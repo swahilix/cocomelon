@@ -54,6 +54,8 @@ jobs:
         run: |
           npm install
           npm run build
+          echo "Built asset manifest:"
+          find public/build -maxdepth 2 -type f -name 'manifest.json' -print
 
       - name: Prepare deployment directory
         uses: appleboy/ssh-action@v1.2.0
@@ -83,6 +85,7 @@ jobs:
           source: "app,bootstrap,config,database,public,resources,routes,storage,artisan,composer.json,package.json,phpunit.xml,postcss.config.js,tailwind.config.js,vite.config.js"
           target: ${{ secrets.DEPLOY_PATH }}
           overwrite: true
+          debug: true
 
       - name: Activate release
         uses: appleboy/ssh-action@v1.2.0
@@ -94,15 +97,35 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           script: |
             set -e
-            cd "${{ secrets.DEPLOY_PATH }}"
+            DEPLOY_DIR="${{ secrets.DEPLOY_PATH }}"
+            cd "$DEPLOY_DIR"
 
-            echo "Verifying uploaded release"
-            test -f artisan
-            test -f composer.json
-            test -f public/build/manifest.json
+            echo "Deployment directory: $(pwd)"
+            echo "Top-level uploaded files:"
+            ls -la
+            echo "Looking for Laravel/Vite files:"
+            find "$DEPLOY_DIR" -maxdepth 4 \( -name artisan -o -name composer.json -o -name manifest.json \) -print 2>/dev/null || true
+
+            missing=0
+            if [ ! -f artisan ]; then
+              echo "ERROR: artisan is missing from $DEPLOY_DIR"
+              missing=1
+            fi
+            if [ ! -f composer.json ]; then
+              echo "ERROR: composer.json is missing from $DEPLOY_DIR"
+              missing=1
+            fi
+            if [ ! -f public/build/manifest.json ]; then
+              echo "ERROR: public/build/manifest.json is missing from $DEPLOY_DIR"
+              missing=1
+            fi
+            if [ "$missing" -ne 0 ]; then
+              echo "Upload layout verification failed. See directory listing above."
+              exit 1
+            fi
 
             if [ ! -f .env ]; then
-              echo "Production .env is missing at ${{ secrets.DEPLOY_PATH }}/.env"
+              echo "Production .env is missing at $DEPLOY_DIR/.env"
               exit 1
             fi
 
