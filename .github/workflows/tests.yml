@@ -45,10 +45,22 @@ jobs:
       - name: Checkout release
         uses: actions/checkout@v4
 
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring
+          coverage: none
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      - name: Install production PHP dependencies
+        run: |
+          composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+          test -f vendor/autoload.php
 
       - name: Build production assets
         run: |
@@ -65,7 +77,6 @@ jobs:
             --exclude='.github' \
             --exclude='.env' \
             --exclude='node_modules' \
-            --exclude='vendor' \
             --exclude='storage/logs/*' \
             --exclude='storage/framework/cache/*' \
             --exclude='storage/framework/sessions/*' \
@@ -161,10 +172,12 @@ jobs:
             cd "$DEPLOY_DIR"
             test -f artisan || { echo "ERROR: artisan missing after extraction"; exit 1; }
             test -f composer.json || { echo "ERROR: composer.json missing after extraction"; exit 1; }
+            test -f vendor/autoload.php || { echo "ERROR: production vendor dependencies missing after extraction"; exit 1; }
             test -f public/build/manifest.json || { echo "ERROR: Vite manifest missing after extraction"; exit 1; }
             test -f .env || { echo "ERROR: production .env missing"; exit 1; }
 
-            composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+            echo "PHP runtime:"
+            php -v | head -1
 
             php artisan optimize:clear
             php artisan migrate --force
