@@ -91,7 +91,7 @@ jobs:
             mkdir -p "${{ secrets.DEPLOY_PATH }}"
             rm -f "$HOME/prinx-release.tar.gz"
             echo "Home directory: $HOME"
-            echo "Deploying commit ${{ github.sha }} to ${{ secrets.DEPLOY_PATH }}"
+            echo "Configured deploy path: ${{ secrets.DEPLOY_PATH }}"
 
       - name: Upload release to cPanel home
         uses: appleboy/scp-action@v0.1.7
@@ -120,30 +120,40 @@ jobs:
             RELEASE="$HOME/prinx-release.tar.gz"
 
             echo "Checking staged release: $RELEASE"
-            ls -lh "$HOME" | head -50
+            test -f "$RELEASE" || { echo "ERROR: release archive was not uploaded to $HOME"; exit 1; }
 
-            if [ ! -f "$RELEASE" ]; then
-              echo "ERROR: release archive was not uploaded to $HOME"
-              find "$HOME" -maxdepth 3 -name 'prinx-release.tar.gz' -print 2>/dev/null || true
+            # Never deploy into a new/incorrect directory that does not already
+            # contain the production Laravel environment configuration.
+            if [ ! -f "$DEPLOY_DIR/.env" ]; then
+              echo "ERROR: configured DEPLOY_PATH is not the existing Laravel app root."
+              echo "Missing: $DEPLOY_DIR/.env"
+              echo ""
+              echo "Laravel app roots found under this cPanel account:"
+              found=0
+              while IFS= read -r env_file; do
+                candidate="$(dirname "$env_file")"
+                if [ -f "$candidate/artisan" ] && [ -f "$candidate/composer.json" ]; then
+                  echo "  $candidate"
+                  found=1
+                fi
+              done < <(find "$HOME" -maxdepth 5 -type f -name '.env' 2>/dev/null)
+              if [ "$found" -eq 0 ]; then
+                echo "  No directory containing .env + artisan + composer.json was found."
+              fi
+              echo ""
+              echo "Update the GitHub DEPLOY_PATH secret to the correct Laravel app root and run again."
+              rm -f "$RELEASE"
               exit 1
             fi
 
-            mkdir -p "$DEPLOY_DIR"
-            echo "Extracting commit ${{ github.sha }} into $DEPLOY_DIR"
+            echo "Production environment found. Deploying to $DEPLOY_DIR"
             tar -xzf "$RELEASE" -C "$DEPLOY_DIR"
             rm -f "$RELEASE"
 
             cd "$DEPLOY_DIR"
-            echo "Deployment directory: $(pwd)"
-
             test -f artisan || { echo "ERROR: artisan missing after extraction"; exit 1; }
             test -f composer.json || { echo "ERROR: composer.json missing after extraction"; exit 1; }
             test -f public/build/manifest.json || { echo "ERROR: Vite manifest missing after extraction"; exit 1; }
-
-            if [ ! -f .env ]; then
-              echo "Production .env is missing at $DEPLOY_DIR/.env"
-              exit 1
-            fi
 
             composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
