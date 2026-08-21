@@ -22,6 +22,8 @@ const settingsForm = useForm({
 });
 
 const credentialsForm = useForm({ credentials: null });
+const registrationForm = useForm({ developer_email: '' });
+
 const test = () => router.post('/admin/merchant/test');
 const sync = () => router.post('/admin/merchant/sync-all');
 const badge = (status) => status === 'success' ? 'bg-emerald-100 text-emerald-700' : status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700';
@@ -40,6 +42,12 @@ const uploadCredentials = () => {
         onSuccess: () => credentialsForm.reset('credentials'),
     });
 };
+
+const registerGcp = () => {
+    registrationForm.post('/admin/merchant/register-gcp', {
+        preserveScroll: true,
+    });
+};
 </script>
 
 <template>
@@ -50,7 +58,7 @@ const uploadCredentials = () => {
             <div>
                 <p class="section-kicker">Product distribution</p>
                 <h1 class="section-title">Google Merchant Center</h1>
-                <p class="mt-2 max-w-2xl text-sm text-slate-500">Configure the Merchant API, test the connection and synchronize eligible products.</p>
+                <p class="mt-2 max-w-2xl text-sm text-slate-500">Configure the Merchant API, register the Google Cloud project, test the connection and synchronize eligible products.</p>
             </div>
             <div class="flex flex-wrap gap-2">
                 <button class="btn-light" :disabled="!configured" @click="test"><Icon name="link-2" :size="17" /> Test connection</button>
@@ -64,9 +72,9 @@ const uploadCredentials = () => {
                     <Icon :name="configured ? 'tick-circle' : 'warning-2'" :size="18" />
                 </div>
                 <div>
-                    <h2 class="font-semibold">{{ configured ? 'Google Merchant is ready' : 'Complete the setup below' }}</h2>
+                    <h2 class="font-semibold">{{ configured ? 'Merchant settings are complete' : 'Complete the setup below' }}</h2>
                     <p class="mt-1 text-sm leading-6" :class="configured ? 'text-emerald-700' : 'text-amber-800'">
-                        {{ configured ? 'Credentials and Merchant account settings are complete. You can test the connection or synchronize products.' : 'Your JSON credentials may already be installed, but the Merchant account settings must also be completed before synchronization can start.' }}
+                        {{ configured ? 'Credentials and Merchant account settings are present. If Google reports that the GCP project is not registered, use the registration section below once.' : 'Upload credentials and complete the Merchant account settings before testing synchronization.' }}
                     </p>
                 </div>
             </div>
@@ -161,6 +169,37 @@ const uploadCredentials = () => {
                 </form>
             </section>
         </div>
+
+        <section class="card mt-5 overflow-hidden">
+            <div class="grid gap-5 p-5 lg:grid-cols-[1fr_420px] lg:items-center">
+                <div class="flex items-start gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[9px] bg-blue-50 text-blue-600">
+                        <Icon name="cloud-add" :size="21" />
+                    </div>
+                    <div>
+                        <h2 class="font-semibold text-slate-900">Register Google Cloud project</h2>
+                        <p class="mt-1 max-w-2xl text-sm leading-6 text-slate-500">Merchant API requires a one-time developer registration for the Google Cloud project used by your service-account JSON. Enter a real Google Account email for API notifications. Do not use the service-account email.</p>
+                        <div class="mt-3 inline-flex items-center gap-2 rounded-[8px] bg-slate-100 px-3 py-2 text-xs text-slate-600">
+                            <Icon name="info-circle" :size="15" />
+                            Run this once. After successful registration, Google may need about 5 minutes before API calls start working.
+                        </div>
+                    </div>
+                </div>
+
+                <form class="space-y-3" @submit.prevent="registerGcp">
+                    <div>
+                        <label class="label">Developer Google email</label>
+                        <input v-model.trim="registrationForm.developer_email" type="email" class="input" placeholder="you@gmail.com" autocomplete="email">
+                        <p v-if="registrationForm.errors.developer_email" class="error">{{ registrationForm.errors.developer_email }}</p>
+                    </div>
+                    <button class="btn-primary w-full" :disabled="registrationForm.processing || !credentialsInstalled || !config.account_id">
+                        <Icon name="cloud-add" :size="17" />
+                        {{ registrationForm.processing ? 'Registering project...' : 'Register GCP Project' }}
+                    </button>
+                    <p v-if="!credentialsInstalled || !config.account_id" class="text-xs text-amber-600">Upload credentials and save the Merchant Account ID first.</p>
+                </form>
+            </div>
+        </section>
 
         <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div class="card p-5"><p class="text-xs font-medium uppercase text-slate-400">Eligible products</p><b class="mt-2 block text-3xl font-semibold">{{ counts.eligible }}</b></div>
