@@ -1,2 +1,14 @@
 <?php
-namespace App\Models;use Illuminate\Database\Eloquent\Factories\HasFactory;use Illuminate\Database\Eloquent\Model;class MerchantSyncLog extends Model{use HasFactory;protected $fillable=['product_id','action','status','request_payload','response_payload','error_message','synced_at'];protected function casts():array{return['request_payload'=>'array','response_payload'=>'array','synced_at'=>'datetime'];}public function product(){return$this->belongsTo(Product::class)->withTrashed();}}
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class MerchantSyncLog extends Model
+{
+    use HasFactory;
+    protected $fillable = ['product_id','action','status','request_payload','response_payload','error_message','synced_at'];
+    protected function casts(): array { return ['request_payload'=>'array','response_payload'=>'array','synced_at'=>'datetime']; }
+    public function product() { return $this->belongsTo(Product::class)->withTrashed(); }
+}
