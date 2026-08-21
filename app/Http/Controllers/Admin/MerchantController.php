@@ -101,6 +101,33 @@ class MerchantController extends Controller
         return back()->with('success', 'Google Merchant service-account credentials uploaded securely.');
     }
 
+    public function registerGcp(Request $request, GoogleMerchantService $merchant): RedirectResponse
+    {
+        $validated = $request->validate([
+            'developer_email' => ['required', 'email:rfc', 'max:255', 'not_regex:/\.gserviceaccount\.com$/i'],
+        ], [
+            'developer_email.not_regex' => 'Use a real Google Account email for the developer contact, not a service-account email.',
+        ]);
+
+        try {
+            $response = $merchant->registerGcp($validated['developer_email']);
+            $projectIds = collect($response['gcpIds'] ?? [])->filter()->implode(', ');
+            $message = 'Google Cloud project registered with Merchant Center successfully.';
+
+            if ($projectIds !== '') {
+                $message .= ' Registered project: '.$projectIds.'.';
+            }
+
+            $message .= ' Google may take up to about 5 minutes before normal Merchant API calls start working.';
+
+            return back()->with('success', $message);
+        } catch (Throwable $exception) {
+            return back()->withErrors([
+                'developer_email' => $exception->getMessage(),
+            ]);
+        }
+    }
+
     public function syncAll(): RedirectResponse
     {
         Product::merchantEligible()->select('id')->chunkById(
