@@ -1,6 +1,5 @@
 <script setup>
 import { Link, router, usePage } from '@inertiajs/vue3';
-import Icon from './Icon.vue';
 
 const props = defineProps({
     product: Object,
@@ -25,15 +24,25 @@ const add = () => router.post(`/cart/${props.product.slug}`, { quantity: 1 }, { 
                 <span v-else class="inline-block"></span>
                 <span v-if="Number(product.sale_price) > 0 && Number(product.current_price) < Number(product.price)" class="rounded-[10px] bg-prinx-500 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">Sale</span>
             </div>
-            <span :class="['absolute bottom-3 left-3 rounded-[10px] px-2.5 py-1 text-[10px] font-black', product.in_stock ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700']">{{ product.in_stock ? 'In stock' : 'Out of stock' }}</span>
+            <span :class="['absolute bottom-3 left-3 rounded-[10px] px-2.5 py-1 text-[10px] font-black', product.in_stock ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700']">
+                {{ product.in_stock ? 'In stock' : 'Out of stock' }}
+            </span>
         </Link>
         <div :class="['flex flex-1 flex-col', compactMobile ? 'p-3 sm:p-5' : 'p-4 sm:p-5']">
-            <div class="flex items-center justify-between gap-3"><p class="truncate text-[10px] font-black uppercase tracking-[.14em] text-prinx-600">{{ product.category?.name || 'Electronics' }}</p><span :class="['truncate text-[11px] font-bold text-slate-400', compactMobile ? 'hidden sm:block' : '']">{{ product.brand?.name || 'Prinx' }}</span></div>
+            <div class="flex items-center justify-between gap-3">
+                <p class="truncate text-[10px] font-black uppercase tracking-[.14em] text-prinx-600">{{ product.category?.name || 'Electronics' }}</p>
+                <span :class="['truncate text-[11px] font-bold text-slate-400', compactMobile ? 'hidden sm:block' : '']">{{ product.brand?.name || 'Prinx' }}</span>
+            </div>
             <Link :href="`/products/${product.slug}`" :class="['mt-2 line-clamp-2 block font-black text-slate-950 transition group-hover:text-prinx-600', compactMobile ? 'min-h-10 text-sm leading-5 sm:min-h-12 sm:text-base sm:leading-6' : 'min-h-12 text-base leading-6']">{{ product.name }}</Link>
             <p v-if="showDescription && product.short_description" :class="['mt-2 line-clamp-2 text-sm leading-6 text-slate-500', compactMobile ? 'hidden sm:block' : '']">{{ product.short_description }}</p>
             <div :class="['mt-auto flex items-end justify-between', compactMobile ? 'gap-2 pt-3 sm:gap-3 sm:pt-5' : 'gap-3 pt-5']">
-                <div><div :class="['font-black text-slate-950', compactMobile ? 'text-sm sm:text-lg' : 'text-lg']">{{ money(product.current_price) }}</div><div v-if="Number(product.current_price) < Number(product.price)" class="text-xs font-semibold text-slate-400 line-through">{{ money(product.price) }}</div></div>
-                <button type="button" :class="['inline-flex shrink-0 items-center justify-center rounded-[10px] bg-slate-950 text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-prinx-500 disabled:cursor-not-allowed disabled:opacity-40', compactMobile ? 'h-9 w-9 sm:h-11 sm:w-11' : 'h-11 w-11']" :disabled="!product.in_stock" @click="add" :aria-label="`Add ${product.name} to cart`"><Icon name="shopping-cart" :size="20" /></button>
+                <div>
+                    <div :class="['font-black text-slate-950', compactMobile ? 'text-sm sm:text-lg' : 'text-lg']">{{ money(product.current_price) }}</div>
+                    <div v-if="Number(product.current_price) < Number(product.price)" class="text-xs font-semibold text-slate-400 line-through">{{ money(product.price) }}</div>
+                </div>
+                <button type="button" :class="['inline-flex shrink-0 items-center justify-center rounded-[10px] bg-slate-950 text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-prinx-500 disabled:cursor-not-allowed disabled:opacity-40', compactMobile ? 'h-9 w-9 sm:h-11 sm:w-11' : 'h-11 w-11']" :disabled="!product.in_stock" @click="add" :aria-label="`Add ${product.name} to cart`">
+                    <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="2"><path d="M3 3h2l2.4 11.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L21 7H6"/><path d="M12 9v4M10 11h4"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>
+                </button>
             </div>
         </div>
     </article>
