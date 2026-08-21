@@ -1,0 +1,35 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_sqlite
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist
+      - run: cp .env.example .env && php artisan key:generate
+      - run: php artisan test
+      - run: ./vendor/bin/pint --test
+      - run: npm install
+      - run: npm run build
+      - name: Smoke test Inertia SSR server
+        shell: bash
+        run: |
+          node bootstrap/ssr/ssr.js > /tmp/prinx-ssr.log 2>&1 &
+          SSR_PID=$!
+          trap 'kill $SSR_PID || true' EXIT
+          sleep 2
+          curl --fail --silent --show-error http://127.0.0.1:13714/health

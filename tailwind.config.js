@@ -1,0 +1,2 @@
+/** @type {import('tailwindcss').Config} */
+export default {content:['./resources/**/*.blade.php','./resources/**/*.js','./resources/**/*.vue'],theme:{extend:{colors:{prinx:{50:'#fff4ed',100:'#ffe6d4',200:'#ffc9a8',300:'#ffa270',400:'#ff7138',500:'#ff4d0a',600:'#ee3500',700:'#c62500',800:'#9d2108',900:'#7e200d',950:'#440d02'}},boxShadow:{soft:'0 14px 40px rgba(17, 24, 39, 0.08)',glow:'0 18px 55px rgba(255, 77, 10, 0.18)'},fontFamily:{sans:['Inter','ui-sans-serif','system-ui','sans-serif']}}},plugins:[]};

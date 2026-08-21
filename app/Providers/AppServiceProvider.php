@@ -1,0 +1,2 @@
+<?php
+namespace App\Providers;use App\Models\Product;use App\Observers\ProductObserver;use Illuminate\Support\ServiceProvider;use Illuminate\Support\Facades\URL;use Illuminate\Support\Facades\Schema;class AppServiceProvider extends ServiceProvider{public function register():void{}public function boot():void{Schema::defaultStringLength(191);Product::observe(ProductObserver::class);if($this->app->environment('production'))URL::forceScheme('https');}}

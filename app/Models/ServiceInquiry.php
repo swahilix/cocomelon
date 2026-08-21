@@ -1,0 +1,2 @@
+<?php
+namespace App\Models;use Illuminate\Database\Eloquent\Factories\HasFactory;use Illuminate\Database\Eloquent\Model;class ServiceInquiry extends Model{use HasFactory;protected $fillable=['service_id','name','email','phone','preferred_date','message','status','admin_notes'];protected function casts():array{return['preferred_date'=>'date'];}public function service(){return$this->belongsTo(Service::class)->withTrashed();}}

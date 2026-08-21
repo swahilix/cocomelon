@@ -1,0 +1,17 @@
+[program:prinx-queue]
+command=/usr/bin/php /var/www/prinx-electronics-store/artisan queue:work --sleep=3 --tries=3 --max-time=3600
+directory=/var/www/prinx-electronics-store
+autostart=true
+autorestart=true
+user=www-data
+redirect_stderr=true
+stdout_logfile=/var/www/prinx-electronics-store/storage/logs/queue-worker.log
+
+[program:prinx-ssr]
+command=/usr/bin/php /var/www/prinx-electronics-store/artisan inertia:start-ssr
+directory=/var/www/prinx-electronics-store
+autostart=true
+autorestart=true
+user=www-data
+redirect_stderr=true
+stdout_logfile=/var/www/prinx-electronics-store/storage/logs/inertia-ssr.log
