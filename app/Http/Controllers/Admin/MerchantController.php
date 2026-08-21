@@ -146,9 +146,13 @@ class MerchantController extends Controller
             return back()->with('error', 'This product is not Merchant-ready. Missing: '.implode('; ', $issues).'.');
         }
 
-        SyncProductToGoogleMerchant::dispatch($product->id);
+        try {
+            SyncProductToGoogleMerchant::dispatchSync($product->id);
 
-        return back()->with('success', 'Product queued for Google Merchant sync.');
+            return back()->with('success', 'Product synchronized with Google Merchant successfully.');
+        } catch (Throwable $exception) {
+            return back()->with('error', 'Google Merchant sync failed: '.$exception->getMessage());
+        }
     }
 
     public function test(GoogleMerchantService $merchant): RedirectResponse
