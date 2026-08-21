@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Services\GoogleMerchantService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Inertia\Inertia;
@@ -24,7 +25,7 @@ class MerchantController extends Controller
             'configured' => $merchant->configured(),
             'credentialsInstalled' => is_file($merchant->credentialsPath()),
             'config' => [
-                'enabled' => config('merchant.enabled'),
+                'enabled' => (bool) config('merchant.enabled'),
                 'account_id' => config('merchant.account_id'),
                 'data_source_id' => config('merchant.data_source_id'),
                 'feed_label' => config('merchant.feed_label'),
@@ -39,6 +40,32 @@ class MerchantController extends Controller
             ],
             'logs' => MerchantSyncLog::with('product:id,name,slug')->latest()->paginate(20),
         ]);
+    }
+
+    public function updateSettings(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'enabled' => ['required', 'boolean'],
+            'account_id' => ['required', 'regex:/^\d+$/', 'max:40'],
+            'data_source_id' => ['required', 'regex:/^\d+$/', 'max:40'],
+            'content_language' => ['required', 'regex:/^[a-zA-Z]{2,5}$/', 'max:5'],
+            'feed_label' => ['required', 'string', 'max:50'],
+            'currency' => ['required', 'regex:/^[A-Za-z]{3}$/'],
+        ]);
+
+        $this->writeEnv([
+            'GOOGLE_MERCHANT_ENABLED' => $validated['enabled'] ? 'true' : 'false',
+            'GOOGLE_MERCHANT_ACCOUNT_ID' => $validated['account_id'],
+            'GOOGLE_MERCHANT_DATA_SOURCE_ID' => $validated['data_source_id'],
+            'GOOGLE_MERCHANT_CONTENT_LANGUAGE' => strtolower($validated['content_language']),
+            'GOOGLE_MERCHANT_FEED_LABEL' => strtoupper($validated['feed_label']),
+            'GOOGLE_MERCHANT_CURRENCY' => strtoupper($validated['currency']),
+        ]);
+
+        Cache::forget('google-merchant-access-token');
+        Artisan::call('config:clear');
+
+        return back()->with('success', 'Google Merchant settings saved. The integration status has been refreshed.');
     }
 
     public function uploadCredentials(Request $request, GoogleMerchantService $merchant): RedirectResponse
@@ -104,5 +131,38 @@ class MerchantController extends Controller
         } catch (Throwable $exception) {
             return back()->with('error', $exception->getMessage());
         }
+    }
+
+    private function writeEnv(array $values): void
+    {
+        $path = base_path('.env');
+
+        if (! File::exists($path)) {
+            throw new \RuntimeException('The server .env file could not be found.');
+        }
+
+        $contents = File::get($path);
+
+        foreach ($values as $key => $value) {
+            $line = $key.'='.$this->envValue((string) $value);
+            $pattern = '/^'.preg_quote($key, '/').'=.*$/m';
+
+            if (preg_match($pattern, $contents)) {
+                $contents = preg_replace($pattern, $line, $contents, 1);
+            } else {
+                $contents = rtrim($contents).PHP_EOL.$line.PHP_EOL;
+            }
+        }
+
+        File::put($path, $contents, true);
+    }
+
+    private function envValue(string $value): string
+    {
+        if (in_array($value, ['true', 'false'], true) || preg_match('/^\d+$/', $value)) {
+            return $value;
+        }
+
+        return '"'.str_replace(['\\', '"'], ['\\\\', '\\"'], $value).'"';
     }
 }
