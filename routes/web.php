@@ -86,7 +86,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::patch('orders/{order}', [AdminOrderController::class, 'update'])->name('orders.update');
     Route::get('inquiries', [InquiryController::class, 'index'])->name('inquiries.index');
     Route::patch('inquiries/{inquiry}', [InquiryController::class, 'update'])->name('inquiries.update');
+
     Route::get('merchant', [MerchantController::class, 'index'])->name('merchant.index');
+    Route::post('merchant/credentials', [MerchantController::class, 'uploadCredentials'])->name('merchant.credentials');
     Route::post('merchant/test', [MerchantController::class, 'test'])->name('merchant.test');
     Route::post('merchant/sync-all', [MerchantController::class, 'syncAll'])->name('merchant.sync-all');
     Route::post('merchant/products/{product}', [MerchantController::class, 'sync'])->name('merchant.sync');
