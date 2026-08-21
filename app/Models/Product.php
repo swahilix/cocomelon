@@ -92,7 +92,6 @@ class Product extends Model
         })->values()->all();
     }
 
-
     public function getImageMetadataAttribute(): array
     {
         $description = (string) ($this->meta_description ?: $this->short_description ?: Str::limit($this->plain_description, 180, ''));
@@ -143,7 +142,6 @@ class Product extends Model
         return !$this->track_stock || $this->stock_quantity > 0;
     }
 
-
     public static function descriptionToPlainText(string $description): string
     {
         $description = preg_replace('/^\s{0,3}#{1,6}\s*/m', '', $description) ?? $description;
@@ -160,15 +158,26 @@ class Product extends Model
         return self::descriptionToPlainText((string) $this->description);
     }
 
+    public function merchantReadinessIssues(): array
+    {
+        $issues = [];
+
+        if ($this->status !== 'active') $issues[] = 'status must be Active';
+        if (! $this->merchant_sync_enabled) $issues[] = 'Google Merchant sync must be enabled';
+        if (blank($this->sku)) $issues[] = 'SKU is missing';
+        if (blank($this->name)) $issues[] = 'product name is missing';
+        if (blank($this->description)) $issues[] = 'description is missing';
+        if ((float) $this->price <= 0) $issues[] = 'price must be greater than 0';
+        if (blank($this->primary_image)) $issues[] = 'main image is missing';
+        if (blank($this->gtin) && ! (filled($this->brand_id) && filled($this->mpn))) {
+            $issues[] = 'GTIN is missing, or Brand + MPN must both be provided';
+        }
+
+        return $issues;
+    }
+
     public function getMerchantReadyAttribute(): bool
     {
-        return $this->status === 'active'
-            && $this->merchant_sync_enabled
-            && filled($this->sku)
-            && filled($this->name)
-            && filled($this->description)
-            && filled($this->primary_image)
-            && $this->price > 0
-            && (filled($this->gtin) || (filled($this->brand_id) && filled($this->mpn)));
+        return $this->merchantReadinessIssues() === [];
     }
 }
