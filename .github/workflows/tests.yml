@@ -91,7 +91,7 @@ jobs:
             mkdir -p "${{ secrets.DEPLOY_PATH }}"
             rm -f "$HOME/prinx-release.tar.gz"
             echo "Home directory: $HOME"
-            echo "Configured deploy path: ${{ secrets.DEPLOY_PATH }}"
+            echo "Configured deploy folder: $(basename "${{ secrets.DEPLOY_PATH }}")"
 
       - name: Upload release to cPanel home
         uses: appleboy/scp-action@v0.1.7
@@ -122,18 +122,17 @@ jobs:
             echo "Checking staged release: $RELEASE"
             test -f "$RELEASE" || { echo "ERROR: release archive was not uploaded to $HOME"; exit 1; }
 
-            # Never deploy into a new/incorrect directory that does not already
-            # contain the production Laravel environment configuration.
             if [ ! -f "$DEPLOY_DIR/.env" ]; then
               echo "ERROR: configured DEPLOY_PATH is not the existing Laravel app root."
-              echo "Missing: $DEPLOY_DIR/.env"
+              echo "Configured folder: $(basename "$DEPLOY_DIR")"
               echo ""
               echo "Laravel app roots found under this cPanel account:"
               found=0
               while IFS= read -r env_file; do
                 candidate="$(dirname "$env_file")"
                 if [ -f "$candidate/artisan" ] && [ -f "$candidate/composer.json" ]; then
-                  echo "  $candidate"
+                  folder="$(basename "$candidate")"
+                  printf '  folder=%s | env=yes | artisan=yes | composer=yes\n' "$folder"
                   found=1
                 fi
               done < <(find "$HOME" -maxdepth 5 -type f -name '.env' 2>/dev/null)
@@ -141,12 +140,12 @@ jobs:
                 echo "  No directory containing .env + artisan + composer.json was found."
               fi
               echo ""
-              echo "Update the GitHub DEPLOY_PATH secret to the correct Laravel app root and run again."
+              echo "Set DEPLOY_PATH to the full path of the Prinx Laravel app root shown above, then run again."
               rm -f "$RELEASE"
               exit 1
             fi
 
-            echo "Production environment found. Deploying to $DEPLOY_DIR"
+            echo "Production environment found in folder: $(basename "$DEPLOY_DIR")"
             tar -xzf "$RELEASE" -C "$DEPLOY_DIR"
             rm -f "$RELEASE"
 
