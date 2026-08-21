@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
-use App\Models\InventoryMovement;
 use App\Services\CartService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -64,14 +63,10 @@ class CheckoutController extends Controller
                     'line_total' => $line['line_total'],
                 ]);
                 if ($product->track_stock) {
-                    $before=(int)$product->stock_quantity;
-                    $after=$before-(int)$line['quantity'];
-                    $product->update(['stock_quantity'=>$after]);
-                    InventoryMovement::create(['product_id'=>$product->id,'order_id'=>$order->id,'user_id'=>$request->user()?->id,'type'=>'sale','quantity_change'=>-(int)$line['quantity'],'quantity_before'=>$before,'quantity_after'=>$after,'reference'=>$order->order_number]);
+                    $product->decrement('stock_quantity', $line['quantity']);
                 }
             }
 
-            $order->statusHistory()->create(['user_id'=>$request->user()?->id,'status'=>$order->status,'payment_status'=>$order->payment_status,'note'=>'Order placed']);
             return $order;
         });
 
