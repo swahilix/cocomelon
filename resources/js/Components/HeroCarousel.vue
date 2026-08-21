@@ -15,7 +15,7 @@ const itemUrl = computed(() => {
     if (!slide.value?.item) return '/shop';
     return slide.value.item_type === 'service'
         ? `/services/${slide.value.item.slug}`
-        : `/shop/${slide.value.item.slug}`;
+        : `/products/${slide.value.item.slug}`;
 });
 
 const secondaryUrl = computed(() => slide.value?.item_type === 'service' ? '/services' : '/shop');
