@@ -90,6 +90,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('merchant', [MerchantController::class, 'index'])->name('merchant.index');
     Route::post('merchant/settings', [MerchantController::class, 'updateSettings'])->name('merchant.settings');
     Route::post('merchant/credentials', [MerchantController::class, 'uploadCredentials'])->name('merchant.credentials');
+    Route::post('merchant/register-gcp', [MerchantController::class, 'registerGcp'])->name('merchant.register-gcp');
     Route::post('merchant/test', [MerchantController::class, 'test'])->name('merchant.test');
     Route::post('merchant/sync-all', [MerchantController::class, 'syncAll'])->name('merchant.sync-all');
     Route::post('merchant/products/{product}', [MerchantController::class, 'sync'])->name('merchant.sync');
