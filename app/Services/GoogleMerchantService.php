@@ -1,2 +1,198 @@
 <?php
-namespace App\Services;use App\Models\Product;use Google\Auth\Credentials\ServiceAccountCredentials;use Illuminate\Http\Client\PendingRequest;use Illuminate\Support\Facades\Cache;use Illuminate\Support\Facades\Http;use Illuminate\Support\Str;use RuntimeException;class GoogleMerchantService{public function configured():bool{return config('merchant.enabled')&&filled(config('merchant.account_id'))&&filled(config('merchant.data_source_id'))&&is_file($this->credentialsPath());}public function credentialsPath():string{$p=(string)config('merchant.credentials_path');return Str::startsWith($p,DIRECTORY_SEPARATOR)?$p:base_path($p);}public function accessToken():string{if(!$this->configured())throw new RuntimeException('Google Merchant is not fully configured.');return Cache::remember('google-merchant-access-token',now()->addMinutes(50),function():string{$key=json_decode((string)file_get_contents($this->credentialsPath()),true,512,JSON_THROW_ON_ERROR);$c=new ServiceAccountCredentials([config('merchant.scope')],$key);$t=$c->fetchAuthToken();if(empty($t['access_token']))throw new RuntimeException('Google did not return an access token.');return$t['access_token'];});}protected function client():PendingRequest{return Http::acceptJson()->asJson()->withToken($this->accessToken())->timeout(45)->retry(2,500,throw:false);}public function sync(Product $p):array{if(!$p->merchant_ready)throw new RuntimeException('Product is missing required Merchant attributes. Add an image and GTIN, or brand plus MPN.');$a=config('merchant.account_id');$ds="accounts/{$a}/dataSources/".config('merchant.data_source_id');$url=config('merchant.base_url')."/products/v1/accounts/{$a}/productInputs:insert";$r=$this->client()->post($url.'?'.http_build_query(['dataSource'=>$ds]),$this->payload($p));if(!$r->successful())throw new RuntimeException($r->json('error.message')?:$r->body());return$r->json();}public function delete(Product $p):array{$a=config('merchant.account_id');$id=rawurlencode('online~'.config('merchant.content_language').'~'.config('merchant.feed_label').'~'.$p->sku);$ds="accounts/{$a}/dataSources/".config('merchant.data_source_id');$url=config('merchant.base_url')."/products/v1/accounts/{$a}/productInputs/{$id}";$r=$this->client()->delete($url.'?'.http_build_query(['dataSource'=>$ds]));if(!$r->successful()&&$r->status()!==404)throw new RuntimeException($r->json('error.message')?:$r->body());return$r->json()??['deleted'=>true];}public function testConnection():array{$a=config('merchant.account_id');$r=$this->client()->get(config('merchant.base_url')."/datasources/v1/accounts/{$a}/dataSources",['pageSize'=>5]);if(!$r->successful())throw new RuntimeException($r->json('error.message')?:$r->body());return$r->json();}public function payload(Product $p):array{$attrs=['title'=>Str::limit($p->name,150,''),'description'=>Str::limit($p->plain_description,5000,''),'link'=>route('products.show',$p),'imageLink'=>$this->absoluteUrl($p->image_url),'additionalImageLinks'=>collect($p->gallery_urls)->map(fn($u)=>$this->absoluteUrl($u))->take(10)->values()->all(),'availability'=>$p->in_stock?'IN_STOCK':'OUT_OF_STOCK','condition'=>strtoupper($p->condition),'price'=>$this->priceObject((float)$p->price),'brand'=>$p->brand?->name,'mpn'=>$p->mpn,'googleProductCategory'=>$p->google_product_category,'productTypes'=>$p->product_type?[$p->product_type]:($p->category?['Electronics > '.$p->category->name]:[]),'itemGroupId'=>$p->item_group_id,'color'=>$p->color,'sizes'=>$p->size?[$p->size]:[],'gender'=>$p->gender?strtoupper($p->gender):null,'ageGroup'=>$p->age_group?strtoupper($p->age_group):null,'videoLinks'=>$p->video_url?[$p->video_url]:[]];if($p->sale_price&&$p->current_price<(float)$p->price)$attrs['salePrice']=$this->priceObject((float)$p->sale_price);if($p->gtin)$attrs['gtins']=[$p->gtin];$attrs['shipping']=[['country'=>config('merchant.country'),'service'=>config('merchant.shipping_service'),'price'=>$this->priceObject((float)($p->shipping_price??config('merchant.default_shipping_price')))]];$attrs=array_filter($attrs,fn($v)=>$v!==null&&$v!==''&&$v!==[]);return['offerId'=>$p->sku,'contentLanguage'=>config('merchant.content_language'),'feedLabel'=>config('merchant.feed_label'),'productAttributes'=>$attrs];}protected function priceObject(float $a):array{return['amountMicros'=>(string)round($a*1000000),'currencyCode'=>config('merchant.currency')];}protected function absoluteUrl(string $u):string{return Str::startsWith($u,['http://','https://'])?$u:url($u);}}
+
+namespace App\Services;
+
+use App\Models\Product;
+use Google\Auth\Credentials\ServiceAccountCredentials;
+use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+use RuntimeException;
+
+class GoogleMerchantService
+{
+    public function configured(): bool
+    {
+        return config('merchant.enabled')
+            && filled(config('merchant.account_id'))
+            && filled(config('merchant.data_source_id'))
+            && is_file($this->credentialsPath());
+    }
+
+    public function credentialsPath(): string
+    {
+        $path = (string) config('merchant.credentials_path');
+
+        return Str::startsWith($path, DIRECTORY_SEPARATOR) ? $path : base_path($path);
+    }
+
+    public function accessToken(): string
+    {
+        if (! $this->configured()) {
+            throw new RuntimeException('Google Merchant is not fully configured.');
+        }
+
+        return $this->serviceAccountAccessToken();
+    }
+
+    public function registerGcp(string $developerEmail): array
+    {
+        $accountId = (string) config('merchant.account_id');
+
+        if (blank($accountId)) {
+            throw new RuntimeException('Set the Merchant Account ID before registering the GCP project.');
+        }
+
+        if (! is_file($this->credentialsPath())) {
+            throw new RuntimeException('Upload the Google service-account JSON before registering the GCP project.');
+        }
+
+        $url = config('merchant.base_url')."/accounts/v1/accounts/{$accountId}/developerRegistration:registerGcp";
+
+        $response = Http::acceptJson()
+            ->asJson()
+            ->withToken($this->serviceAccountAccessToken())
+            ->timeout(45)
+            ->retry(2, 500, throw: false)
+            ->post($url, ['developerEmail' => $developerEmail]);
+
+        if (! $response->successful()) {
+            throw new RuntimeException($response->json('error.message') ?: $response->body());
+        }
+
+        return $response->json();
+    }
+
+    public function sync(Product $product): array
+    {
+        if (! $product->merchant_ready) {
+            throw new RuntimeException('Product is missing required Merchant attributes. Add an image and GTIN, or brand plus MPN.');
+        }
+
+        $accountId = config('merchant.account_id');
+        $dataSource = "accounts/{$accountId}/dataSources/".config('merchant.data_source_id');
+        $url = config('merchant.base_url')."/products/v1/accounts/{$accountId}/productInputs:insert";
+        $response = $this->client()->post($url.'?'.http_build_query(['dataSource' => $dataSource]), $this->payload($product));
+
+        if (! $response->successful()) {
+            throw new RuntimeException($response->json('error.message') ?: $response->body());
+        }
+
+        return $response->json();
+    }
+
+    public function delete(Product $product): array
+    {
+        $accountId = config('merchant.account_id');
+        $id = rawurlencode('online~'.config('merchant.content_language').'~'.config('merchant.feed_label').'~'.$product->sku);
+        $dataSource = "accounts/{$accountId}/dataSources/".config('merchant.data_source_id');
+        $url = config('merchant.base_url')."/products/v1/accounts/{$accountId}/productInputs/{$id}";
+        $response = $this->client()->delete($url.'?'.http_build_query(['dataSource' => $dataSource]));
+
+        if (! $response->successful() && $response->status() !== 404) {
+            throw new RuntimeException($response->json('error.message') ?: $response->body());
+        }
+
+        return $response->json() ?? ['deleted' => true];
+    }
+
+    public function testConnection(): array
+    {
+        $accountId = config('merchant.account_id');
+        $response = $this->client()->get(
+            config('merchant.base_url')."/datasources/v1/accounts/{$accountId}/dataSources",
+            ['pageSize' => 5]
+        );
+
+        if (! $response->successful()) {
+            throw new RuntimeException($response->json('error.message') ?: $response->body());
+        }
+
+        return $response->json();
+    }
+
+    public function payload(Product $product): array
+    {
+        $attributes = [
+            'title' => Str::limit($product->name, 150, ''),
+            'description' => Str::limit($product->plain_description, 5000, ''),
+            'link' => route('products.show', $product),
+            'imageLink' => $this->absoluteUrl($product->image_url),
+            'additionalImageLinks' => collect($product->gallery_urls)->map(fn ($url) => $this->absoluteUrl($url))->take(10)->values()->all(),
+            'availability' => $product->in_stock ? 'IN_STOCK' : 'OUT_OF_STOCK',
+            'condition' => strtoupper($product->condition),
+            'price' => $this->priceObject((float) $product->price),
+            'brand' => $product->brand?->name,
+            'mpn' => $product->mpn,
+            'googleProductCategory' => $product->google_product_category,
+            'productTypes' => $product->product_type ? [$product->product_type] : ($product->category ? ['Electronics > '.$product->category->name] : []),
+            'itemGroupId' => $product->item_group_id,
+            'color' => $product->color,
+            'sizes' => $product->size ? [$product->size] : [],
+            'gender' => $product->gender ? strtoupper($product->gender) : null,
+            'ageGroup' => $product->age_group ? strtoupper($product->age_group) : null,
+            'videoLinks' => $product->video_url ? [$product->video_url] : [],
+        ];
+
+        if ($product->sale_price && $product->current_price < (float) $product->price) {
+            $attributes['salePrice'] = $this->priceObject((float) $product->sale_price);
+        }
+
+        if ($product->gtin) {
+            $attributes['gtins'] = [$product->gtin];
+        }
+
+        $attributes['shipping'] = [[
+            'country' => config('merchant.country'),
+            'service' => config('merchant.shipping_service'),
+            'price' => $this->priceObject((float) ($product->shipping_price ?? config('merchant.default_shipping_price'))),
+        ]];
+
+        $attributes = array_filter($attributes, fn ($value) => $value !== null && $value !== '' && $value !== []);
+
+        return [
+            'offerId' => $product->sku,
+            'contentLanguage' => config('merchant.content_language'),
+            'feedLabel' => config('merchant.feed_label'),
+            'productAttributes' => $attributes,
+        ];
+    }
+
+    protected function client(): PendingRequest
+    {
+        return Http::acceptJson()
+            ->asJson()
+            ->withToken($this->accessToken())
+            ->timeout(45)
+            ->retry(2, 500, throw: false);
+    }
+
+    protected function serviceAccountAccessToken(): string
+    {
+        return Cache::remember('google-merchant-access-token', now()->addMinutes(50), function (): string {
+            $key = json_decode((string) file_get_contents($this->credentialsPath()), true, 512, JSON_THROW_ON_ERROR);
+            $credentials = new ServiceAccountCredentials([config('merchant.scope')], $key);
+            $token = $credentials->fetchAuthToken();
+
+            if (empty($token['access_token'])) {
+                throw new RuntimeException('Google did not return an access token.');
+            }
+
+            return $token['access_token'];
+        });
+    }
+
+    protected function priceObject(float $amount): array
+    {
+        return [
+            'amountMicros' => (string) round($amount * 1000000),
+            'currencyCode' => config('merchant.currency'),
+        ];
+    }
+
+    protected function absoluteUrl(string $url): string
+    {
+        return Str::startsWith($url, ['http://', 'https://']) ? $url : url($url);
+    }
+}
