@@ -55,24 +55,6 @@ jobs:
           npm install
           npm run build
 
-      - name: Create deployment package
-        shell: bash
-        run: |
-          RELEASE_ARCHIVE=/tmp/prinx-release.tar.gz
-          rm -f "$RELEASE_ARCHIVE"
-          tar \
-            --exclude='.git' \
-            --exclude='.github' \
-            --exclude='.env' \
-            --exclude='node_modules' \
-            --exclude='vendor' \
-            --exclude='storage/logs/*' \
-            --exclude='storage/framework/cache/*' \
-            --exclude='storage/framework/sessions/*' \
-            --exclude='storage/framework/views/*' \
-            -czf "$RELEASE_ARCHIVE" .
-          mv "$RELEASE_ARCHIVE" ./prinx-release.tar.gz
-
       - name: Prepare deployment directory
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -88,9 +70,9 @@ jobs:
               exit 1
             fi
             mkdir -p "${{ secrets.DEPLOY_PATH }}"
-            echo "Deploying to: ${{ secrets.DEPLOY_PATH }}"
+            echo "Deploying commit ${{ github.sha }} to ${{ secrets.DEPLOY_PATH }}"
 
-      - name: Upload release
+      - name: Upload application files
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -98,8 +80,9 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: prinx-release.tar.gz
+          source: "app,bootstrap,config,database,public,resources,routes,storage,artisan,composer.json,package.json,phpunit.xml,postcss.config.js,tailwind.config.js,vite.config.js"
           target: ${{ secrets.DEPLOY_PATH }}
+          overwrite: true
 
       - name: Activate release
         uses: appleboy/ssh-action@v1.2.0
@@ -113,9 +96,10 @@ jobs:
             set -e
             cd "${{ secrets.DEPLOY_PATH }}"
 
-            echo "Extracting commit ${{ github.sha }}"
-            tar -xzf prinx-release.tar.gz
-            rm -f prinx-release.tar.gz
+            echo "Verifying uploaded release"
+            test -f artisan
+            test -f composer.json
+            test -f public/build/manifest.json
 
             if [ ! -f .env ]; then
               echo "Production .env is missing at ${{ secrets.DEPLOY_PATH }}/.env"
