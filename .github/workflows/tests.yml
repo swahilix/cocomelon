@@ -88,9 +88,7 @@ jobs:
               echo "DEPLOY_PATH secret is missing"
               exit 1
             fi
-            mkdir -p "${{ secrets.DEPLOY_PATH }}"
             rm -f "$HOME/prinx-release.tar.gz"
-            echo "Home directory: $HOME"
             echo "Configured deploy folder: $(basename "${{ secrets.DEPLOY_PATH }}")"
 
       - name: Upload release to cPanel home
@@ -122,30 +120,41 @@ jobs:
             echo "Checking staged release: $RELEASE"
             test -f "$RELEASE" || { echo "ERROR: release archive was not uploaded to $HOME"; exit 1; }
 
-            if [ ! -f "$DEPLOY_DIR/.env" ]; then
-              echo "ERROR: configured DEPLOY_PATH is not the existing Laravel app root."
-              echo "Configured folder: $(basename "$DEPLOY_DIR")"
-              echo ""
-              echo "Laravel app roots found under this cPanel account:"
-              found=0
+            # If the configured full path is stale/wrong, resolve it safely by
+            # matching its folder name against existing Laravel roots.
+            if [ ! -f "$DEPLOY_DIR/.env" ] || [ ! -f "$DEPLOY_DIR/artisan" ] || [ ! -f "$DEPLOY_DIR/composer.json" ]; then
+              target_name="$(basename "$DEPLOY_DIR")"
+              echo "Configured full path is not a Laravel root; resolving folder: $target_name"
+
+              matches=""
+              count=0
               while IFS= read -r env_file; do
                 candidate="$(dirname "$env_file")"
-                if [ -f "$candidate/artisan" ] && [ -f "$candidate/composer.json" ]; then
-                  folder="$(basename "$candidate")"
-                  printf '  folder=%s | env=yes | artisan=yes | composer=yes\n' "$folder"
-                  found=1
+                if [ "$(basename "$candidate")" = "$target_name" ] && [ -f "$candidate/artisan" ] && [ -f "$candidate/composer.json" ]; then
+                  matches="$candidate"
+                  count=$((count + 1))
                 fi
               done < <(find "$HOME" -maxdepth 5 -type f -name '.env' 2>/dev/null)
-              if [ "$found" -eq 0 ]; then
-                echo "  No directory containing .env + artisan + composer.json was found."
+
+              if [ "$count" -eq 1 ]; then
+                DEPLOY_DIR="$matches"
+                echo "Resolved unique Laravel app folder: $(basename "$DEPLOY_DIR")"
+              else
+                echo "ERROR: could not uniquely resolve Laravel app folder '$target_name' (matches=$count)."
+                echo "Laravel roots discovered:"
+                while IFS= read -r env_file; do
+                  candidate="$(dirname "$env_file")"
+                  if [ -f "$candidate/artisan" ] && [ -f "$candidate/composer.json" ]; then
+                    rel="${candidate#$HOME/}"
+                    printf '  relative=%s\n' "$rel"
+                  fi
+                done < <(find "$HOME" -maxdepth 5 -type f -name '.env' 2>/dev/null)
+                rm -f "$RELEASE"
+                exit 1
               fi
-              echo ""
-              echo "Set DEPLOY_PATH to the full path of the Prinx Laravel app root shown above, then run again."
-              rm -f "$RELEASE"
-              exit 1
             fi
 
-            echo "Production environment found in folder: $(basename "$DEPLOY_DIR")"
+            echo "Deploying into resolved folder: $(basename "$DEPLOY_DIR")"
             tar -xzf "$RELEASE" -C "$DEPLOY_DIR"
             rm -f "$RELEASE"
 
@@ -153,6 +162,7 @@ jobs:
             test -f artisan || { echo "ERROR: artisan missing after extraction"; exit 1; }
             test -f composer.json || { echo "ERROR: composer.json missing after extraction"; exit 1; }
             test -f public/build/manifest.json || { echo "ERROR: Vite manifest missing after extraction"; exit 1; }
+            test -f .env || { echo "ERROR: production .env missing"; exit 1; }
 
             composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
