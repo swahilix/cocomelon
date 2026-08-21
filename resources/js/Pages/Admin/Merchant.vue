@@ -12,10 +12,21 @@ const props = defineProps({
     logs: Object,
 });
 
+const settingsForm = useForm({
+    enabled: Boolean(props.config.enabled),
+    account_id: props.config.account_id || '',
+    data_source_id: props.config.data_source_id || '',
+    content_language: props.config.content_language || 'en',
+    feed_label: props.config.feed_label || 'TZ',
+    currency: props.config.currency || 'TZS',
+});
+
 const credentialsForm = useForm({ credentials: null });
 const test = () => router.post('/admin/merchant/test');
 const sync = () => router.post('/admin/merchant/sync-all');
 const badge = (status) => status === 'success' ? 'bg-emerald-100 text-emerald-700' : status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700';
+
+const saveSettings = () => settingsForm.post('/admin/merchant/settings', { preserveScroll: true });
 
 const selectCredentials = (event) => {
     credentialsForm.credentials = event.target.files?.[0] || null;
@@ -35,62 +46,121 @@ const uploadCredentials = () => {
     <AdminLayout>
         <Head title="Google Merchant" />
 
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="section-kicker">Product distribution</p>
                 <h1 class="section-title">Google Merchant Center</h1>
-                <p class="mt-2 max-w-2xl text-sm text-slate-500">Synchronize active products with Google Merchant.</p>
+                <p class="mt-2 max-w-2xl text-sm text-slate-500">Configure the Merchant API, test the connection and synchronize eligible products.</p>
             </div>
-            <div class="flex gap-2">
-                <button class="btn-light" @click="test"><Icon name="link-2" :size="17" /> Test connection</button>
+            <div class="flex flex-wrap gap-2">
+                <button class="btn-light" :disabled="!configured" @click="test"><Icon name="link-2" :size="17" /> Test connection</button>
                 <button class="btn-primary" :disabled="!configured" @click="sync"><Icon name="refresh-2" :size="17" /> Sync all eligible</button>
             </div>
         </div>
 
-        <div :class="['mt-6 rounded-[10px] border p-5', configured ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50']">
+        <div :class="['mt-6 rounded-[10px] border p-4', configured ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50']">
             <div class="flex items-start gap-3">
-                <div :class="['mt-0.5 flex h-8 w-8 items-center justify-center rounded-[8px] text-white', configured ? 'bg-emerald-600' : 'bg-amber-600']">
+                <div :class="['flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] text-white', configured ? 'bg-emerald-600' : 'bg-amber-600']">
                     <Icon :name="configured ? 'tick-circle' : 'warning-2'" :size="18" />
                 </div>
                 <div>
-                    <h2 class="font-semibold">{{ configured ? 'Integration configured' : 'Configuration required' }}</h2>
+                    <h2 class="font-semibold">{{ configured ? 'Google Merchant is ready' : 'Complete the setup below' }}</h2>
                     <p class="mt-1 text-sm leading-6" :class="configured ? 'text-emerald-700' : 'text-amber-800'">
-                        {{ configured ? 'The service-account file and Merchant account settings were detected.' : 'Merchant settings are incomplete. Upload your service-account JSON and complete the Merchant settings.' }}
+                        {{ configured ? 'Credentials and Merchant account settings are complete. You can test the connection or synchronize products.' : 'Your JSON credentials may already be installed, but the Merchant account settings must also be completed before synchronization can start.' }}
                     </p>
                 </div>
             </div>
         </div>
 
-        <section class="card mt-6 overflow-hidden">
-            <div class="flex flex-col gap-4 border-b border-slate-200 p-5 sm:flex-row sm:items-center sm:justify-between">
-                <div class="flex items-start gap-3">
+        <div class="mt-6 grid gap-5 xl:grid-cols-2">
+            <section class="card overflow-hidden">
+                <div class="flex items-start gap-3 border-b border-slate-200 p-5">
                     <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[9px] bg-prinx-50 text-prinx-600">
-                        <Icon name="document-upload" :size="21" />
+                        <Icon name="setting-2" :size="21" />
                     </div>
                     <div>
-                        <h2 class="font-semibold text-slate-900">Google service-account credentials</h2>
-                        <p class="mt-1 text-sm leading-6 text-slate-500">Upload the JSON file downloaded from Google Cloud. The contents stay in private server storage and are never displayed in the admin panel.</p>
+                        <h2 class="font-semibold text-slate-900">Merchant API settings</h2>
+                        <p class="mt-1 text-sm leading-6 text-slate-500">Enter the IDs from your Google Merchant Center account. These settings are saved on the server.</p>
                     </div>
                 </div>
-                <span :class="['status shrink-0', credentialsInstalled ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700']">
-                    <Icon :name="credentialsInstalled ? 'shield-tick' : 'shield-cross'" :size="14" />
-                    {{ credentialsInstalled ? 'Credentials installed' : 'Not uploaded' }}
-                </span>
-            </div>
 
-            <form class="grid gap-4 p-5 lg:grid-cols-[1fr_auto] lg:items-end" @submit.prevent="uploadCredentials">
-                <div>
-                    <label class="label">Service-account JSON file</label>
-                    <input type="file" accept=".json,application/json" class="input file:mr-3 file:rounded-[6px] file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-slate-700" @change="selectCredentials">
-                    <p class="mt-2 text-xs leading-5 text-slate-500">Maximum file size: 1 MB. A valid service-account file must contain project ID, client email and private key.</p>
-                    <p v-if="credentialsForm.errors.credentials" class="error">{{ credentialsForm.errors.credentials }}</p>
+                <form class="space-y-4 p-5" @submit.prevent="saveSettings">
+                    <label class="flex items-center justify-between gap-4 rounded-[9px] border border-slate-200 bg-slate-50 px-4 py-3">
+                        <div>
+                            <span class="block text-sm font-semibold text-slate-800">Enable Google Merchant</span>
+                            <span class="mt-0.5 block text-xs text-slate-500">Allow API testing and product synchronization.</span>
+                        </div>
+                        <input v-model="settingsForm.enabled" type="checkbox" class="h-5 w-5 accent-prinx-500">
+                    </label>
+
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label class="label">Merchant Account ID</label>
+                            <input v-model.trim="settingsForm.account_id" inputmode="numeric" class="input" placeholder="123456789">
+                            <p v-if="settingsForm.errors.account_id" class="error">{{ settingsForm.errors.account_id }}</p>
+                        </div>
+                        <div>
+                            <label class="label">Data Source ID</label>
+                            <input v-model.trim="settingsForm.data_source_id" inputmode="numeric" class="input" placeholder="123456789">
+                            <p v-if="settingsForm.errors.data_source_id" class="error">{{ settingsForm.errors.data_source_id }}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid gap-4 sm:grid-cols-3">
+                        <div>
+                            <label class="label">Language</label>
+                            <input v-model.trim="settingsForm.content_language" class="input" placeholder="en" maxlength="5">
+                            <p v-if="settingsForm.errors.content_language" class="error">{{ settingsForm.errors.content_language }}</p>
+                        </div>
+                        <div>
+                            <label class="label">Feed label</label>
+                            <input v-model.trim="settingsForm.feed_label" class="input" placeholder="TZ" maxlength="50">
+                            <p v-if="settingsForm.errors.feed_label" class="error">{{ settingsForm.errors.feed_label }}</p>
+                        </div>
+                        <div>
+                            <label class="label">Currency</label>
+                            <input v-model.trim="settingsForm.currency" class="input" placeholder="TZS" maxlength="3">
+                            <p v-if="settingsForm.errors.currency" class="error">{{ settingsForm.errors.currency }}</p>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" :disabled="settingsForm.processing">
+                        <Icon name="tick-circle" :size="17" />
+                        {{ settingsForm.processing ? 'Saving...' : 'Save Merchant settings' }}
+                    </button>
+                </form>
+            </section>
+
+            <section class="card overflow-hidden">
+                <div class="flex items-start justify-between gap-4 border-b border-slate-200 p-5">
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[9px] bg-prinx-50 text-prinx-600">
+                            <Icon name="document-upload" :size="21" />
+                        </div>
+                        <div>
+                            <h2 class="font-semibold text-slate-900">Service-account credentials</h2>
+                            <p class="mt-1 text-sm leading-6 text-slate-500">Upload the JSON downloaded from Google Cloud. The original filename does not matter.</p>
+                        </div>
+                    </div>
+                    <span :class="['status shrink-0', credentialsInstalled ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700']">
+                        <Icon :name="credentialsInstalled ? 'shield-tick' : 'shield-cross'" :size="14" />
+                        {{ credentialsInstalled ? 'Installed' : 'Missing' }}
+                    </span>
                 </div>
-                <button class="btn-primary min-w-40" :disabled="credentialsForm.processing || !credentialsForm.credentials">
-                    <Icon name="document-upload" :size="17" />
-                    {{ credentialsForm.processing ? 'Uploading...' : credentialsInstalled ? 'Replace credentials' : 'Upload credentials' }}
-                </button>
-            </form>
-        </section>
+
+                <form class="p-5" @submit.prevent="uploadCredentials">
+                    <label class="label">Google service-account JSON</label>
+                    <input type="file" accept=".json,application/json" class="input file:mr-3 file:rounded-[6px] file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-slate-700" @change="selectCredentials">
+                    <p class="mt-2 text-xs leading-5 text-slate-500">Maximum 1 MB. The system validates the project ID, client email and private key, then stores the file privately as the configured credentials file.</p>
+                    <p v-if="credentialsForm.errors.credentials" class="error">{{ credentialsForm.errors.credentials }}</p>
+
+                    <button class="btn-light mt-4" :disabled="credentialsForm.processing || !credentialsForm.credentials">
+                        <Icon name="document-upload" :size="17" />
+                        {{ credentialsForm.processing ? 'Uploading...' : credentialsInstalled ? 'Replace credentials' : 'Upload credentials' }}
+                    </button>
+                </form>
+            </section>
+        </div>
 
         <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div class="card p-5"><p class="text-xs font-medium uppercase text-slate-400">Eligible products</p><b class="mt-2 block text-3xl font-semibold">{{ counts.eligible }}</b></div>
@@ -99,7 +169,7 @@ const uploadCredentials = () => {
             <div class="card p-5"><p class="text-xs font-medium uppercase text-slate-400">Failed</p><b class="mt-2 block text-3xl font-semibold text-red-600">{{ counts.failed }}</b></div>
         </div>
 
-        <div class="mt-6 grid gap-6 xl:grid-cols-[1fr_360px]">
+        <div class="mt-6 grid gap-6 xl:grid-cols-[1fr_340px]">
             <section class="card overflow-hidden">
                 <div class="border-b p-5"><h2 class="font-semibold">Synchronization log</h2></div>
                 <div class="overflow-x-auto">
@@ -122,26 +192,24 @@ const uploadCredentials = () => {
 
             <aside class="space-y-5">
                 <section class="card p-5">
-                    <h2 class="font-semibold">Current settings</h2>
+                    <h2 class="font-semibold">Setup status</h2>
                     <dl class="mt-4 space-y-3 text-sm">
-                        <div class="flex justify-between gap-3"><dt class="text-slate-500">Enabled</dt><dd class="font-medium">{{ config.enabled ? 'Yes' : 'No' }}</dd></div>
-                        <div class="flex justify-between gap-3"><dt class="text-slate-500">Account ID</dt><dd class="font-medium">{{ config.account_id || 'Not set' }}</dd></div>
-                        <div class="flex justify-between gap-3"><dt class="text-slate-500">Data source</dt><dd class="font-medium">{{ config.data_source_id || 'Not set' }}</dd></div>
-                        <div class="flex justify-between gap-3"><dt class="text-slate-500">Language</dt><dd class="font-medium">{{ config.content_language }}</dd></div>
-                        <div class="flex justify-between gap-3"><dt class="text-slate-500">Feed label</dt><dd class="font-medium">{{ config.feed_label }}</dd></div>
-                        <div class="flex justify-between gap-3"><dt class="text-slate-500">Currency</dt><dd class="font-medium">{{ config.currency }}</dd></div>
+                        <div class="flex justify-between gap-3"><dt class="text-slate-500">Credentials</dt><dd :class="credentialsInstalled ? 'font-medium text-emerald-600' : 'font-medium text-amber-600'">{{ credentialsInstalled ? 'Installed' : 'Missing' }}</dd></div>
+                        <div class="flex justify-between gap-3"><dt class="text-slate-500">Integration</dt><dd :class="config.enabled ? 'font-medium text-emerald-600' : 'font-medium text-slate-500'">{{ config.enabled ? 'Enabled' : 'Disabled' }}</dd></div>
+                        <div class="flex justify-between gap-3"><dt class="text-slate-500">Account ID</dt><dd class="max-w-40 truncate font-medium">{{ config.account_id || 'Not set' }}</dd></div>
+                        <div class="flex justify-between gap-3"><dt class="text-slate-500">Data source</dt><dd class="max-w-40 truncate font-medium">{{ config.data_source_id || 'Not set' }}</dd></div>
                     </dl>
                 </section>
 
                 <section class="rounded-[10px] bg-slate-950 p-5 text-white">
                     <h2 class="font-semibold">Automated refresh</h2>
-                    <p class="mt-2 text-sm leading-6 text-slate-300">Scheduled synchronization status.</p>
+                    <p class="mt-2 text-sm leading-6 text-slate-300">For background synchronization, keep the Laravel scheduler and queue worker running.</p>
                     <code class="mt-4 block rounded-[8px] bg-black/40 p-3 text-xs text-prinx-300">php artisan schedule:work<br>php artisan queue:work</code>
                 </section>
 
                 <section class="card p-5">
                     <h2 class="font-semibold">Fallback XML feed</h2>
-                    <p class="mt-2 text-sm text-slate-500">XML product feed.</p>
+                    <p class="mt-2 text-sm text-slate-500">Google-compatible XML product feed.</p>
                     <a href="/google-merchant-feed.xml" target="_blank" class="btn-light mt-4 w-full"><Icon name="document-text" :size="17" /> Open product feed</a>
                 </section>
             </aside>
