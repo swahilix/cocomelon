@@ -31,6 +31,12 @@ const sections = [
             ['Google Merchant', '/admin/merchant', 'shop'],
         ],
     },
+    {
+        label: 'System',
+        items: [
+            ['System monitoring', '/admin/system-monitor', 'monitor-recorder'],
+        ],
+    },
 ];
 const active = (url) => url === '/admin' ? page.url === '/admin' : page.url.startsWith(url);
 const logout = () => router.post('/logout');
