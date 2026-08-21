@@ -176,14 +176,44 @@ jobs:
             test -f public/build/manifest.json || { echo "ERROR: Vite manifest missing after extraction"; exit 1; }
             test -f .env || { echo "ERROR: production .env missing"; exit 1; }
 
-            echo "PHP runtime:"
-            php -v | head -1
+            # cPanel shared hosting often keeps the default `php` CLI on an
+            # older version even when the domain itself is configured for 8.3.
+            # Find an installed PHP >= 8.3 binary and use it for all Artisan work.
+            PHP_BIN=""
+            for candidate in \
+              /opt/cpanel/ea-php83/root/usr/bin/php \
+              /opt/alt/php83/usr/bin/php \
+              /usr/local/bin/ea-php83 \
+              /usr/local/bin/php83 \
+              /usr/bin/php83 \
+              "$(command -v ea-php83 2>/dev/null || true)" \
+              "$(command -v alt-php83 2>/dev/null || true)" \
+              "$(command -v php83 2>/dev/null || true)" \
+              "$(command -v php 2>/dev/null || true)"; do
+              [ -n "$candidate" ] || continue
+              [ -x "$candidate" ] || continue
+              if "$candidate" -r 'exit(version_compare(PHP_VERSION, "8.3.0", ">=") ? 0 : 1);' >/dev/null 2>&1; then
+                PHP_BIN="$candidate"
+                break
+              fi
+            done
 
-            php artisan optimize:clear
-            php artisan migrate --force
-            php artisan storage:link || true
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
+            if [ -z "$PHP_BIN" ]; then
+              echo "ERROR: no PHP 8.3+ CLI binary was found on this cPanel account."
+              echo "Default CLI PHP is:"
+              php -v | head -1 || true
+              echo "Configure PHP 8.3 for the domain in cPanel and ensure its CLI binary is available."
+              exit 1
+            fi
+
+            echo "Deployment PHP runtime:"
+            "$PHP_BIN" -v | head -1
+
+            "$PHP_BIN" artisan optimize:clear
+            "$PHP_BIN" artisan migrate --force
+            "$PHP_BIN" artisan storage:link || true
+            "$PHP_BIN" artisan config:cache
+            "$PHP_BIN" artisan route:cache
+            "$PHP_BIN" artisan view:cache
 
             echo "Deployment complete: ${{ github.sha }}"
