@@ -1,5 +1,6 @@
 <script setup>
 import { Link, router, usePage } from '@inertiajs/vue3';
+import Icon from './Icon.vue';
 
 const props = defineProps({
     product: Object,
@@ -41,7 +42,7 @@ const add = () => router.post(`/cart/${props.product.slug}`, { quantity: 1 }, { 
                     <div v-if="Number(product.current_price) < Number(product.price)" class="text-xs font-semibold text-slate-400 line-through">{{ money(product.price) }}</div>
                 </div>
                 <button type="button" :class="['inline-flex shrink-0 items-center justify-center rounded-[10px] bg-slate-950 text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-prinx-500 disabled:cursor-not-allowed disabled:opacity-40', compactMobile ? 'h-9 w-9 sm:h-11 sm:w-11' : 'h-11 w-11']" :disabled="!product.in_stock" @click="add" :aria-label="`Add ${product.name} to cart`">
-                    <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="2"><path d="M3 3h2l2.4 11.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L21 7H6"/><path d="M12 9v4M10 11h4"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>
+                    <Icon name="shopping-cart" :size="20" />
                 </button>
             </div>
         </div>

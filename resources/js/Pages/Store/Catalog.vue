@@ -5,96 +5,24 @@ import AppLayout from '../../Layouts/AppLayout.vue';
 import ProductCard from '../../Components/ProductCard.vue';
 import Pagination from '../../Components/Pagination.vue';
 import SeoHead from '../../Components/SeoHead.vue';
+import Icon from '../../Components/Icon.vue';
 
-const props = defineProps({
-    products: Object,
-    categories: Array,
-    brands: Array,
-    filters: Object,
-    selectedCategory: { type: Object, default: null },
-});
-
-const form = reactive({
-    search: props.filters.search || '',
-    category: props.filters.category || '',
-    brand: props.filters.brand || '',
-    in_stock: !!props.filters.in_stock,
-    min_price: props.filters.min_price || '',
-    max_price: props.filters.max_price || '',
-    sort: props.filters.sort || '',
-});
-
+const props = defineProps({ products: Object, categories: Array, brands: Array, filters: Object, selectedCategory: { type: Object, default: null } });
+const form = reactive({ search: props.filters.search || '', category: props.filters.category || '', brand: props.filters.brand || '', in_stock: !!props.filters.in_stock, min_price: props.filters.min_price || '', max_price: props.filters.max_price || '', sort: props.filters.sort || '' });
 const hasSecondaryFilters = computed(() => !!(form.search || (!props.selectedCategory && form.category) || form.brand || form.in_stock || form.min_price || form.max_price || form.sort));
 const title = computed(() => props.selectedCategory ? `${props.selectedCategory.name} | Shop` : 'Shop Electronics');
 const description = computed(() => props.selectedCategory?.description || 'Browse electronics, smartphones, computers and accessories from Prinx Electronics.');
 const canonical = computed(() => props.selectedCategory ? `/shop/category/${props.selectedCategory.slug}` : '/shop');
-const apply = () => {
-    const data = { ...form, category: props.selectedCategory?.slug || form.category || '' };
-    router.get('/shop', data, { preserveState: true, replace: true, preserveScroll: true });
-};
+const apply = () => { const data = { ...form, category: props.selectedCategory?.slug || form.category || '' }; router.get('/shop', data, { preserveState: true, replace: true, preserveScroll: true }); };
 const selectCategory = (category) => router.get('/shop', category ? { category: category.slug } : {}, { preserveState: false });
-const reset = () => {
-    Object.assign(form, { search: '', category: '', brand: '', in_stock: false, min_price: '', max_price: '', sort: '' });
-    router.get('/shop');
-};
+const reset = () => { Object.assign(form, { search: '', category: '', brand: '', in_stock: false, min_price: '', max_price: '', sort: '' }); router.get('/shop'); };
 </script>
 
 <template>
     <AppLayout>
         <SeoHead :title="title" :description="description" :canonical="canonical" :robots="hasSecondaryFilters ? 'noindex,follow' : 'index,follow,max-image-preview:large'" />
-
-        <section class="relative overflow-hidden border-b border-slate-800 bg-slate-950 text-white">
-            <div class="absolute inset-0 opacity-20" style="background-image:radial-gradient(circle at 80% 10%,rgba(249,115,22,.65),transparent 25%),linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:auto,36px 36px,36px 36px"></div>
-            <div class="container-shell relative py-12 sm:py-16">
-                <p class="text-xs font-black uppercase tracking-[.2em] text-prinx-400">Product catalogue</p>
-                <h1 class="mt-3 max-w-3xl text-3xl font-black tracking-tight sm:text-5xl">{{ selectedCategory?.name || 'Electronics for every need' }}</h1>
-                <p class="mt-4 max-w-2xl text-base leading-7 text-slate-300">{{ selectedCategory?.description || 'Search by category or brand and compare clear pricing, stock and product specifications before ordering.' }}</p>
-                <div v-if="selectedCategory" class="mt-6 flex items-center gap-2 text-sm font-bold text-slate-400"><Link href="/shop" class="hover:text-white">All products</Link><span>/</span><span class="text-prinx-400">{{ selectedCategory.name }}</span></div>
-            </div>
-        </section>
-
-        <section class="border-b border-slate-200 bg-white py-6">
-            <div class="container-shell">
-                <div class="category-carousel">
-                    <button :class="['category-selector-card rounded-[10px] border p-2.5 text-left transition', !selectedCategory ? 'border-prinx-500 bg-prinx-50' : 'border-slate-200 hover:border-prinx-200']" @click="selectCategory(null)">
-                        <span class="text-[9px] font-black uppercase tracking-wide text-prinx-600">All</span>
-                        <b class="mt-1 block truncate text-sm text-slate-950">All products</b>
-                        <span class="mt-1 block truncate text-[11px] text-slate-500">{{ products.total }} currently shown</span>
-                    </button>
-                    <button v-for="category in categories" :key="category.id" :class="['category-selector-card flex items-center gap-2 rounded-[10px] border p-2.5 text-left transition', selectedCategory?.id === category.id ? 'border-prinx-500 bg-prinx-50' : 'border-slate-200 hover:border-prinx-200 hover:bg-slate-50']" @click="selectCategory(category)">
-                        <img :src="category.image_url" :alt="`Browse ${category.name} products at Prinx Electronics`" :title="category.name" loading="lazy" decoding="async" class="h-10 w-10 shrink-0 rounded-[8px] bg-slate-100 object-cover">
-                        <span class="min-w-0"><b class="block truncate text-xs text-slate-950">{{ category.name }}</b><small class="mt-1 block truncate text-[10px] font-semibold text-slate-500">{{ category.products_count }} products</small></span>
-                    </button>
-                </div>
-            </div>
-        </section>
-
-        <div class="container-shell grid gap-8 py-10 lg:grid-cols-[280px_1fr]">
-            <aside>
-                <form class="card sticky top-32 overflow-hidden" @submit.prevent="apply">
-                    <div class="border-b border-slate-200 bg-slate-50 px-5 py-4"><h2 class="font-black text-slate-950">Filter products</h2><p class="mt-1 text-xs text-slate-500">Narrow the catalogue quickly.</p></div>
-                    <div class="space-y-5 p-5">
-                        <div><label class="label">Search</label><div class="relative"><svg viewBox="0 0 24 24" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 fill-none stroke-slate-400" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input v-model="form.search" class="input pl-9" placeholder="Product or SKU"></div></div>
-                        <div v-if="!selectedCategory"><label class="label">Category</label><select v-model="form.category" class="input"><option value="">All categories</option><option v-for="category in categories" :key="category.id" :value="category.slug">{{ category.name }}</option></select></div>
-                        <div><label class="label">Brand</label><select v-model="form.brand" class="input"><option value="">All brands</option><option v-for="brand in brands" :key="brand.id" :value="brand.slug">{{ brand.name }}</option></select></div>
-                        <div><label class="label">Price range</label><div class="grid grid-cols-2 gap-3"><input v-model="form.min_price" type="number" min="0" class="input" placeholder="Minimum"><input v-model="form.max_price" type="number" min="0" class="input" placeholder="Maximum"></div></div>
-                        <label class="flex cursor-pointer items-center justify-between rounded-[10px] border border-slate-200 p-3 text-sm font-bold text-slate-700"><span>In-stock products only</span><input v-model="form.in_stock" type="checkbox" class="h-4 w-4 accent-prinx-500"></label>
-                        <button class="btn-primary w-full">Apply filters</button>
-                        <button type="button" class="w-full text-sm font-bold text-slate-500 hover:text-prinx-600" @click="reset">Clear filters</button>
-                    </div>
-                </form>
-            </aside>
-
-            <section>
-                <div class="mb-6 flex flex-col gap-4 rounded-[10px] border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div><p class="text-sm text-slate-500"><b class="text-lg font-black text-slate-950">{{ products.total }}</b> products found</p><p v-if="selectedCategory" class="mt-1 text-xs font-semibold text-prinx-600">Category: {{ selectedCategory.name }}</p></div>
-                    <select v-model="form.sort" class="input w-full sm:w-56" @change="apply"><option value="">Recommended</option><option value="newest">Newest first</option><option value="price_low">Price: low to high</option><option value="price_high">Price: high to low</option><option value="name">Name A–Z</option></select>
-                </div>
-
-                <div v-if="products.data.length" class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3"><ProductCard v-for="product in products.data" :key="product.id" :product="product" /></div>
-                <div v-else class="card py-20 text-center"><div class="mx-auto flex h-16 w-16 items-center justify-center rounded-[10px] bg-prinx-50 text-2xl">⌕</div><h2 class="mt-5 text-xl font-black">No products found</h2><p class="mt-2 text-sm text-slate-500">Try another category, brand or search phrase.</p><button class="btn-primary mt-5" @click="reset">Clear filters</button></div>
-                <Pagination :links="products.links" />
-            </section>
-        </div>
+        <section class="relative overflow-hidden border-b border-slate-800 bg-slate-950 text-white"><div class="absolute inset-0 opacity-20" style="background-image:radial-gradient(circle at 80% 10%,rgba(249,115,22,.65),transparent 25%),linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:auto,36px 36px,36px 36px"></div><div class="container-shell relative py-12 sm:py-16"><p class="text-xs font-black uppercase tracking-[.2em] text-prinx-400">Product catalogue</p><h1 class="mt-3 max-w-3xl text-3xl font-black tracking-tight sm:text-5xl">{{ selectedCategory?.name || 'Electronics for every need' }}</h1><p class="mt-4 max-w-2xl text-base leading-7 text-slate-300">{{ selectedCategory?.description || 'Search by category or brand and compare clear pricing, stock and product specifications before ordering.' }}</p><div v-if="selectedCategory" class="mt-6 flex items-center gap-2 text-sm font-bold text-slate-400"><Link href="/shop" class="hover:text-white">All products</Link><span>/</span><span class="text-prinx-400">{{ selectedCategory.name }}</span></div></div></section>
+        <section class="border-b border-slate-200 bg-white py-6"><div class="container-shell"><div class="category-carousel"><button :class="['category-selector-card rounded-[10px] border p-2.5 text-left transition', !selectedCategory ? 'border-prinx-500 bg-prinx-50' : 'border-slate-200 hover:border-prinx-200']" @click="selectCategory(null)"><span class="text-[9px] font-black uppercase tracking-wide text-prinx-600">All</span><b class="mt-1 block truncate text-sm text-slate-950">All products</b><span class="mt-1 block truncate text-[11px] text-slate-500">{{ products.total }} currently shown</span></button><button v-for="category in categories" :key="category.id" :class="['category-selector-card flex items-center gap-2 rounded-[10px] border p-2.5 text-left transition', selectedCategory?.id === category.id ? 'border-prinx-500 bg-prinx-50' : 'border-slate-200 hover:border-prinx-200 hover:bg-slate-50']" @click="selectCategory(category)"><img :src="category.image_url" :alt="`Browse ${category.name} products at Prinx Electronics`" :title="category.name" loading="lazy" decoding="async" class="h-10 w-10 shrink-0 rounded-[8px] bg-slate-100 object-cover"><span class="min-w-0"><b class="block truncate text-xs text-slate-950">{{ category.name }}</b><small class="mt-1 block truncate text-[10px] font-semibold text-slate-500">{{ category.products_count }} products</small></span></button></div></div></section>
+        <div class="container-shell grid gap-8 py-10 lg:grid-cols-[280px_1fr]"><aside><form class="card sticky top-32 overflow-hidden" @submit.prevent="apply"><div class="border-b border-slate-200 bg-slate-50 px-5 py-4"><h2 class="font-black text-slate-950">Filter products</h2><p class="mt-1 text-xs text-slate-500">Narrow the catalogue quickly.</p></div><div class="space-y-5 p-5"><div><label class="label">Search</label><div class="relative"><Icon name="search-normal" :size="17" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" /><input v-model="form.search" class="input pl-9" placeholder="Product or SKU"></div></div><div v-if="!selectedCategory"><label class="label">Category</label><select v-model="form.category" class="input"><option value="">All categories</option><option v-for="category in categories" :key="category.id" :value="category.slug">{{ category.name }}</option></select></div><div><label class="label">Brand</label><select v-model="form.brand" class="input"><option value="">All brands</option><option v-for="brand in brands" :key="brand.id" :value="brand.slug">{{ brand.name }}</option></select></div><div><label class="label">Price range</label><div class="grid grid-cols-2 gap-3"><input v-model="form.min_price" type="number" min="0" class="input" placeholder="Minimum"><input v-model="form.max_price" type="number" min="0" class="input" placeholder="Maximum"></div></div><label class="flex cursor-pointer items-center justify-between rounded-[10px] border border-slate-200 p-3 text-sm font-bold text-slate-700"><span>In-stock products only</span><input v-model="form.in_stock" type="checkbox" class="h-4 w-4 accent-prinx-500"></label><button class="btn-primary w-full">Apply filters</button><button type="button" class="w-full text-sm font-bold text-slate-500 hover:text-prinx-600" @click="reset">Clear filters</button></div></form></aside><section><div class="mb-6 flex flex-col gap-4 rounded-[10px] border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between"><div><p class="text-sm text-slate-500"><b class="text-lg font-black text-slate-950">{{ products.total }}</b> products found</p><p v-if="selectedCategory" class="mt-1 text-xs font-semibold text-prinx-600">Category: {{ selectedCategory.name }}</p></div><select v-model="form.sort" class="input w-full sm:w-56" @change="apply"><option value="">Recommended</option><option value="newest">Newest first</option><option value="price_low">Price: low to high</option><option value="price_high">Price: high to low</option><option value="name">Name A–Z</option></select></div><div v-if="products.data.length" class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3"><ProductCard v-for="product in products.data" :key="product.id" :product="product" /></div><div v-else class="card py-20 text-center"><div class="mx-auto flex h-16 w-16 items-center justify-center rounded-[10px] bg-prinx-50 text-prinx-600"><Icon name="search-status" :size="28" /></div><h2 class="mt-5 text-xl font-black">No products found</h2><p class="mt-2 text-sm text-slate-500">Try another category, brand or search phrase.</p><button class="btn-primary mt-5" @click="reset">Clear filters</button></div><Pagination :links="products.links" /></section></div>
     </AppLayout>
 </template>
