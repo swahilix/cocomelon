@@ -1,9 +1,108 @@
 <?php
+
 namespace App\Http\Controllers\Admin;
-use App\Http\Controllers\Controller; use App\Jobs\SyncProductToGoogleMerchant; use App\Models\{MerchantSyncLog,Product}; use App\Services\GoogleMerchantService; use Illuminate\Http\RedirectResponse; use Inertia\{Inertia,Response}; use Throwable;
-class MerchantController extends Controller {
- public function index(GoogleMerchantService $m): Response {return Inertia::render('Admin/Merchant',['configured'=>$m->configured(),'config'=>['enabled'=>config('merchant.enabled'),'account_id'=>config('merchant.account_id'),'data_source_id'=>config('merchant.data_source_id'),'feed_label'=>config('merchant.feed_label'),'content_language'=>config('merchant.content_language'),'currency'=>config('merchant.currency')],'counts'=>['eligible'=>Product::merchantEligible()->count(),'synced'=>Product::where('merchant_sync_status','synced')->count(),'failed'=>Product::where('merchant_sync_status','failed')->count(),'pending'=>Product::where('merchant_sync_status','pending')->count()],'logs'=>MerchantSyncLog::with('product:id,name,slug')->latest()->paginate(20)]);}
- public function syncAll(): RedirectResponse {Product::merchantEligible()->select('id')->chunkById(100,fn($ps)=>$ps->each(fn($p)=>SyncProductToGoogleMerchant::dispatch($p->id)));return back()->with('success','Eligible products queued for Google Merchant sync.');}
- public function sync(Product $product): RedirectResponse {if (!$product->merchant_ready) return back()->with('error','This product is not Merchant-ready. Add a public image and GTIN, or brand plus MPN.');SyncProductToGoogleMerchant::dispatch($product->id);return back()->with('success','Product queued for Google Merchant sync.');}
- public function test(GoogleMerchantService $m): RedirectResponse {try{$m->testConnection();return back()->with('success','Google Merchant connection is working.');}catch(Throwable $e){return back()->with('error',$e->getMessage());}}
+
+use App\Http\Controllers\Controller;
+use App\Jobs\SyncProductToGoogleMerchant;
+use App\Models\MerchantSyncLog;
+use App\Models\Product;
+use App\Services\GoogleMerchantService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\File;
+use Inertia\Inertia;
+use Inertia\Response;
+use JsonException;
+use Throwable;
+
+class MerchantController extends Controller
+{
+    public function index(GoogleMerchantService $merchant): Response
+    {
+        return Inertia::render('Admin/Merchant', [
+            'configured' => $merchant->configured(),
+            'credentialsInstalled' => is_file($merchant->credentialsPath()),
+            'config' => [
+                'enabled' => config('merchant.enabled'),
+                'account_id' => config('merchant.account_id'),
+                'data_source_id' => config('merchant.data_source_id'),
+                'feed_label' => config('merchant.feed_label'),
+                'content_language' => config('merchant.content_language'),
+                'currency' => config('merchant.currency'),
+            ],
+            'counts' => [
+                'eligible' => Product::merchantEligible()->count(),
+                'synced' => Product::where('merchant_sync_status', 'synced')->count(),
+                'failed' => Product::where('merchant_sync_status', 'failed')->count(),
+                'pending' => Product::where('merchant_sync_status', 'pending')->count(),
+            ],
+            'logs' => MerchantSyncLog::with('product:id,name,slug')->latest()->paginate(20),
+        ]);
+    }
+
+    public function uploadCredentials(Request $request, GoogleMerchantService $merchant): RedirectResponse
+    {
+        $request->validate([
+            'credentials' => ['required', 'file', 'mimes:json,txt', 'max:1024'],
+        ]);
+
+        try {
+            $contents = $request->file('credentials')->get();
+            $credentials = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            return back()->withErrors(['credentials' => 'The selected file is not valid JSON.']);
+        }
+
+        if (! is_array($credentials)
+            || ($credentials['type'] ?? null) !== 'service_account'
+            || blank($credentials['client_email'] ?? null)
+            || blank($credentials['private_key'] ?? null)
+            || blank($credentials['project_id'] ?? null)) {
+            return back()->withErrors([
+                'credentials' => 'Upload a valid Google service-account JSON file containing type, project_id, client_email and private_key.',
+            ]);
+        }
+
+        $path = $merchant->credentialsPath();
+        File::ensureDirectoryExists(dirname($path), 0700, true);
+        File::put($path, $contents, true);
+
+        @chmod($path, 0600);
+        Cache::forget('google-merchant-access-token');
+
+        return back()->with('success', 'Google Merchant service-account credentials uploaded securely.');
+    }
+
+    public function syncAll(): RedirectResponse
+    {
+        Product::merchantEligible()->select('id')->chunkById(
+            100,
+            fn ($products) => $products->each(fn ($product) => SyncProductToGoogleMerchant::dispatch($product->id))
+        );
+
+        return back()->with('success', 'Eligible products queued for Google Merchant sync.');
+    }
+
+    public function sync(Product $product): RedirectResponse
+    {
+        if (! $product->merchant_ready) {
+            return back()->with('error', 'This product is not Merchant-ready. Add a public image and GTIN, or brand plus MPN.');
+        }
+
+        SyncProductToGoogleMerchant::dispatch($product->id);
+
+        return back()->with('success', 'Product queued for Google Merchant sync.');
+    }
+
+    public function test(GoogleMerchantService $merchant): RedirectResponse
+    {
+        try {
+            $merchant->testConnection();
+
+            return back()->with('success', 'Google Merchant connection is working.');
+        } catch (Throwable $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+    }
 }
