@@ -10,19 +10,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           extensions: mbstring, pdo_sqlite
           coverage: none
+
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+
       - run: composer install --no-interaction --prefer-dist
       - run: cp .env.example .env && php artisan key:generate
       - run: npm install
       - run: npm run build
       - run: php artisan test
+
       - name: Smoke test Inertia SSR server
         shell: bash
         run: |
@@ -36,8 +40,37 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: test
     runs-on: ubuntu-latest
+
     steps:
-      - name: Deploy over SSH
+      - name: Checkout release
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build production assets
+        run: |
+          npm install
+          npm run build
+
+      - name: Create deployment package
+        shell: bash
+        run: |
+          tar \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='.env' \
+            --exclude='node_modules' \
+            --exclude='vendor' \
+            --exclude='storage/logs/*' \
+            --exclude='storage/framework/cache/*' \
+            --exclude='storage/framework/sessions/*' \
+            --exclude='storage/framework/views/*' \
+            -czf prinx-release.tar.gz .
+
+      - name: Prepare deployment directory
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -46,5 +79,53 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           script: |
-            echo "SSH connection successful"
-            echo "Workflow trigger test: 2026-08-21 12:29 EAT"
+            set -e
+            if [ -z "${{ secrets.DEPLOY_PATH }}" ]; then
+              echo "DEPLOY_PATH secret is missing"
+              exit 1
+            fi
+            mkdir -p "${{ secrets.DEPLOY_PATH }}"
+            echo "Deploying to: ${{ secrets.DEPLOY_PATH }}"
+
+      - name: Upload release
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: prinx-release.tar.gz
+          target: ${{ secrets.DEPLOY_PATH }}
+
+      - name: Activate release
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          script: |
+            set -e
+            cd "${{ secrets.DEPLOY_PATH }}"
+
+            echo "Extracting commit ${{ github.sha }}"
+            tar -xzf prinx-release.tar.gz
+            rm -f prinx-release.tar.gz
+
+            if [ ! -f .env ]; then
+              echo "Production .env is missing at ${{ secrets.DEPLOY_PATH }}/.env"
+              exit 1
+            fi
+
+            composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+            php artisan optimize:clear
+            php artisan migrate --force
+            php artisan storage:link || true
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+
+            echo "Deployment complete: ${{ github.sha }}"
