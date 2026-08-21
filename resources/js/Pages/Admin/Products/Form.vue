@@ -7,6 +7,7 @@ const props = defineProps({ product: Object, categories: Array, brands: Array, a
 const p = props.product || {};
 
 const form = useForm({
+    _method: p.id ? 'PATCH' : 'POST',
     category_id: p.category_id || '',
     brand_id: p.brand_id || '',
     name: p.name || '',
@@ -55,14 +56,19 @@ const submit = () => {
     form.clearErrors();
 
     if (p.id) {
-        form.transform((data) => ({ ...data, _method: 'patch' })).post(`/admin/products/${p.slug}`, {
+        form._method = 'PATCH';
+        form.post(`/admin/products/${p.slug}`, {
             forceFormData: true,
             preserveScroll: true,
         });
         return;
     }
 
-    form.post('/admin/products', { forceFormData: true, preserveScroll: true });
+    form._method = 'POST';
+    form.post('/admin/products', {
+        forceFormData: true,
+        preserveScroll: true,
+    });
 };
 </script>
 
@@ -83,30 +89,30 @@ const submit = () => {
                     <div class="mt-4 grid gap-4 sm:grid-cols-2">
                         <div class="sm:col-span-2">
                             <label class="label">Product name</label>
-                            <input v-model="form.name" class="input">
+                            <input v-model.trim="form.name" name="name" class="input" autocomplete="off">
                             <p v-if="form.errors.name" class="error">{{ form.errors.name }}</p>
                         </div>
                         <div>
                             <label class="label">SKU</label>
-                            <input v-model="form.sku" class="input">
+                            <input v-model.trim="form.sku" name="sku" class="input">
                             <p v-if="form.errors.sku" class="error">{{ form.errors.sku }}</p>
                         </div>
                         <div>
                             <label class="label">Category</label>
-                            <select v-model="form.category_id" class="input"><option value="">Select</option><option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option></select>
+                            <select v-model="form.category_id" name="category_id" class="input"><option value="">Select</option><option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option></select>
                             <p v-if="form.errors.category_id" class="error">{{ form.errors.category_id }}</p>
                         </div>
                         <div>
                             <label class="label">Brand</label>
-                            <select v-model="form.brand_id" class="input"><option value="">No brand</option><option v-for="b in brands" :key="b.id" :value="b.id">{{ b.name }}</option></select>
+                            <select v-model="form.brand_id" name="brand_id" class="input"><option value="">No brand</option><option v-for="b in brands" :key="b.id" :value="b.id">{{ b.name }}</option></select>
                             <p v-if="form.errors.brand_id" class="error">{{ form.errors.brand_id }}</p>
                         </div>
-                        <div><label class="label">Price</label><input v-model="form.price" type="number" class="input"><p v-if="form.errors.price" class="error">{{ form.errors.price }}</p></div>
-                        <div><label class="label">Sale price</label><input v-model="form.sale_price" type="number" class="input"><p v-if="form.errors.sale_price" class="error">{{ form.errors.sale_price }}</p></div>
-                        <div><label class="label">Stock</label><input v-model="form.stock_quantity" type="number" class="input"></div>
-                        <div><label class="label">Low stock alert</label><input v-model="form.low_stock_threshold" type="number" class="input"></div>
-                        <div class="sm:col-span-2"><label class="label">Short description</label><textarea v-model="form.short_description" class="input" rows="3"></textarea></div>
-                        <div class="sm:col-span-2"><label class="label">Description</label><textarea v-model="form.description" class="input" rows="10"></textarea><p v-if="form.errors.description" class="error">{{ form.errors.description }}</p></div>
+                        <div><label class="label">Price</label><input v-model="form.price" name="price" type="number" class="input"><p v-if="form.errors.price" class="error">{{ form.errors.price }}</p></div>
+                        <div><label class="label">Sale price</label><input v-model="form.sale_price" name="sale_price" type="number" class="input"><p v-if="form.errors.sale_price" class="error">{{ form.errors.sale_price }}</p></div>
+                        <div><label class="label">Stock</label><input v-model="form.stock_quantity" name="stock_quantity" type="number" class="input"></div>
+                        <div><label class="label">Low stock alert</label><input v-model="form.low_stock_threshold" name="low_stock_threshold" type="number" class="input"></div>
+                        <div class="sm:col-span-2"><label class="label">Short description</label><textarea v-model="form.short_description" name="short_description" class="input" rows="3"></textarea></div>
+                        <div class="sm:col-span-2"><label class="label">Description</label><textarea v-model="form.description" name="description" class="input" rows="10"></textarea><p v-if="form.errors.description" class="error">{{ form.errors.description }}</p></div>
                         <div class="sm:col-span-2"><label class="label">Specifications <span class="text-xs text-slate-400">one per line: Label: Value</span></label><textarea v-model="form.specifications_text" class="input font-mono" rows="7"></textarea></div>
                     </div>
                 </section>
