@@ -140,8 +140,10 @@ class MerchantController extends Controller
 
     public function sync(Product $product): RedirectResponse
     {
-        if (! $product->merchant_ready) {
-            return back()->with('error', 'This product is not Merchant-ready. Add a public image and GTIN, or brand plus MPN.');
+        $issues = $product->merchantReadinessIssues();
+
+        if ($issues !== []) {
+            return back()->with('error', 'This product is not Merchant-ready. Missing: '.implode('; ', $issues).'.');
         }
 
         SyncProductToGoogleMerchant::dispatch($product->id);
