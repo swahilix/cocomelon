@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ProductReelController;
 use App\Http\Controllers\Admin\ServiceController as AdminServiceController;
+use App\Http\Controllers\Admin\SystemMonitorController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
@@ -94,4 +95,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::post('merchant/test', [MerchantController::class, 'test'])->name('merchant.test');
     Route::post('merchant/sync-all', [MerchantController::class, 'syncAll'])->name('merchant.sync-all');
     Route::post('merchant/products/{product}', [MerchantController::class, 'sync'])->name('merchant.sync');
+
+    Route::get('system-monitor', SystemMonitorController::class)->name('system-monitor');
 });
