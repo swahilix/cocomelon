@@ -131,8 +131,6 @@ jobs:
             echo "Checking staged release: $RELEASE"
             test -f "$RELEASE" || { echo "ERROR: release archive was not uploaded to $HOME"; exit 1; }
 
-            # If the configured full path is stale/wrong, resolve it safely by
-            # matching its folder name against existing Laravel roots.
             if [ ! -f "$DEPLOY_DIR/.env" ] || [ ! -f "$DEPLOY_DIR/artisan" ] || [ ! -f "$DEPLOY_DIR/composer.json" ]; then
               target_name="$(basename "$DEPLOY_DIR")"
               echo "Configured full path is not a Laravel root; resolving folder: $target_name"
@@ -166,6 +164,13 @@ jobs:
             fi
 
             echo "Deploying into resolved folder: $(basename "$DEPLOY_DIR")"
+
+            # Releases are extracted over the existing cPanel app directory.
+            # Remove files that existed in the reconstructed branch but were
+            # removed from the canonical uploaded Prinx source, otherwise old
+            # migrations continue to be discovered by Laravel.
+            rm -f "$DEPLOY_DIR/database/migrations/2026_08_21_000800_add_commerce_operations.php"
+
             tar -xzf "$RELEASE" -C "$DEPLOY_DIR"
             rm -f "$RELEASE"
 
@@ -176,9 +181,6 @@ jobs:
             test -f public/build/manifest.json || { echo "ERROR: Vite manifest missing after extraction"; exit 1; }
             test -f .env || { echo "ERROR: production .env missing"; exit 1; }
 
-            # cPanel shared hosting often keeps the default `php` CLI on an
-            # older version even when the domain itself is configured for 8.3.
-            # Find an installed PHP >= 8.3 binary and use it for all Artisan work.
             PHP_BIN=""
             for candidate in \
               /opt/cpanel/ea-php83/root/usr/bin/php \
