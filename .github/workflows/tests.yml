@@ -54,8 +54,25 @@ jobs:
         run: |
           npm install
           npm run build
-          echo "Built asset manifest:"
-          find public/build -maxdepth 2 -type f -name 'manifest.json' -print
+          test -f public/build/manifest.json
+
+      - name: Create deployment archive
+        shell: bash
+        run: |
+          rm -f /tmp/prinx-release.tar.gz prinx-release.tar.gz
+          tar \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='.env' \
+            --exclude='node_modules' \
+            --exclude='vendor' \
+            --exclude='storage/logs/*' \
+            --exclude='storage/framework/cache/*' \
+            --exclude='storage/framework/sessions/*' \
+            --exclude='storage/framework/views/*' \
+            -czf /tmp/prinx-release.tar.gz .
+          mv /tmp/prinx-release.tar.gz prinx-release.tar.gz
+          ls -lh prinx-release.tar.gz
 
       - name: Prepare deployment directory
         uses: appleboy/ssh-action@v1.2.0
@@ -72,9 +89,11 @@ jobs:
               exit 1
             fi
             mkdir -p "${{ secrets.DEPLOY_PATH }}"
+            rm -f "$HOME/prinx-release.tar.gz"
+            echo "Home directory: $HOME"
             echo "Deploying commit ${{ github.sha }} to ${{ secrets.DEPLOY_PATH }}"
 
-      - name: Upload application files
+      - name: Upload release to cPanel home
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -82,8 +101,8 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: "app,bootstrap,config,database,public,resources,routes,storage,artisan,composer.json,package.json,phpunit.xml,postcss.config.js,tailwind.config.js,vite.config.js"
-          target: ${{ secrets.DEPLOY_PATH }}
+          source: "prinx-release.tar.gz"
+          target: "./"
           overwrite: true
           debug: true
 
@@ -98,31 +117,28 @@ jobs:
           script: |
             set -e
             DEPLOY_DIR="${{ secrets.DEPLOY_PATH }}"
-            cd "$DEPLOY_DIR"
+            RELEASE="$HOME/prinx-release.tar.gz"
 
-            echo "Deployment directory: $(pwd)"
-            echo "Top-level uploaded files:"
-            ls -la
-            echo "Looking for Laravel/Vite files:"
-            find "$DEPLOY_DIR" -maxdepth 4 \( -name artisan -o -name composer.json -o -name manifest.json \) -print 2>/dev/null || true
+            echo "Checking staged release: $RELEASE"
+            ls -lh "$HOME" | head -50
 
-            missing=0
-            if [ ! -f artisan ]; then
-              echo "ERROR: artisan is missing from $DEPLOY_DIR"
-              missing=1
-            fi
-            if [ ! -f composer.json ]; then
-              echo "ERROR: composer.json is missing from $DEPLOY_DIR"
-              missing=1
-            fi
-            if [ ! -f public/build/manifest.json ]; then
-              echo "ERROR: public/build/manifest.json is missing from $DEPLOY_DIR"
-              missing=1
-            fi
-            if [ "$missing" -ne 0 ]; then
-              echo "Upload layout verification failed. See directory listing above."
+            if [ ! -f "$RELEASE" ]; then
+              echo "ERROR: release archive was not uploaded to $HOME"
+              find "$HOME" -maxdepth 3 -name 'prinx-release.tar.gz' -print 2>/dev/null || true
               exit 1
             fi
+
+            mkdir -p "$DEPLOY_DIR"
+            echo "Extracting commit ${{ github.sha }} into $DEPLOY_DIR"
+            tar -xzf "$RELEASE" -C "$DEPLOY_DIR"
+            rm -f "$RELEASE"
+
+            cd "$DEPLOY_DIR"
+            echo "Deployment directory: $(pwd)"
+
+            test -f artisan || { echo "ERROR: artisan missing after extraction"; exit 1; }
+            test -f composer.json || { echo "ERROR: composer.json missing after extraction"; exit 1; }
+            test -f public/build/manifest.json || { echo "ERROR: Vite manifest missing after extraction"; exit 1; }
 
             if [ ! -f .env ]; then
               echo "Production .env is missing at $DEPLOY_DIR/.env"
