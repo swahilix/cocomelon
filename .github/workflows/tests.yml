@@ -48,4 +48,4 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           script: |
             echo "SSH connection successful"
-            echo "Workflow trigger test: 2026-08-21"
+            echo "Workflow trigger test: 2026-08-21 12:27 EAT"
