@@ -26,19 +26,41 @@ const homeSchema = computed(() => ({
             name: page.props.store.name,
             legalName: page.props.store.legal_name || page.props.store.name,
             url: page.props.store.url,
-            logo: { '@type': 'ImageObject', contentUrl: page.props.store.logo, name: `${page.props.store.name} logo`, creditText: page.props.store.image_credit },
+            logo: {
+                '@type': 'ImageObject',
+                contentUrl: page.props.store.logo,
+                name: `${page.props.store.name} logo`,
+                creditText: page.props.store.image_credit,
+            },
             image: page.props.store.logo,
             sameAs: page.props.store.same_as?.length ? page.props.store.same_as : undefined,
             description: page.props.store.description,
             telephone: page.props.store.phone,
             email: page.props.store.email,
-            contactPoint: { '@type': 'ContactPoint', contactType: 'customer service', telephone: page.props.store.phone, email: page.props.store.email, areaServed: page.props.store.country },
-            address: { '@type': 'PostalAddress', addressLocality: page.props.store.address, addressCountry: page.props.store.country },
+            contactPoint: {
+                '@type': 'ContactPoint',
+                contactType: 'customer service',
+                telephone: page.props.store.phone,
+                email: page.props.store.email,
+                areaServed: page.props.store.country,
+            },
+            address: {
+                '@type': 'PostalAddress',
+                addressLocality: page.props.store.address,
+                addressCountry: page.props.store.country,
+            },
         },
         {
-            '@type': 'WebSite', '@id': `${page.props.store.url}/#website`, url: page.props.store.url, name: page.props.store.name,
+            '@type': 'WebSite',
+            '@id': `${page.props.store.url}/#website`,
+            url: page.props.store.url,
+            name: page.props.store.name,
             publisher: { '@id': `${page.props.store.url}/#store` },
-            potentialAction: { '@type': 'SearchAction', target: `${page.props.store.url}/shop?search={search_term_string}`, 'query-input': 'required name=search_term_string' },
+            potentialAction: {
+                '@type': 'SearchAction',
+                target: `${page.props.store.url}/shop?search={search_term_string}`,
+                'query-input': 'required name=search_term_string',
+            },
         },
     ],
 }));
@@ -62,7 +84,12 @@ const homeSchema = computed(() => ({
                         <div class="absolute inset-0 bg-gradient-to-t from-slate-950/55 via-transparent to-transparent"></div>
                         <span class="absolute bottom-2 left-2 rounded-[8px] bg-white/95 px-2 py-1 text-[9px] font-black text-slate-800">{{ category.products_count }} products</span>
                     </div>
-                    <div class="p-3"><div class="flex items-start justify-between gap-2"><div class="min-w-0"><h3 class="truncate text-sm font-black text-slate-950 transition group-hover:text-prinx-600">{{ category.name }}</h3><p class="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{{ category.description }}</p></div><span class="shrink-0 text-sm font-black text-prinx-600">→</span></div></div>
+                    <div class="p-3">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="min-w-0"><h3 class="truncate text-sm font-black text-slate-950 transition group-hover:text-prinx-600">{{ category.name }}</h3><p class="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{{ category.description }}</p></div>
+                            <span class="shrink-0 text-sm font-black text-prinx-600">→</span>
+                        </div>
+                    </div>
                 </Link>
             </div>
         </section>
@@ -81,7 +108,12 @@ const homeSchema = computed(() => ({
                 <div class="grid lg:grid-cols-[.8fr_1.2fr]">
                     <div class="relative overflow-hidden p-7 sm:p-10 lg:p-12">
                         <div class="absolute -left-20 -top-20 h-64 w-64 rounded-[10px] bg-prinx-500/25 blur-3xl"></div>
-                        <div class="relative"><p class="text-xs font-black uppercase tracking-[.2em] text-prinx-400">Prinx technical services</p><h2 class="mt-4 text-3xl font-black leading-tight">Support that keeps your technology working.</h2><p class="mt-4 max-w-md leading-7 text-slate-300">From diagnostics and repair to upgrades and network installation, our team supports your devices after the sale.</p><Link href="/services" class="btn-primary mt-7">Explore all services →</Link></div>
+                        <div class="relative">
+                            <p class="text-xs font-black uppercase tracking-[.2em] text-prinx-400">Prinx technical services</p>
+                            <h2 class="mt-4 text-3xl font-black leading-tight">Support that keeps your technology working.</h2>
+                            <p class="mt-4 max-w-md leading-7 text-slate-300">From diagnostics and repair to upgrades and network installation, our team supports your devices after the sale.</p>
+                            <Link href="/services" class="btn-primary mt-7">Explore all services →</Link>
+                        </div>
                     </div>
                     <div class="grid gap-px bg-slate-800 sm:grid-cols-2">
                         <Link v-for="category in serviceCategories" :key="category.id" :href="`/services?category=${encodeURIComponent(category.slug)}`" class="group bg-slate-900 p-6 transition hover:bg-slate-800">
