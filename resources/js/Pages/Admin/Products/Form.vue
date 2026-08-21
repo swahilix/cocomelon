@@ -1,10 +1,15 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import { Link, useForm } from '@inertiajs/vue3';
 import AdminLayout from '../../../Layouts/AdminLayout.vue';
+import Icon from '../../../Components/Icon.vue';
 
 const props = defineProps({ product: Object, categories: Array, brands: Array, aiFormatterEnabled: Boolean });
 const p = props.product || {};
+const imageInput = ref(null);
+const isDraggingImages = ref(false);
+const replaceMainImage = ref(false);
+const selectedImagePreviews = ref([]);
 
 const form = useForm({
     _method: p.id ? 'PATCH' : 'POST',
@@ -39,6 +44,13 @@ const form = useForm({
     sort_order: p.sort_order || 0,
 });
 
+const currentImages = computed(() => {
+    const images = [];
+    if (p.primary_image && p.image_url) images.push({ url: p.image_url, label: 'Main image', main: true });
+    for (const url of p.gallery_urls || []) images.push({ url, label: 'Gallery image', main: false });
+    return images;
+});
+
 const merchantIssues = computed(() => {
     const issues = [];
     if (form.status !== 'active') issues.push('set status to Active');
@@ -51,6 +63,56 @@ const merchantIssues = computed(() => {
     if (!form.gtin && !(form.brand_id && form.mpn)) issues.push('add GTIN or Brand + MPN');
     return issues;
 });
+
+const clearImagePreviews = () => {
+    selectedImagePreviews.value.forEach((item) => URL.revokeObjectURL(item.url));
+    selectedImagePreviews.value = [];
+};
+
+const applySelectedImages = (files) => {
+    const images = Array.from(files || []).filter((file) => file.type?.startsWith('image/')).slice(0, 10);
+    if (!images.length) return;
+
+    clearImagePreviews();
+    selectedImagePreviews.value = images.map((file, index) => ({
+        file,
+        url: URL.createObjectURL(file),
+        main: (!p.primary_image || replaceMainImage.value) && index === 0,
+    }));
+
+    if (!p.primary_image || replaceMainImage.value) {
+        form.primary_image = images[0];
+        form.gallery = images.slice(1);
+    } else {
+        form.primary_image = null;
+        form.gallery = images;
+    }
+
+    form.clearErrors('primary_image', 'gallery');
+};
+
+const chooseImages = () => imageInput.value?.click();
+const selectImages = (event) => applySelectedImages(event.target.files);
+const dropImages = (event) => {
+    isDraggingImages.value = false;
+    applySelectedImages(event.dataTransfer?.files);
+};
+
+const removeSelectedImage = (index) => {
+    const files = selectedImagePreviews.value.filter((_, i) => i !== index).map((item) => item.file);
+    if (!files.length) {
+        clearImagePreviews();
+        form.primary_image = null;
+        form.gallery = [];
+        if (imageInput.value) imageInput.value.value = '';
+        return;
+    }
+    applySelectedImages(files);
+};
+
+const refreshImageRole = () => {
+    if (selectedImagePreviews.value.length) applySelectedImages(selectedImagePreviews.value.map((item) => item.file));
+};
 
 const submit = () => {
     form.clearErrors();
@@ -70,6 +132,8 @@ const submit = () => {
         preserveScroll: true,
     });
 };
+
+onBeforeUnmount(clearImagePreviews);
 </script>
 
 <template>
@@ -121,7 +185,7 @@ const submit = () => {
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <h2 class="font-semibold">Images & Merchant data</h2>
-                            <p class="mt-1 text-sm text-slate-500">Google requires a main image and either a GTIN or Brand + MPN.</p>
+                            <p class="mt-1 text-sm text-slate-500">Upload multiple product images. The main image is used by the storefront and Google Merchant.</p>
                         </div>
                         <span :class="['status shrink-0', merchantIssues.length ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700']">{{ merchantIssues.length ? `${merchantIssues.length} item${merchantIssues.length === 1 ? '' : 's'} missing` : 'Merchant ready' }}</span>
                     </div>
@@ -131,9 +195,64 @@ const submit = () => {
                         {{ merchantIssues.join(', ') }}.
                     </div>
 
-                    <div class="mt-4 grid gap-4 sm:grid-cols-2">
-                        <div><label class="label">Main image</label><input type="file" accept="image/*" @change="form.primary_image = $event.target.files[0]"><p v-if="form.errors.primary_image" class="error">{{ form.errors.primary_image }}</p></div>
-                        <div><label class="label">Or image URL</label><input v-model="form.primary_image_url" class="input"></div>
+                    <div v-if="currentImages.length" class="mt-5">
+                        <div class="mb-2 flex items-center justify-between gap-3">
+                            <label class="label mb-0">Attached images</label>
+                            <span class="text-xs text-slate-500">{{ currentImages.length }} saved</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                            <div v-for="(image, index) in currentImages" :key="`${image.url}-${index}`" class="relative overflow-hidden rounded-[8px] border border-slate-200 bg-slate-50">
+                                <img :src="image.url" :alt="image.label" class="aspect-square w-full object-cover">
+                                <div class="absolute inset-x-0 bottom-0 bg-slate-950/75 px-2 py-1.5 text-[11px] font-medium text-white">{{ image.main ? 'Main image' : `Gallery ${index}` }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-5">
+                        <div class="mb-2 flex flex-wrap items-center justify-between gap-3">
+                            <label class="label mb-0">Upload product images</label>
+                            <label v-if="p.primary_image" class="flex items-center gap-2 text-xs font-medium text-slate-600">
+                                <input v-model="replaceMainImage" type="checkbox" class="h-4 w-4 accent-prinx-500" @change="refreshImageRole">
+                                Replace current main with first new image
+                            </label>
+                        </div>
+
+                        <input ref="imageInput" type="file" accept="image/*" multiple class="hidden" @change="selectImages">
+                        <button
+                            type="button"
+                            :class="['flex min-h-40 w-full flex-col items-center justify-center rounded-[10px] border-2 border-dashed px-5 py-7 text-center transition', isDraggingImages ? 'border-prinx-500 bg-prinx-50' : 'border-slate-300 bg-slate-50 hover:border-prinx-400 hover:bg-prinx-50/50']"
+                            @click="chooseImages"
+                            @dragenter.prevent="isDraggingImages = true"
+                            @dragover.prevent="isDraggingImages = true"
+                            @dragleave.prevent="isDraggingImages = false"
+                            @drop.prevent="dropImages"
+                        >
+                            <span class="flex h-11 w-11 items-center justify-center rounded-[9px] bg-white text-prinx-600 shadow-sm"><Icon name="gallery-add" :size="22" /></span>
+                            <span class="mt-3 text-sm font-semibold text-slate-800">Drop images here or click to browse</span>
+                            <span class="mt-1 text-xs leading-5 text-slate-500">Select multiple JPG, PNG or WebP images. Maximum 10 images, 8 MB each.</span>
+                        </button>
+
+                        <p v-if="form.errors.primary_image" class="error">{{ form.errors.primary_image }}</p>
+                        <p v-if="form.errors.gallery" class="error">{{ form.errors.gallery }}</p>
+
+                        <div v-if="selectedImagePreviews.length" class="mt-4">
+                            <div class="mb-2 flex items-center justify-between gap-3">
+                                <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">New images</span>
+                                <span class="text-xs text-slate-500">{{ selectedImagePreviews.length }} selected</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                                <div v-for="(image, index) in selectedImagePreviews" :key="image.url" class="relative overflow-hidden rounded-[8px] border border-slate-200 bg-slate-50">
+                                    <img :src="image.url" alt="Selected product image" class="aspect-square w-full object-cover">
+                                    <span v-if="image.main" class="absolute left-2 top-2 rounded-[6px] bg-slate-950/80 px-2 py-1 text-[10px] font-semibold text-white">New main</span>
+                                    <button type="button" class="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-[7px] bg-white/95 text-red-600 shadow" @click="removeSelectedImage(index)"><Icon name="close-circle" :size="17" /></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 grid gap-4 sm:grid-cols-2">
+                        <div><label class="label">Or main image URL</label><input v-model="form.primary_image_url" class="input" placeholder="https://..."></div>
+                        <div><label class="label">Additional image URLs</label><textarea v-model="form.gallery_urls" class="input" rows="2" placeholder="One image URL per line"></textarea></div>
                         <div><label class="label">GTIN</label><input v-model.trim="form.gtin" class="input" placeholder="UPC / EAN / GTIN"></div>
                         <div><label class="label">MPN</label><input v-model.trim="form.mpn" class="input" placeholder="Manufacturer part number"></div>
                         <div><label class="label">Warranty</label><input v-model="form.warranty" class="input"></div>
