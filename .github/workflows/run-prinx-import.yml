@@ -19,12 +19,29 @@ jobs:
           ref: prinx-import
           fetch-depth: 0
 
+      - name: Validate staged chunks
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'Remote chunk checksums:'
+          sha256sum .import/chunk-*
+          echo 'Validating Base64:'
+          for f in .import/chunk-*; do
+            printf '%s bytes=%s ' "$f" "$(wc -c < "$f")"
+            if base64 --decode "$f" >/dev/null 2>&1; then
+              echo OK
+            else
+              echo INVALID
+            fi
+          done
+
       - name: Reconstruct developed source
         shell: bash
         run: |
           set -euo pipefail
           cat .import/chunk-* > /tmp/prinx.b64
           base64 --decode /tmp/prinx.b64 > /tmp/prinx.tar.xz
+          echo 'bf5d922a34c75d7988e175eceb5b84a83ea2ebe3b087d1466d37d32bce5720d9  /tmp/prinx.tar.xz' | sha256sum -c -
           mkdir -p /tmp/prinx-developed
           tar -xJf /tmp/prinx.tar.xz -C /tmp/prinx-developed
           test -f /tmp/prinx-developed/artisan
