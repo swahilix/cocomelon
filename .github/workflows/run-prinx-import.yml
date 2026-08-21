@@ -1,11 +1,10 @@
 name: Build fresh Prinx Laravel project
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-    paths:
-      - '.github/workflows/run-prinx-import.yml'
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
@@ -20,12 +19,6 @@ jobs:
           ref: prinx-import
           fetch-depth: 0
 
-      - name: Set up PHP 8.3
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.3'
-          tools: composer:v2
-
       - name: Reconstruct developed source
         shell: bash
         run: |
@@ -37,45 +30,30 @@ jobs:
           test -f /tmp/prinx-developed/artisan
           test -f /tmp/prinx-developed/composer.json
 
-      - name: Create fresh Laravel 13 app
+      - name: Replace staged branch with normal source files
         shell: bash
         run: |
           set -euo pipefail
-          composer create-project laravel/laravel:^13.0 /tmp/prinx-fresh --no-interaction --prefer-dist
-
-      - name: Add developed Prinx code to fresh app
-        shell: bash
-        run: |
-          set -euo pipefail
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
           rsync -a \
             --exclude='.env' \
             --exclude='.git' \
-            --exclude='.github' \
             --exclude='.import' \
             --exclude='vendor' \
             --exclude='node_modules' \
             --exclude='public/build' \
             --exclude='bootstrap/ssr' \
-            /tmp/prinx-developed/ /tmp/prinx-fresh/
+            /tmp/prinx-developed/ ./
 
-          rm -rf /tmp/prinx-fresh/vendor /tmp/prinx-fresh/node_modules
-          rm -rf /tmp/prinx-fresh/public/build /tmp/prinx-fresh/bootstrap/ssr
-          rm -f /tmp/prinx-fresh/.env
-
-          test -f /tmp/prinx-fresh/artisan
-          test -f /tmp/prinx-fresh/routes/web.php
-          test -d /tmp/prinx-fresh/resources/js
-          test -f /tmp/prinx-fresh/database/migrations/2026_08_21_000800_add_commerce_operations.php
-
-      - name: Replace main with normal source files
-        shell: bash
-        run: |
-          set -euo pipefail
-          find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
-          rsync -a --exclude='.git' /tmp/prinx-fresh/ ./
+          rm -rf .import
+          rm -f .github/workflows/import-prinx.yml
+          test -f artisan
+          test -f composer.json
+          test -f routes/web.php
+          test -f PRINX-IMPLEMENTATION-PLAN.md
 
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
           git commit -m 'feat: add Prinx Laravel ecommerce project'
-          git push origin HEAD:main --force
+          git push origin HEAD:prinx-import
