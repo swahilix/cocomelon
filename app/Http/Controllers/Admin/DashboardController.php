@@ -9,14 +9,25 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\Service;
 use App\Models\ServiceInquiry;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function __invoke(): Response
+    public function __invoke(): Response|RedirectResponse
     {
+        $user = request()->user();
+        if (! $user?->hasPermission('manage_storefront')) {
+            if ($user?->hasPermission('use_pos')) return redirect()->route('admin.pos.index');
+            if ($user?->hasPermission('view_inventory')) return redirect()->route('admin.stock.inventory');
+            if ($user?->hasPermission('view_profit_reports')) return redirect()->route('admin.profit.index');
+            if ($user?->hasPermission('manage_expenses')) return redirect()->route('admin.expenses.index');
+            if ($user?->hasPermission('view_reports')) return redirect()->route('admin.reports.index');
+            abort(403, 'No admin workspace is available for your current role.');
+        }
+
         $today = now()->toDateString();
 
         $posSales = DB::table('pos_sales')->where('status', '!=', 'voided')->whereDate('created_at', $today)->get(['id', 'total']);
