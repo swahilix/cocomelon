@@ -96,11 +96,12 @@ class ProfitController extends Controller
         $posCogs = (float) $posLines->sum(fn ($line) => (int) $line->quantity * (float) $line->unit_cost)
             - (float) $returnLines->where('restock', true)->sum(fn ($line) => (int) $line->quantity * (float) $line->unit_cost);
         $onlineCogs = (float) $onlineLines->sum(fn ($line) => (int) $line->quantity * (float) ($line->unit_cost ?? 0));
-        $cogs = max(0, $posCogs + $onlineCogs);
+        $cogs = $posCogs + $onlineCogs;
 
         $revenue = $posRevenue + $onlineRevenue;
         $grossProfit = $revenue - $cogs;
         $expenseRows = DB::table('expenses')
+            ->where('status', 'posted')
             ->whereBetween('expense_date', [$from->toDateString(), $to->toDateString()])
             ->get(['expense_date', 'amount']);
         $expenses = (float) $expenseRows->sum('amount');
@@ -223,7 +224,6 @@ class ProfitController extends Controller
         $userIds = $posSales->pluck('created_by')->merge($returnLines->pluck('created_by'))->filter()->unique();
         $names = $userIds->isEmpty() ? collect() : DB::table('users')->whereIn('id', $userIds)->pluck('name', 'id');
         $linesBySale = $posLines->groupBy('pos_sale_id');
-        $returnsBySale = $returnLines->groupBy('pos_sale_id');
         $rows = collect();
 
         foreach ($posSales as $sale) {
