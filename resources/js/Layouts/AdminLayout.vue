@@ -45,6 +45,7 @@ const sections = computed(() => [
         label: 'System',
         items: [
             ['Staff access', '/admin/access', 'profile-2user', ['manage_staff']],
+            ['Audit trail', '/admin/audit', 'document-text', ['manage_staff']],
             ['System monitoring', '/admin/system-monitor', 'monitor', ['view_system_monitor']],
         ].filter((item) => canAny(item[3])),
     },
