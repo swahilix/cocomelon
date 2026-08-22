@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\ProductReelController;
 use App\Http\Controllers\Admin\ServiceController as AdminServiceController;
 use App\Http\Controllers\Admin\StockController;
 use App\Http\Controllers\Admin\StockMovementController;
+use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\SystemMonitorController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
@@ -84,6 +85,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::match(['post', 'patch'], 'catalog/brands/{brand}', [AdminCatalogController::class, 'updateBrand'])->name('catalog.brands.update');
     Route::delete('catalog/brands/{brand}', [AdminCatalogController::class, 'destroyBrand'])->name('catalog.brands.destroy');
     Route::post('catalog/brands/{brand}/restore', [AdminCatalogController::class, 'restoreBrand'])->whereNumber('brand')->name('catalog.brands.restore');
+
+    Route::get('suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
+    Route::post('suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
+    Route::get('suppliers/{supplier}', [SupplierController::class, 'show'])->name('suppliers.show');
+    Route::match(['post', 'patch'], 'suppliers/{supplier}', [SupplierController::class, 'update'])->name('suppliers.update');
+    Route::delete('suppliers/{supplier}', [SupplierController::class, 'destroy'])->name('suppliers.destroy');
 
     Route::get('stock', [StockController::class, 'index'])->name('stock.index');
     Route::get('stock/inventory', InventoryController::class)->name('stock.inventory');
