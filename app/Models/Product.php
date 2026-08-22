@@ -15,7 +15,7 @@ class Product extends Model
 
     protected $fillable = [
         'category_id', 'brand_id', 'name', 'slug', 'sku', 'short_description', 'description',
-        'price', 'sale_price', 'sale_starts_at', 'sale_ends_at', 'stock_quantity', 'low_stock_threshold', 'track_stock',
+        'price', 'sale_price', 'sale_starts_at', 'sale_ends_at', 'stock_quantity', 'average_cost', 'last_purchase_cost', 'low_stock_threshold', 'track_stock',
         'condition', 'status', 'featured', 'merchant_sync_enabled', 'primary_image', 'gallery',
         'gtin', 'mpn', 'google_product_category', 'product_type', 'item_group_id', 'color', 'size',
         'gender', 'age_group', 'video_url', 'shipping_price', 'shipping_weight', 'warranty',
@@ -26,7 +26,7 @@ class Product extends Model
     protected function casts(): array
     {
         return [
-            'price' => 'decimal:2', 'sale_price' => 'decimal:2', 'shipping_price' => 'decimal:2',
+            'price' => 'decimal:2', 'sale_price' => 'decimal:2', 'average_cost' => 'decimal:4', 'last_purchase_cost' => 'decimal:4', 'shipping_price' => 'decimal:2',
             'shipping_weight' => 'decimal:3', 'stock_quantity' => 'integer', 'low_stock_threshold' => 'integer', 'track_stock' => 'boolean',
             'featured' => 'boolean', 'merchant_sync_enabled' => 'boolean', 'gallery' => 'array',
             'sale_starts_at' => 'datetime', 'sale_ends_at' => 'datetime',
