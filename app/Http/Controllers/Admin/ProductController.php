@@ -6,10 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\InventoryMovement;
 use App\Services\ImageOptimizationService;
+use App\Services\InventoryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -66,28 +67,36 @@ class ProductController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, InventoryService $inventory): RedirectResponse
     {
-        $data = $this->prepareProductData($this->handleImages($request, $this->validated($request)));
-        $product = Product::create($data);
-        if ($product->track_stock && $product->stock_quantity > 0) {
-            InventoryMovement::create(['product_id'=>$product->id,'user_id'=>$request->user()?->id,'type'=>'opening','quantity_change'=>$product->stock_quantity,'quantity_before'=>0,'quantity_after'=>$product->stock_quantity,'reference'=>'Product created']);
-        }
+        $validated = $this->validated($request);
+        $openingStock = (int) ($validated['stock_quantity'] ?? 0);
+        $data = $this->prepareProductData($this->handleImages($request, $validated));
+        $data['stock_quantity'] = 0;
 
-        return redirect()->route('admin.products.edit', $product)->with('success', 'Product created successfully.');
+        $product = DB::transaction(function () use ($data, $openingStock, $request, $inventory): Product {
+            $product = Product::create($data);
+
+            if ($product->track_stock && $openingStock > 0) {
+                $inventory->openingBalance($product, $openingStock, 'Initial stock entered when product was created.', $request->user()?->id);
+            }
+
+            return $product->refresh();
+        });
+
+        return redirect()->route('admin.products.edit', $product)->with('success', 'Product created successfully. Future stock changes must be posted from Stock Management → Inventory.');
     }
 
     public function update(Request $request, Product $product): RedirectResponse
     {
-        $before = (int) $product->stock_quantity;
         $data = $this->prepareProductData($this->handleImages($request, $this->validated($request, $product), $product));
-        $product->update($data);
-        $after = (int) $product->stock_quantity;
-        if ($product->track_stock && $before !== $after) {
-            InventoryMovement::create(['product_id'=>$product->id,'user_id'=>$request->user()?->id,'type'=>'adjustment','quantity_change'=>$after-$before,'quantity_before'=>$before,'quantity_after'=>$after,'reference'=>'Admin product edit']);
-        }
 
-        return back()->with('success', 'Product updated successfully.');
+        // Inventory is intentionally isolated from product metadata edits. Stock changes must use InventoryService.
+        unset($data['stock_quantity']);
+
+        $product->update($data);
+
+        return back()->with('success', 'Product updated successfully. Stock quantity is managed separately from Stock Management → Inventory.');
     }
 
     public function destroy(Product $product): RedirectResponse
