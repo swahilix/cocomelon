@@ -22,9 +22,9 @@ class PosController extends Controller
     public function index(Request $request, CashRegisterService $registers): Response
     {
         $products = Product::query()
-            ->with(['category:id,name'])
+            ->with(['category:id,name', 'brand:id,name'])
             ->where('status', 'active')
-            ->select(['id', 'category_id', 'name', 'sku', 'stock_quantity', 'track_stock', 'price', 'sale_price', 'sale_starts_at', 'sale_ends_at', 'primary_image'])
+            ->select(['id', 'category_id', 'brand_id', 'name', 'sku', 'stock_quantity', 'track_stock', 'price', 'sale_price', 'sale_starts_at', 'sale_ends_at', 'primary_image'])
             ->orderBy('name')
             ->get()
             ->map(fn (Product $product) => [
@@ -32,6 +32,7 @@ class PosController extends Controller
                 'name' => $product->name,
                 'sku' => $product->sku,
                 'category' => $product->category?->name ?: 'Other',
+                'brand' => $product->brand?->name,
                 'stock_quantity' => $product->stock_quantity,
                 'track_stock' => $product->track_stock,
                 'price' => $product->current_price,
@@ -50,6 +51,7 @@ class PosController extends Controller
         return Inertia::render('Admin/Pos/Index', [
             'products' => $products,
             'categories' => $products->pluck('category')->unique()->sort()->values(),
+            'brands' => $products->pluck('brand')->filter()->unique()->sort()->values(),
             'customers' => DB::table('pos_customers')->orderBy('name')->limit(500)->get(['id', 'name', 'phone', 'email']),
             'heldSales' => DB::table('pos_held_sales')->latest('id')->limit(30)->get(['id', 'reference', 'customer_name', 'customer_phone', 'created_at']),
             'resumeHold' => $held,
