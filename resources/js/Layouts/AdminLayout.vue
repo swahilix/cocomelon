@@ -29,6 +29,7 @@ const sections = [
             ['Sales', '/admin/sales', 'receipt-item'],
             ['Expenses', '/admin/expenses', 'wallet'],
             ['Profit & costing', '/admin/profit', 'wallet'],
+            ['Reports', '/admin/reports', 'chart'],
             ['Orders', '/admin/orders', 'shopping-cart'],
             ['Service requests', '/admin/inquiries', 'sms'],
         ],
