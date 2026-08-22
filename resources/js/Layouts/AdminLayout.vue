@@ -25,6 +25,7 @@ const sections = [
         label: 'Sales & customers',
         items: [
             ['Point of sale', '/admin/pos', 'shop'],
+            ['Sales', '/admin/sales', 'receipt-item'],
             ['Orders', '/admin/orders', 'shopping-cart'],
             ['Service requests', '/admin/inquiries', 'sms'],
         ],
