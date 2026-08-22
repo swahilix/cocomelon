@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ProductReelController;
 use App\Http\Controllers\Admin\ServiceController as AdminServiceController;
+use App\Http\Controllers\Admin\StockController;
 use App\Http\Controllers\Admin\SystemMonitorController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
@@ -81,6 +82,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::match(['post', 'patch'], 'catalog/brands/{brand}', [AdminCatalogController::class, 'updateBrand'])->name('catalog.brands.update');
     Route::delete('catalog/brands/{brand}', [AdminCatalogController::class, 'destroyBrand'])->name('catalog.brands.destroy');
     Route::post('catalog/brands/{brand}/restore', [AdminCatalogController::class, 'restoreBrand'])->whereNumber('brand')->name('catalog.brands.restore');
+
+    Route::get('stock', [StockController::class, 'index'])->name('stock.index');
+    Route::post('stock/purchases', [StockController::class, 'purchase'])->name('stock.purchases.store');
+    Route::post('stock/expenses', [StockController::class, 'expense'])->name('stock.expenses.store');
+    Route::post('stock/pos', [StockController::class, 'pos'])->name('stock.pos.store');
 
     Route::get('orders', [AdminOrderController::class, 'index'])->name('orders.index');
     Route::get('orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
