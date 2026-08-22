@@ -62,26 +62,24 @@ class CheckoutController extends Controller
                         abort(422, "{$line['product']->name} is no longer available.");
                     }
 
+                    $unitCost = (float) $product->average_cost;
+
                     $order->items()->create([
                         'product_id' => $product->id,
                         'product_name' => $product->name,
                         'sku' => $product->sku,
                         'quantity' => $line['quantity'],
                         'unit_price' => $line['unit_price'],
+                        'unit_cost' => $unitCost,
                         'line_total' => $line['line_total'],
                     ]);
-
-                    $lastCost = (float) (DB::table('stock_purchase_items')
-                        ->where('product_id', $product->id)
-                        ->latest('id')
-                        ->value('unit_cost') ?? 0);
 
                     $inventory->decrease(
                         $product,
                         (int) $line['quantity'],
                         'online_order',
                         $order->order_number,
-                        $lastCost,
+                        $unitCost,
                         $data['customer_name'],
                         $request->user()?->id,
                         'online_order',
