@@ -26,10 +26,13 @@ class SensitiveAction
         string $idSource,
     ): Response {
         $subjectId = $this->resolveSubjectId($request, $idSource);
-        $before = $subjectId ? DB::table($table)->where('id', $subjectId)->first() : null;
 
         DB::beginTransaction();
         try {
+            $before = $subjectId
+                ? DB::table($table)->where('id', $subjectId)->lockForUpdate()->first()
+                : null;
+
             $this->guard->claim($request, $action, $subjectType, $subjectId);
             $response = $next($request);
 
