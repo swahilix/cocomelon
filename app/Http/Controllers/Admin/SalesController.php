@@ -84,7 +84,7 @@ class SalesController extends Controller
         ]);
     }
 
-    public function showPos(int $sale): Response
+    public function showPos(Request $request, int $sale, CashRegisterService $registers): Response
     {
         $record = DB::table('pos_sales')
             ->leftJoin('users', 'users.id', '=', 'pos_sales.created_by')
@@ -107,11 +107,23 @@ class SalesController extends Controller
             ->select('pos_sale_return_items.*', 'pos_sale_returns.reference as return_reference')
             ->get();
 
+        $currentRegister = $registers->currentOpenSession($request->user()?->id);
+        $paymentMethods = $currentRegister
+            ? $registers->methodsForSession((int) $currentRegister->id)
+            : DB::table('payment_methods')
+                ->where(fn ($query) => $query->where('is_active', true)->orWhere('is_cash', true))
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get()
+                ->all();
+
         return Inertia::render('Admin/Sales/ShowPos', [
             'sale' => $record,
             'items' => $items,
             'returns' => $returns,
             'returnItems' => $returnItems,
+            'paymentMethods' => $paymentMethods,
+            'currentRegister' => $currentRegister,
             'movements' => DB::table('stock_movements')
                 ->join('products', 'products.id', '=', 'stock_movements.product_id')
                 ->where('source_type', 'pos_sale')->where('source_id', $sale)
@@ -128,7 +140,7 @@ class SalesController extends Controller
         $validated = $request->validate([
             'return_date' => ['required', 'date'],
             'reason' => ['required', 'string', 'max:255'],
-            'refund_method' => ['required', 'in:cash,mobile_money,bank,card,other'],
+            'refund_method_id' => ['required', 'integer', 'exists:payment_methods,id'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.sale_item_id' => ['required', 'integer', 'exists:pos_sale_items,id'],
@@ -140,6 +152,7 @@ class SalesController extends Controller
         try {
             DB::transaction(function () use ($validated, $sale, $request, $inventory, $registers, $guard, $audit): void {
                 $register = $registers->requireOpenSession($request->user()?->id);
+                $refundMethod = $registers->methodForSession($register->id, (int) $validated['refund_method_id']);
                 $saleRow = DB::table('pos_sales')->where('id', $sale)->lockForUpdate()->first();
                 if (! $saleRow || $saleRow->status === 'voided') {
                     throw new RuntimeException('This POS sale cannot be returned.');
@@ -154,11 +167,12 @@ class SalesController extends Controller
                 $returnReference = $this->reference('RET');
                 $returnId = DB::table('pos_sale_returns')->insertGetId([
                     'cash_register_session_id' => $register->id,
+                    'payment_method_id' => $refundMethod->id,
                     'reference' => $returnReference,
                     'pos_sale_id' => $sale,
                     'return_date' => $validated['return_date'],
                     'refund_amount' => 0,
-                    'refund_method' => $validated['refund_method'],
+                    'refund_method' => $refundMethod->name,
                     'reason' => $validated['reason'],
                     'notes' => $validated['notes'] ?? null,
                     'created_by' => $request->user()?->id,
@@ -216,17 +230,18 @@ class SalesController extends Controller
                     'updated_at' => now(),
                 ]);
 
-                if ($validated['refund_method'] === 'cash' && $refund > 0) {
+                if ($refund > 0) {
                     $registers->record(
                         $register->id,
-                        'cash_refund',
+                        $refundMethod->is_cash ? 'cash_refund' : 'payment_refund',
                         'out',
                         $refund,
-                        'POS cash refund',
+                        "POS {$refundMethod->name} refund",
                         $returnReference,
                         $request->user()?->id,
                         'pos_return',
                         $returnId,
+                        (int) $refundMethod->id,
                     );
                 }
 
@@ -234,7 +249,7 @@ class SalesController extends Controller
                 $audit->record($request, 'pos.refund_posted', 'pos_sale', $sale, $saleRow->reference, $saleRow, $after, [
                     'return_id' => $returnId,
                     'return_reference' => $returnReference,
-                    'refund_method' => $validated['refund_method'],
+                    'refund_method' => $refundMethod->name,
                     'refund_amount' => $refund,
                     'items' => $returned,
                 ]);
@@ -285,17 +300,25 @@ class SalesController extends Controller
                     'updated_at' => now(),
                 ]);
 
-                if ($saleRow->payment_method === 'cash' && (float) $saleRow->total > 0) {
+                $refundMethod = null;
+                if ($saleRow->payment_method_id) {
+                    $refundMethod = $registers->methodForSession($register->id, (int) $saleRow->payment_method_id);
+                } elseif (strtolower((string) $saleRow->payment_method) === 'cash') {
+                    $refundMethod = $registers->cashMethod();
+                }
+
+                if ($refundMethod && (float) $saleRow->total > 0) {
                     $registers->record(
                         $register->id,
-                        'cash_void_refund',
+                        $refundMethod->is_cash ? 'cash_void_refund' : 'payment_void_refund',
                         'out',
                         (float) $saleRow->total,
-                        'Cash returned after POS void',
+                        "{$refundMethod->name} returned after POS void",
                         $saleRow->reference,
                         $request->user()?->id,
                         'pos_void',
                         $sale,
+                        (int) $refundMethod->id,
                     );
                 }
 
