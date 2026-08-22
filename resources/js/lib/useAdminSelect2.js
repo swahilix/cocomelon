@@ -15,11 +15,7 @@ export function useAdminSelect2(rootSelector) {
 
         root.querySelectorAll('select:not([data-native-select])').forEach((select) => {
             const $select = $(select);
-
-            if ($select.hasClass('select2-hidden-accessible')) {
-                $select.trigger('change.select2');
-                return;
-            }
+            if ($select.hasClass('select2-hidden-accessible')) return;
 
             const firstOption = select.options?.[0];
             const placeholder = select.dataset.placeholder
@@ -32,8 +28,8 @@ export function useAdminSelect2(rootSelector) {
                 dropdownAutoWidth: false,
             });
 
-            // Select2 uses jQuery events. Dispatch a native change as well so
-            // Vue v-model always receives the selected value.
+            // Select2 emits jQuery events; dispatch a native change so Vue
+            // v-model always receives user selections as well.
             $select.on('select2:select.adminSelect2 select2:unselect.adminSelect2 select2:clear.adminSelect2', () => {
                 select.dispatchEvent(new Event('change', { bubbles: true }));
             });
@@ -55,16 +51,19 @@ export function useAdminSelect2(rootSelector) {
 
         observer = new MutationObserver((mutations) => {
             const $ = window.jQuery;
-            if ($?.fn?.select2) {
-                mutations.forEach((mutation) => {
-                    const select = mutation.target instanceof HTMLSelectElement
-                        ? mutation.target
-                        : mutation.target?.closest?.('select');
-                    if (select && $(select).hasClass('select2-hidden-accessible')) {
-                        $(select).trigger('change.select2');
-                    }
-                });
-            }
+
+            mutations.forEach((mutation) => {
+                // Refresh an initialized Select2 only when its own options
+                // changed. DOM inserted by Select2 itself is ignored.
+                const select = mutation.target instanceof HTMLSelectElement
+                    ? mutation.target
+                    : mutation.target?.closest?.('select');
+
+                if (select && $?.fn?.select2 && $(select).hasClass('select2-hidden-accessible')) {
+                    $(select).trigger('change.select2');
+                }
+            });
+
             scheduleEnhance();
         });
 
