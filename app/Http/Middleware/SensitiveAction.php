@@ -36,7 +36,9 @@ class SensitiveAction
             $this->guard->claim($request, $action, $subjectType, $subjectId);
             $response = $next($request);
 
-            if ($response->getStatusCode() >= 400 || $request->session()->has('errors')) {
+            $newFlash = (array) $request->session()->get('_flash.new', []);
+            $hasCurrentErrors = in_array('errors', $newFlash, true);
+            if ($response->getStatusCode() >= 400 || $hasCurrentErrors) {
                 DB::rollBack();
                 return $response;
             }
