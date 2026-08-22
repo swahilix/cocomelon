@@ -56,7 +56,8 @@ class RegisterController extends Controller
         try {
             DB::transaction(function () use ($validated, $request): void {
                 $userId = $request->user()?->id;
-                $exists = DB::table('cash_register_sessions')->where('user_id', $userId)->where('status', 'open')->lockForUpdate()->exists();
+                DB::table('users')->where('id', $userId)->lockForUpdate()->first();
+                $exists = DB::table('cash_register_sessions')->where('user_id', $userId)->where('status', 'open')->exists();
                 if ($exists) throw new RuntimeException('You already have an open register session.');
 
                 DB::table('cash_register_sessions')->insert([
@@ -80,7 +81,7 @@ class RegisterController extends Controller
     public function movement(Request $request, CashRegisterService $registers): RedirectResponse
     {
         $validated = $request->validate([
-            'direction' => ['required', 'in:in,out'],
+            'direction' => ['required', 'in:in,out,expense'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'reason' => ['required', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:1000'],
@@ -89,15 +90,22 @@ class RegisterController extends Controller
         try {
             DB::transaction(function () use ($validated, $request, $registers): void {
                 $session = $registers->requireOpenSession($request->user()?->id);
+                $type = match ($validated['direction']) {
+                    'in' => 'cash_in',
+                    'expense' => 'expense',
+                    default => 'cash_out',
+                };
+                $direction = $validated['direction'] === 'in' ? 'in' : 'out';
+
                 $registers->record(
                     $session->id,
-                    $validated['direction'] === 'in' ? 'cash_in' : 'cash_out',
-                    $validated['direction'],
+                    $type,
+                    $direction,
                     (float) $validated['amount'],
                     $validated['reason'],
                     $validated['notes'] ?? null,
                     $request->user()?->id,
-                    'manual_cash_movement',
+                    $type === 'expense' ? 'expense_cash_payment' : 'manual_cash_movement',
                     null,
                 );
             });
@@ -164,6 +172,7 @@ class RegisterController extends Controller
         $cashRefunds = (float) $movements->filter(fn ($m) => in_array($m->type, ['cash_refund', 'cash_void_refund'], true) && $m->direction === 'out')->sum('amount');
         $cashIn = (float) $movements->where('direction', 'in')->where('type', 'cash_in')->sum('amount');
         $cashOut = (float) $movements->where('direction', 'out')->where('type', 'cash_out')->sum('amount');
+        $expenseCashOut = (float) $movements->where('direction', 'out')->where('type', 'expense')->sum('amount');
         $expected = $session->status === 'open' ? $registers->expectedCash($sessionId) : (float) $session->expected_cash;
 
         return [
@@ -177,6 +186,7 @@ class RegisterController extends Controller
                 'cash_refunds' => $cashRefunds,
                 'manual_cash_in' => $cashIn,
                 'manual_cash_out' => $cashOut,
+                'expense_cash_out' => $expenseCashOut,
                 'expected_cash' => $expected,
                 'counted_cash' => $session->counted_cash !== null ? (float) $session->counted_cash : null,
                 'variance' => $session->variance !== null ? (float) $session->variance : null,
