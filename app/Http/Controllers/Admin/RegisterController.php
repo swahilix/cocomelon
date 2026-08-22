@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\AuditService;
 use App\Services\CashRegisterService;
+use App\Services\PostingGuard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -46,22 +48,25 @@ class RegisterController extends Controller
         ]);
     }
 
-    public function open(Request $request): RedirectResponse
+    public function open(Request $request, PostingGuard $guard, AuditService $audit): RedirectResponse
     {
         $validated = $request->validate([
             'opening_cash' => ['required', 'numeric', 'min:0'],
             'opening_notes' => ['nullable', 'string', 'max:1000'],
+            '_operation_id' => ['nullable', 'string', 'max:120'],
         ]);
 
         try {
-            DB::transaction(function () use ($validated, $request): void {
+            DB::transaction(function () use ($validated, $request, $guard, $audit): void {
                 $userId = $request->user()?->id;
                 DB::table('users')->where('id', $userId)->lockForUpdate()->first();
                 $exists = DB::table('cash_register_sessions')->where('user_id', $userId)->where('status', 'open')->exists();
                 if ($exists) throw new RuntimeException('You already have an open register session.');
 
-                DB::table('cash_register_sessions')->insert([
-                    'reference' => 'REG-'.now()->format('ymd-His').'-'.strtoupper(Str::random(4)),
+                $guard->claim($request, 'register.open', 'cash_register_session');
+                $reference = 'REG-'.now()->format('ymd-His').'-'.strtoupper(Str::random(4));
+                $sessionId = DB::table('cash_register_sessions')->insertGetId([
+                    'reference' => $reference,
                     'user_id' => $userId,
                     'opening_cash' => $validated['opening_cash'],
                     'opened_at' => now(),
@@ -70,6 +75,8 @@ class RegisterController extends Controller
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+                $after = DB::table('cash_register_sessions')->where('id', $sessionId)->first();
+                $audit->record($request, 'register.opened', 'cash_register_session', $sessionId, $reference, null, $after);
             });
         } catch (Throwable $e) {
             return back()->withErrors(['register' => $e->getMessage()]);
@@ -78,18 +85,20 @@ class RegisterController extends Controller
         return back()->with('success', 'Cash register opened successfully.');
     }
 
-    public function movement(Request $request, CashRegisterService $registers): RedirectResponse
+    public function movement(Request $request, CashRegisterService $registers, PostingGuard $guard, AuditService $audit): RedirectResponse
     {
         $validated = $request->validate([
             'direction' => ['required', 'in:in,out,expense'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'reason' => ['required', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            '_operation_id' => ['nullable', 'string', 'max:120'],
         ]);
 
         try {
-            DB::transaction(function () use ($validated, $request, $registers): void {
+            DB::transaction(function () use ($validated, $request, $registers, $guard, $audit): void {
                 $session = $registers->requireOpenSession($request->user()?->id);
+                $guard->claim($request, 'register.movement', 'cash_register_session', $session->id);
                 $type = match ($validated['direction']) {
                     'in' => 'cash_in',
                     'expense' => 'expense',
@@ -97,7 +106,7 @@ class RegisterController extends Controller
                 };
                 $direction = $validated['direction'] === 'in' ? 'in' : 'out';
 
-                $registers->record(
+                $movementId = $registers->record(
                     $session->id,
                     $type,
                     $direction,
@@ -108,6 +117,9 @@ class RegisterController extends Controller
                     $type === 'expense' ? 'expense_cash_payment' : 'manual_cash_movement',
                     null,
                 );
+
+                $after = DB::table('cash_register_movements')->where('id', $movementId)->first();
+                $audit->record($request, 'register.cash_movement', 'cash_register_movement', $movementId, $after?->reference, null, $after, ['session_id' => $session->id]);
             });
         } catch (Throwable $e) {
             return back()->withErrors(['movement' => $e->getMessage()]);
@@ -116,16 +128,21 @@ class RegisterController extends Controller
         return back()->with('success', 'Cash movement recorded.');
     }
 
-    public function close(Request $request, CashRegisterService $registers): RedirectResponse
+    public function close(Request $request, CashRegisterService $registers, PostingGuard $guard, AuditService $audit): RedirectResponse
     {
         $validated = $request->validate([
             'counted_cash' => ['required', 'numeric', 'min:0'],
             'closing_notes' => ['nullable', 'string', 'max:1500'],
+            '_operation_id' => ['nullable', 'string', 'max:120'],
         ]);
 
         try {
-            DB::transaction(function () use ($validated, $request, $registers): void {
+            DB::transaction(function () use ($validated, $request, $registers, $guard, $audit): void {
                 $session = $registers->requireOpenSession($request->user()?->id);
+                $before = DB::table('cash_register_sessions')->where('id', $session->id)->lockForUpdate()->first();
+                if (! $before || $before->status !== 'open') throw new RuntimeException('Register is already closed or unavailable.');
+
+                $guard->claim($request, 'register.close', 'cash_register_session', $session->id);
                 $expected = $registers->expectedCash($session->id);
                 $counted = round((float) $validated['counted_cash'], 2);
 
@@ -139,6 +156,9 @@ class RegisterController extends Controller
                     'closing_notes' => $validated['closing_notes'] ?? null,
                     'updated_at' => now(),
                 ]);
+
+                $after = DB::table('cash_register_sessions')->where('id', $session->id)->first();
+                $audit->record($request, 'register.closed', 'cash_register_session', $session->id, $before->reference, $before, $after);
             });
         } catch (Throwable $e) {
             return back()->withErrors(['close' => $e->getMessage()]);
