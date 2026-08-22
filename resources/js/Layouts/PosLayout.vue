@@ -18,7 +18,7 @@ const toggleFullscreen = async () => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-[#eef1f4] text-slate-900">
+    <div class="pos-shell min-h-screen bg-[#eef1f4] text-slate-900">
         <Head><meta head-key="robots" name="robots" content="noindex,nofollow" /></Head>
         <Flash />
 
