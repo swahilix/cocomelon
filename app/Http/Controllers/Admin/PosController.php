@@ -40,6 +40,15 @@ class PosController extends Controller
                 'available' => ! $product->track_stock || $product->stock_quantity > 0,
             ]);
 
+        $currentRegister = $registers->currentOpenSession($request->user()?->id);
+        $paymentMethods = $currentRegister
+            ? collect($registers->methodsForSession((int) $currentRegister->id))
+            : DB::table('payment_methods')
+                ->where(fn ($query) => $query->where('is_active', true)->orWhere('is_cash', true))
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get();
+
         $held = null;
         if ($request->filled('hold')) {
             $held = DB::table('pos_held_sales')->where('id', $request->integer('hold'))->first();
@@ -55,7 +64,8 @@ class PosController extends Controller
             'customers' => DB::table('pos_customers')->orderBy('name')->limit(500)->get(['id', 'name', 'phone', 'email']),
             'heldSales' => DB::table('pos_held_sales')->latest('id')->limit(30)->get(['id', 'reference', 'customer_name', 'customer_phone', 'created_at']),
             'resumeHold' => $held,
-            'currentRegister' => $registers->currentOpenSession($request->user()?->id),
+            'currentRegister' => $currentRegister,
+            'paymentMethods' => $paymentMethods,
         ]);
     }
 
@@ -66,6 +76,7 @@ class PosController extends Controller
         try {
             $saleId = DB::transaction(function () use ($validated, $request, $inventory, $registers, $guard, $audit): int {
                 $register = $registers->requireOpenSession($request->user()?->id);
+                $paymentMethod = $registers->methodForSession($register->id, (int) $validated['payment_method_id']);
                 $guard->claim($request, 'pos.sale', 'pos_sale');
 
                 $customerId = $validated['customer_id'] ?? null;
@@ -91,9 +102,11 @@ class PosController extends Controller
                 if ($paid < $total) {
                     throw new RuntimeException('Amount paid cannot be less than the sale total.');
                 }
+                $changeDue = $paymentMethod->is_cash ? max(0, $paid - $total) : 0;
 
                 $saleId = DB::table('pos_sales')->insertGetId([
                     'cash_register_session_id' => $register->id,
+                    'payment_method_id' => $paymentMethod->id,
                     'reference' => $reference,
                     'customer_id' => $customerId,
                     'customer_name' => $validated['customer_name'] ?? null,
@@ -102,8 +115,8 @@ class PosController extends Controller
                     'discount' => $discount,
                     'total' => $total,
                     'amount_paid' => $paid,
-                    'change_due' => $paid - $total,
-                    'payment_method' => $validated['payment_method'],
+                    'change_due' => $changeDue,
+                    'payment_method' => $paymentMethod->name,
                     'payment_reference' => $validated['payment_reference'] ?? null,
                     'notes' => $validated['notes'] ?? null,
                     'created_by' => $request->user()?->id,
@@ -158,17 +171,18 @@ class PosController extends Controller
                     );
                 }
 
-                if ($validated['payment_method'] === 'cash' && $total > 0) {
+                if ($total > 0) {
                     $registers->record(
                         $register->id,
-                        'cash_sale',
+                        $paymentMethod->is_cash ? 'cash_sale' : 'payment_sale',
                         'in',
                         $total,
-                        'POS cash sale',
+                        "POS {$paymentMethod->name} sale",
                         $reference,
                         $request->user()?->id,
                         'pos_sale',
                         $saleId,
+                        (int) $paymentMethod->id,
                     );
                 }
 
@@ -181,6 +195,7 @@ class PosController extends Controller
                     'discount_override' => $discount > 0,
                     'price_overrides' => $priceOverrides,
                     'register_session_id' => $register->id,
+                    'payment_method' => $paymentMethod->name,
                 ]);
 
                 return $saleId;
@@ -192,7 +207,7 @@ class PosController extends Controller
         return redirect()->route('admin.pos.receipt', $saleId)->with('success', 'POS sale completed successfully.');
     }
 
-    public function hold(Request $request): RedirectResponse
+    public function hold(Request $request, CashRegisterService $registers): RedirectResponse
     {
         $validated = $request->validate([
             'hold_id' => ['nullable', 'integer', 'exists:pos_held_sales,id'],
@@ -200,7 +215,7 @@ class PosController extends Controller
             'customer_name' => ['nullable', 'string', 'max:255'],
             'customer_phone' => ['nullable', 'string', 'max:60'],
             'discount' => ['nullable', 'numeric', 'min:0'],
-            'payment_method' => ['required', 'string', 'max:40'],
+            'payment_method_id' => ['required', 'integer', 'exists:payment_methods,id'],
             'payment_reference' => ['nullable', 'string', 'max:120'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'items' => ['required', 'array', 'min:1'],
@@ -209,13 +224,17 @@ class PosController extends Controller
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
         ]);
 
+        $register = $registers->requireOpenSession($request->user()?->id);
+        $paymentMethod = $registers->methodForSession($register->id, (int) $validated['payment_method_id']);
+
         $payload = [
             'customer_id' => $validated['customer_id'] ?? null,
             'customer_name' => $validated['customer_name'] ?? null,
             'customer_phone' => $validated['customer_phone'] ?? null,
             'cart' => json_encode($validated['items']),
             'discount' => $validated['discount'] ?? 0,
-            'payment_method' => $validated['payment_method'],
+            'payment_method_id' => $paymentMethod->id,
+            'payment_method' => $paymentMethod->name,
             'payment_reference' => $validated['payment_reference'] ?? null,
             'notes' => $validated['notes'] ?? null,
             'created_by' => $request->user()?->id,
@@ -269,7 +288,7 @@ class PosController extends Controller
             'save_customer' => ['nullable', 'boolean'],
             'discount' => ['nullable', 'numeric', 'min:0'],
             'amount_paid' => ['required', 'numeric', 'min:0'],
-            'payment_method' => ['required', 'in:cash,mobile_money,bank,card,other'],
+            'payment_method_id' => ['required', 'integer', 'exists:payment_methods,id'],
             'payment_reference' => ['nullable', 'string', 'max:120'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'items' => ['required', 'array', 'min:1'],
