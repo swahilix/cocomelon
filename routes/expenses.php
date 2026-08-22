@@ -3,7 +3,7 @@
 use App\Http\Controllers\Admin\ExpenseController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function (): void {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'permission:manage_expenses'])->group(function (): void {
     Route::get('expenses', [ExpenseController::class, 'index'])->name('expenses.index');
     Route::post('expenses', [ExpenseController::class, 'store'])->name('expenses.store');
     Route::post('expenses/categories', [ExpenseController::class, 'storeCategory'])->name('expenses.categories.store');
