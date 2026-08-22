@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\Supplier;
 use App\Services\InventoryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,14 +31,8 @@ class StockController extends Controller
             ->orderBy('name')
             ->get()
             ->map(function (Product $product): array {
-                $lastMovement = DB::table('stock_movements')
-                    ->where('product_id', $product->id)
-                    ->latest('id')
-                    ->first();
-                $lastCost = (float) (DB::table('stock_purchase_items')
-                    ->where('product_id', $product->id)
-                    ->latest('id')
-                    ->value('unit_cost') ?? 0);
+                $lastMovement = DB::table('stock_movements')->where('product_id', $product->id)->latest('id')->first();
+                $lastCost = (float) (DB::table('stock_purchase_items')->where('product_id', $product->id)->latest('id')->value('unit_cost') ?? 0);
                 $status = ! $product->track_stock
                     ? 'not_tracked'
                     : ($product->stock_quantity <= 0
@@ -70,8 +65,7 @@ class StockController extends Controller
 
         $stats = [
             'stock_units' => Product::query()->where('track_stock', true)->sum('stock_quantity'),
-            'low_stock' => Product::query()->where('track_stock', true)
-                ->whereColumn('stock_quantity', '<=', 'low_stock_threshold')->where('stock_quantity', '>', 0)->count(),
+            'low_stock' => Product::query()->where('track_stock', true)->whereColumn('stock_quantity', '<=', 'low_stock_threshold')->where('stock_quantity', '>', 0)->count(),
             'out_of_stock' => Product::query()->where('track_stock', true)->where('stock_quantity', '<=', 0)->count(),
             'stock_value' => $products->sum('stock_value'),
             'today_sales' => (float) DB::table('pos_sales')->whereDate('created_at', $today)->sum('total'),
@@ -82,10 +76,14 @@ class StockController extends Controller
 
         return Inertia::render('Admin/Stock/Index', [
             'products' => $products,
+            'suppliers' => Supplier::active()->orderBy('name')->get(['id', 'name', 'contact_person', 'phone']),
             'stats' => $stats,
             'categories' => $products->pluck('category')->filter()->unique()->sort()->values(),
             'brands' => $products->pluck('brand')->filter()->unique()->sort()->values(),
-            'purchases' => DB::table('stock_purchases')->latest('id')->limit(20)->get(),
+            'purchases' => DB::table('stock_purchases')
+                ->leftJoin('suppliers', 'suppliers.id', '=', 'stock_purchases.supplier_id')
+                ->select('stock_purchases.*', DB::raw('COALESCE(suppliers.name, stock_purchases.supplier_name) as display_supplier_name'))
+                ->latest('stock_purchases.id')->limit(20)->get(),
             'sales' => DB::table('pos_sales')->latest('id')->limit(20)->get(),
             'expenses' => DB::table('expenses')->latest('id')->limit(20)->get(),
             'movements' => DB::table('stock_movements')
@@ -99,7 +97,8 @@ class StockController extends Controller
     public function purchase(Request $request, InventoryService $inventory): RedirectResponse
     {
         $validated = $request->validate([
-            'supplier_name' => ['nullable', 'string', 'max:255'],
+            'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id', 'required_without:one_time_supplier_name'],
+            'one_time_supplier_name' => ['nullable', 'string', 'max:255', 'required_without:supplier_id'],
             'invoice_number' => ['nullable', 'string', 'max:100'],
             'purchase_date' => ['required', 'date'],
             'additional_cost' => ['nullable', 'numeric', 'min:0'],
@@ -111,13 +110,17 @@ class StockController extends Controller
             'items.*.unit_cost' => ['required', 'numeric', 'min:0'],
         ]);
 
-        DB::transaction(function () use ($validated, $request, $inventory): void {
+        $supplier = ! empty($validated['supplier_id']) ? Supplier::active()->findOrFail($validated['supplier_id']) : null;
+        $supplierName = $supplier?->name ?: trim((string) ($validated['one_time_supplier_name'] ?? ''));
+
+        DB::transaction(function () use ($validated, $request, $inventory, $supplier, $supplierName): void {
             $reference = $this->reference('PUR');
             $subtotal = collect($validated['items'])->sum(fn ($item) => $item['quantity'] * $item['unit_cost']);
             $additional = (float) ($validated['additional_cost'] ?? 0);
             $purchaseId = DB::table('stock_purchases')->insertGetId([
                 'reference' => $reference,
-                'supplier_name' => $validated['supplier_name'] ?? null,
+                'supplier_id' => $supplier?->id,
+                'supplier_name' => $supplierName,
                 'invoice_number' => $validated['invoice_number'] ?? null,
                 'purchase_date' => $validated['purchase_date'],
                 'subtotal' => $subtotal,
@@ -150,7 +153,7 @@ class StockController extends Controller
                     'purchase',
                     $reference,
                     (float) $item['unit_cost'],
-                    $validated['supplier_name'] ?? null,
+                    $supplierName,
                     $request->user()?->id,
                     'stock_purchase',
                     $purchaseId,
@@ -175,23 +178,11 @@ class StockController extends Controller
         try {
             DB::transaction(function () use ($validated, $request, $inventory): void {
                 if ($validated['mode'] === 'opening') {
-                    $inventory->openingBalance(
-                        $validated['product_id'],
-                        $validated['target_quantity'],
-                        $validated['notes'] ?? null,
-                        $request->user()?->id,
-                    );
-
+                    $inventory->openingBalance($validated['product_id'], $validated['target_quantity'], $validated['notes'] ?? null, $request->user()?->id);
                     return;
                 }
 
-                $inventory->adjust(
-                    $validated['product_id'],
-                    $validated['target_quantity'],
-                    $validated['reason'],
-                    $validated['notes'] ?? null,
-                    $request->user()?->id,
-                );
+                $inventory->adjust($validated['product_id'], $validated['target_quantity'], $validated['reason'], $validated['notes'] ?? null, $request->user()?->id);
             });
         } catch (Throwable $exception) {
             return back()->withErrors(['adjustment' => $exception->getMessage()]);
@@ -284,18 +275,7 @@ class StockController extends Controller
                         'updated_at' => now(),
                     ]);
 
-                    $inventory->decrease(
-                        $product,
-                        $item['quantity'],
-                        'pos_sale',
-                        $reference,
-                        $lastCost,
-                        $validated['customer_name'] ?? 'Walk-in customer',
-                        $request->user()?->id,
-                        'pos_sale',
-                        $saleId,
-                        'POS sale',
-                    );
+                    $inventory->decrease($product, $item['quantity'], 'pos_sale', $reference, $lastCost, $validated['customer_name'] ?? 'Walk-in customer', $request->user()?->id, 'pos_sale', $saleId, 'POS sale');
                 }
             });
         } catch (Throwable $exception) {
