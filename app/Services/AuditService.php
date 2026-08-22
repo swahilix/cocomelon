@@ -23,12 +23,52 @@ class AuditService
             'subject_type' => $subjectType,
             'subject_id' => $subjectId,
             'reference' => $reference,
-            'before_values' => $before === null ? null : json_encode($before, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            'after_values' => $after === null ? null : json_encode($after, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            'metadata' => $metadata ? json_encode($metadata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null,
+            'before_values' => $this->encode($before),
+            'after_values' => $this->encode($after),
+            'metadata' => $metadata ? $this->encode($metadata) : null,
             'ip_address' => $request->ip(),
             'user_agent' => mb_substr((string) $request->userAgent(), 0, 2000),
             'created_at' => now(),
         ]);
+    }
+
+    private function encode(array|object|null $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $normalized = json_decode(json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), true);
+        return json_encode($this->redact($normalized), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    private function redact(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        foreach ($value as $key => $item) {
+            $normalizedKey = strtolower((string) $key);
+            if ($this->isSensitiveKey($normalizedKey)) {
+                $value[$key] = '[REDACTED]';
+                continue;
+            }
+
+            $value[$key] = $this->redact($item);
+        }
+
+        return $value;
+    }
+
+    private function isSensitiveKey(string $key): bool
+    {
+        foreach (['password', 'remember_token', 'token', 'secret', 'credential', 'api_key', 'private_key'] as $needle) {
+            if ($key === $needle || str_contains($key, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
