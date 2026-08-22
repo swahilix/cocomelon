@@ -42,6 +42,21 @@ Before Phase 1, inspect the existing migrations/controllers/UI and normalize any
 
 # Phase 1 — Inventory foundation hardening
 
+Status: **Completed — 2026-08-22.**
+
+Implemented decisions:
+
+- `InventoryService` is the single stock mutation path for product creation opening balances, purchases, POS and manual adjustments.
+- Product rows are locked during stock mutation and negative tracked stock is blocked.
+- Product metadata editing no longer changes stock quantity directly.
+- Movement rows preserve quantity before/after, source type/ID, reference, reason, cost, user and reversal linkage.
+- Manual opening-balance and adjustment movements can be reversed by posting an opposite linked movement; original ledger records are never deleted.
+- Purchase/POS movements are intentionally not reversible from the generic ledger because their future reversal must happen from the source transaction workflow.
+- Inventory reconciliation compares the current product balance with calculated movement history and flags mismatches without silently modifying stock.
+- Existing tracked products with no movement history are marked `Opening required` so their current physical balance can be adopted as an opening baseline.
+- Dedicated Inventory view includes stock status, low-stock threshold, latest cost, estimated stock value, movement history, reconciliation state and adjustment controls.
+- Low/out-of-stock products have a purchase shortcut that opens the purchase form with that product selected.
+
 ## 1.1 Stock movement service
 
 Create one reusable inventory service/action responsible for all stock mutations.
@@ -815,7 +830,7 @@ Provide an explicit administrator reconciliation action only after review.
 
 We will implement in this exact order unless a discovered dependency requires a small adjustment:
 
-1. **Phase 1 — Inventory foundation hardening**
+1. **Phase 1 — Inventory foundation hardening** ✅
 2. **Phase 2 — Suppliers**
 3. **Phase 3 — Purchasing workflow**
 4. **Phase 4 — POS redesign**
