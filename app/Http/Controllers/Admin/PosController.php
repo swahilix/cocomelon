@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Services\AuditService;
 use App\Services\CashRegisterService;
 use App\Services\InventoryService;
+use App\Services\PostingGuard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -55,13 +57,15 @@ class PosController extends Controller
         ]);
     }
 
-    public function store(Request $request, InventoryService $inventory, CashRegisterService $registers): RedirectResponse
+    public function store(Request $request, InventoryService $inventory, CashRegisterService $registers, PostingGuard $guard, AuditService $audit): RedirectResponse
     {
         $validated = $this->validatedSale($request);
 
         try {
-            $saleId = DB::transaction(function () use ($validated, $request, $inventory, $registers): int {
+            $saleId = DB::transaction(function () use ($validated, $request, $inventory, $registers, $guard, $audit): int {
                 $register = $registers->requireOpenSession($request->user()?->id);
+                $guard->claim($request, 'pos.sale', 'pos_sale');
+
                 $customerId = $validated['customer_id'] ?? null;
                 if (! $customerId && ! empty($validated['save_customer']) && ! empty($validated['customer_name'])) {
                     $customerId = DB::table('pos_customers')->insertGetId([
@@ -76,9 +80,12 @@ class PosController extends Controller
                 $reference = $this->reference('POS');
                 $subtotal = (float) collect($validated['items'])->sum(fn ($item) => $item['quantity'] * $item['unit_price']);
                 $discount = min((float) ($validated['discount'] ?? 0), $subtotal);
+                if ($discount > 0 && ! $request->user()?->hasPermission('discount_pos_sale')) {
+                    throw new RuntimeException('You do not have permission to apply a POS discount.');
+                }
+
                 $total = max(0, $subtotal - $discount);
                 $paid = (float) $validated['amount_paid'];
-
                 if ($paid < $total) {
                     throw new RuntimeException('Amount paid cannot be less than the sale total.');
                 }
@@ -102,9 +109,24 @@ class PosController extends Controller
                     'updated_at' => now(),
                 ]);
 
+                $priceOverrides = [];
                 foreach ($validated['items'] as $item) {
                     $product = Product::query()->findOrFail($item['product_id']);
-                    $lineTotal = (float) $item['quantity'] * (float) $item['unit_price'];
+                    $submittedPrice = (float) $item['unit_price'];
+                    $normalPrice = (float) $product->current_price;
+                    if (abs($submittedPrice - $normalPrice) > 0.005) {
+                        if (! $request->user()?->hasPermission('override_pos_price')) {
+                            throw new RuntimeException("You do not have permission to override the selling price for {$product->name}.");
+                        }
+                        $priceOverrides[] = [
+                            'product_id' => $product->id,
+                            'product_name' => $product->name,
+                            'normal_price' => $normalPrice,
+                            'sold_price' => $submittedPrice,
+                        ];
+                    }
+
+                    $lineTotal = (float) $item['quantity'] * $submittedPrice;
                     $unitCost = (float) $product->average_cost;
 
                     DB::table('pos_sale_items')->insert([
@@ -113,7 +135,7 @@ class PosController extends Controller
                         'product_name' => $product->name,
                         'sku' => $product->sku,
                         'quantity' => $item['quantity'],
-                        'unit_price' => $item['unit_price'],
+                        'unit_price' => $submittedPrice,
                         'unit_cost' => $unitCost,
                         'line_total' => $lineTotal,
                         'created_at' => now(),
@@ -151,6 +173,13 @@ class PosController extends Controller
                 if (! empty($validated['hold_id'])) {
                     DB::table('pos_held_sales')->where('id', $validated['hold_id'])->delete();
                 }
+
+                $after = DB::table('pos_sales')->where('id', $saleId)->first();
+                $audit->record($request, 'pos.sale_completed', 'pos_sale', $saleId, $reference, null, $after, [
+                    'discount_override' => $discount > 0,
+                    'price_overrides' => $priceOverrides,
+                    'register_session_id' => $register->id,
+                ]);
 
                 return $saleId;
             });
@@ -245,6 +274,7 @@ class PosController extends Controller
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
+            '_operation_id' => ['nullable', 'string', 'max:120'],
         ]);
     }
 
