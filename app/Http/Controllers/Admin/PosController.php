@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Services\CashRegisterService;
 use App\Services\InventoryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ use Throwable;
 
 class PosController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request, CashRegisterService $registers): Response
     {
         $products = Product::query()
             ->with(['category:id,name'])
@@ -50,15 +51,17 @@ class PosController extends Controller
             'customers' => DB::table('pos_customers')->orderBy('name')->limit(500)->get(['id', 'name', 'phone', 'email']),
             'heldSales' => DB::table('pos_held_sales')->latest('id')->limit(30)->get(['id', 'reference', 'customer_name', 'customer_phone', 'created_at']),
             'resumeHold' => $held,
+            'currentRegister' => $registers->currentOpenSession($request->user()?->id),
         ]);
     }
 
-    public function store(Request $request, InventoryService $inventory): RedirectResponse
+    public function store(Request $request, InventoryService $inventory, CashRegisterService $registers): RedirectResponse
     {
         $validated = $this->validatedSale($request);
 
         try {
-            $saleId = DB::transaction(function () use ($validated, $request, $inventory): int {
+            $saleId = DB::transaction(function () use ($validated, $request, $inventory, $registers): int {
+                $register = $registers->requireOpenSession($request->user()?->id);
                 $customerId = $validated['customer_id'] ?? null;
                 if (! $customerId && ! empty($validated['save_customer']) && ! empty($validated['customer_name'])) {
                     $customerId = DB::table('pos_customers')->insertGetId([
@@ -81,6 +84,7 @@ class PosController extends Controller
                 }
 
                 $saleId = DB::table('pos_sales')->insertGetId([
+                    'cash_register_session_id' => $register->id,
                     'reference' => $reference,
                     'customer_id' => $customerId,
                     'customer_name' => $validated['customer_name'] ?? null,
@@ -127,6 +131,20 @@ class PosController extends Controller
                         'pos_sale',
                         $saleId,
                         'POS sale',
+                    );
+                }
+
+                if ($validated['payment_method'] === 'cash' && $total > 0) {
+                    $registers->record(
+                        $register->id,
+                        'cash_sale',
+                        'in',
+                        $total,
+                        'POS cash sale',
+                        $reference,
+                        $request->user()?->id,
+                        'pos_sale',
+                        $saleId,
                     );
                 }
 
