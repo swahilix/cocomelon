@@ -101,7 +101,7 @@ class PosController extends Controller
                 foreach ($validated['items'] as $item) {
                     $product = Product::query()->findOrFail($item['product_id']);
                     $lineTotal = (float) $item['quantity'] * (float) $item['unit_price'];
-                    $lastCost = (float) (DB::table('stock_purchase_items')->where('product_id', $product->id)->latest('id')->value('unit_cost') ?? 0);
+                    $unitCost = (float) $product->average_cost;
 
                     DB::table('pos_sale_items')->insert([
                         'pos_sale_id' => $saleId,
@@ -110,7 +110,7 @@ class PosController extends Controller
                         'sku' => $product->sku,
                         'quantity' => $item['quantity'],
                         'unit_price' => $item['unit_price'],
-                        'unit_cost' => $lastCost,
+                        'unit_cost' => $unitCost,
                         'line_total' => $lineTotal,
                         'created_at' => now(),
                         'updated_at' => now(),
@@ -121,7 +121,7 @@ class PosController extends Controller
                         $item['quantity'],
                         'pos_sale',
                         $reference,
-                        $lastCost,
+                        $unitCost,
                         $validated['customer_name'] ?? 'Walk-in customer',
                         $request->user()?->id,
                         'pos_sale',
