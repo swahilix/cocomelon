@@ -699,6 +699,21 @@ Implemented reports:
 
 # Phase 9 — Cash register / shift management
 
+Status: **Completed — 2026-08-22.**
+
+Implemented decisions:
+
+- Added persistent cashier register sessions with unique reference, opening cash/time, closing time, expected cash, counted cash, variance and opening/closing notes.
+- A cashier may have only one open register at a time; the cashier user row is locked while opening to prevent concurrent duplicate sessions.
+- POS completion now requires the signed-in cashier to have an open register. Every new POS sale stores its register-session ID regardless of payment method.
+- Cash POS sales automatically create immutable drawer cash-in movements for the net sale total; cash change does not inflate drawer revenue because only the final sale total is posted.
+- POS returns and sale voids require an open register. Cash refunds/void refunds create drawer cash-out movements in the register where the refund is actually processed.
+- Non-cash POS sales remain attached to the shift for reporting but do not affect expected physical drawer cash.
+- Added manual Cash in, Cash out and Expense paid from register movement types with amount, reason, notes, user and timestamp.
+- Expected cash is calculated from opening cash plus all cash-in movements minus all cash-out movements. Closing stores that expected value permanently, then records counted cash and over/short variance.
+- Closed-shift reports use immutable cash movements rather than recomputing historical drawer totals from the current sale status, so later refunds/voids do not rewrite a previously closed drawer history.
+- Added `Admin → Cash registers`, current-shift controls, shift history and a dedicated shift detail/report screen showing cashier, opening balance, cash/non-cash sales, refunds, drawer movements, expected cash, counted cash and variance.
+
 ## 9.1 POS register sessions
 
 A cashier opens a register with:
@@ -710,38 +725,46 @@ At closing:
 
 - expected cash
 - counted cash
-- difference
+- difference/variance
 - notes
 - closing time
 
 ## 9.2 Cash movements
 
-Record:
+Implemented movement types:
 
 - cash sale
 - cash refund
+- cash void refund
 - cash in
 - cash out
 - expense paid from register
 
+Every cash movement is linked to a register session and preserves source information where applicable.
+
 ## 9.3 Shift report
 
-Show:
+Shift reporting shows:
 
 - cashier
 - opening balance
 - cash sales
 - non-cash sales
 - cash in/out
+- register-funded expenses
 - refunds
 - expected closing cash
-- actual cash
+- actual/counted cash
 - variance
+- detailed immutable drawer ledger
+- linked POS transactions
 
 ### Phase 9 acceptance criteria
 
 - Cash at the counter can be reconciled per shift.
 - Variances are visible and attributable.
+- Cash POS activity cannot be posted outside an open cashier session.
+- Later refund/void activity does not silently rewrite an already-closed shift balance.
 
 ---
 
@@ -946,7 +969,7 @@ We will implement in this exact order unless a discovered dependency requires a 
 6. **Phase 6 — Online order inventory integration** ✅
 7. **Phase 7 — Costing and profit** ✅
 8. **Phase 8 — Expenses expansion** ✅
-9. **Phase 9 — Cash register shifts**
+9. **Phase 9 — Cash register shifts** ✅
 10. **Phase 10 — Reports/dashboard**
 11. **Phase 11 — Roles/permissions**
 12. **Phase 12 — Audit/safeguards**
