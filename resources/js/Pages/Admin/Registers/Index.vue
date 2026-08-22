@@ -9,6 +9,7 @@ const page = usePage();
 const money = (value) => new Intl.NumberFormat('en-TZ', { style: 'currency', currency: page.props.store.currency, maximumFractionDigits: 0 }).format(Number(value || 0));
 const cashMethod = computed(() => props.paymentMethods.find((method) => Boolean(method.is_cash)) || null);
 const currentMethods = computed(() => props.current?.method_balances || []);
+const canManagePaymentMethods = computed(() => (page.props.auth.permissions || []).includes('manage_payment_methods'));
 
 const openForm = useForm({
     opening_balances: Object.fromEntries((props.activePaymentMethods || []).map((method) => [method.id, 0])),
@@ -129,11 +130,11 @@ const saveMethod = () => {
             </div>
         </template>
 
-        <section class="card mt-6 p-5">
+        <section v-if="canManagePaymentMethods" class="card mt-6 p-5">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><h2 class="font-semibold">Payment methods</h2><p class="mt-1 text-xs text-slate-500">Cash is built in. Add the actual accounts used by the business, such as M-Pesa Lipa Namba, TigoPesa Lipa Namba or NMB Bank Account.</p></div><span class="rounded-[7px] bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-500">Changes apply to newly opened shifts</span></div>
 
             <form class="mt-4 grid gap-2 lg:grid-cols-6" @submit.prevent="saveMethod">
-                <input v-model="methodForm.name" class="input lg:col-span-2" placeholder="Method name, e.g. M-Pesa Lipa Namba">
+                <input v-model="methodForm.name" class="input lg:col-span-2" maxlength="40" placeholder="Method name, e.g. M-Pesa Lipa Namba">
                 <select v-model="methodForm.type" class="input"><option value="mobile_money">Mobile money</option><option value="bank">Bank account</option><option value="card">Card terminal</option><option value="other">Other</option></select>
                 <input v-model="methodForm.account_number" class="input" placeholder="Lipa / account number">
                 <input v-model="methodForm.account_name" class="input" placeholder="Account name">
