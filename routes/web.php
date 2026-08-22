@@ -40,7 +40,7 @@ Route::post('/cart/{product}', [CartController::class, 'store'])->name('cart.sto
 Route::patch('/cart/{product}', [CartController::class, 'update'])->name('cart.update');
 Route::delete('/cart/{product}', [CartController::class, 'destroy'])->name('cart.destroy');
 Route::get('/checkout', [CheckoutController::class, 'create'])->name('checkout.create');
-Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('sensitive:online_order.checkout,order,orders,input:_none')->name('checkout.store');
 Route::get('/order-success/{orderNumber}', [CheckoutController::class, 'success'])->name('checkout.success');
 
 Route::middleware('guest')->group(function (): void {
@@ -116,7 +116,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::middleware('permission:manage_orders')->group(function (): void {
         Route::get('orders', [AdminOrderController::class, 'index'])->name('orders.index');
         Route::get('orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
-        Route::patch('orders/{order}', [AdminOrderController::class, 'update'])->name('orders.update');
+        Route::patch('orders/{order}', [AdminOrderController::class, 'update'])->middleware('sensitive:online_order.status_updated,order,orders,route:order')->name('orders.update');
     });
 
     Route::middleware('permission:manage_inquiries')->group(function (): void {
