@@ -10,7 +10,7 @@ return new class extends Migration {
         Schema::create('order_status_histories', function (Blueprint $table) {
             $table->id();
             $table->foreignId('order_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('user_id')->nullable()->index();
             $table->string('status', 40)->index();
             $table->string('payment_status', 40)->index();
             $table->text('note')->nullable();
