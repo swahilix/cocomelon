@@ -49,10 +49,11 @@ const closeRegister = () => closeForm.post('/admin/registers/close');
             <div class="card mt-6 p-5">
                 <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div><p class="text-xs font-semibold uppercase tracking-[.14em] text-emerald-600">Register open</p><h2 class="mt-1 text-lg font-semibold">{{ current.session.reference }}</h2><p class="mt-1 text-xs text-slate-500">Opened {{ current.session.opened_at }}</p></div>
-                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
                         <div><p class="text-xs text-slate-500">Opening</p><b>{{ money(current.session.opening_cash) }}</b></div>
                         <div><p class="text-xs text-slate-500">Cash sales</p><b>{{ money(current.summary.cash_sales) }}</b></div>
                         <div><p class="text-xs text-slate-500">Cash refunds</p><b>{{ money(current.summary.cash_refunds) }}</b></div>
+                        <div><p class="text-xs text-slate-500">Register expenses</p><b>{{ money(current.summary.expense_cash_out) }}</b></div>
                         <div><p class="text-xs text-slate-500">Expected</p><b>{{ money(current.summary.expected_cash) }}</b></div>
                     </div>
                 </div>
@@ -60,9 +61,9 @@ const closeRegister = () => closeForm.post('/admin/registers/close');
 
             <div class="mt-5 grid gap-5 xl:grid-cols-2">
                 <form class="card p-5" @submit.prevent="addMovement">
-                    <h2 class="font-semibold">Cash in / cash out</h2><p class="mt-1 text-xs text-slate-500">Use this for drawer movements not created automatically by POS sales/refunds.</p>
-                    <div class="mt-4 grid gap-3 sm:grid-cols-2"><select v-model="movementForm.direction" class="input"><option value="in">Cash in</option><option value="out">Cash out</option></select><input v-model="movementForm.amount" type="number" min="0.01" step="0.01" class="input" placeholder="Amount"></div>
-                    <input v-model="movementForm.reason" class="input mt-3" placeholder="Reason">
+                    <h2 class="font-semibold">Drawer movement</h2><p class="mt-1 text-xs text-slate-500">POS cash sales/refunds are automatic. Use this form for other drawer movements and expenses paid directly from the register.</p>
+                    <div class="mt-4 grid gap-3 sm:grid-cols-2"><select v-model="movementForm.direction" class="input"><option value="in">Cash in</option><option value="out">Cash out</option><option value="expense">Expense paid from register</option></select><input v-model="movementForm.amount" type="number" min="0.01" step="0.01" class="input" placeholder="Amount"></div>
+                    <input v-model="movementForm.reason" class="input mt-3" :placeholder="movementForm.direction === 'expense' ? 'Expense title / reason' : 'Reason'">
                     <textarea v-model="movementForm.notes" class="input mt-3 min-h-20" placeholder="Notes"></textarea>
                     <button class="btn-primary mt-3" :disabled="movementForm.processing"><Icon name="add-circle" :size="16" /> Record movement</button>
                     <p v-if="movementForm.errors.movement" class="mt-2 text-sm text-red-600">{{ movementForm.errors.movement }}</p>
