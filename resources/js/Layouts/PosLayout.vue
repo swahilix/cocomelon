@@ -3,10 +3,13 @@ import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import Flash from '../Components/Flash.vue';
 import Icon from '../Components/Icon.vue';
+import { useAdminSelect2 } from '../lib/useAdminSelect2';
 
 const page = usePage();
 const permissions = computed(() => page.props.auth.permissions || []);
 const canViewInventory = computed(() => permissions.value.includes('view_inventory') || permissions.value.includes('manage_purchases'));
+
+useAdminSelect2('.pos-shell');
 
 const logout = () => router.post('/logout');
 const toggleFullscreen = async () => {
