@@ -101,17 +101,17 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 
     Route::get('stock', [StockController::class, 'index'])->middleware('permission:view_inventory,manage_purchases')->name('stock.index');
     Route::get('stock/inventory', InventoryController::class)->middleware('permission:view_inventory')->name('stock.inventory');
-    Route::post('stock/purchases', [StockController::class, 'purchase'])->middleware('permission:manage_purchases')->name('stock.purchases.store');
+    Route::post('stock/purchases', [StockController::class, 'purchase'])->middleware(['permission:manage_purchases', 'sensitive:purchase.created,stock_purchase,stock_purchases,input:_none'])->name('stock.purchases.store');
     Route::get('stock/purchases/{purchase}', [PurchaseController::class, 'show'])->middleware('permission:manage_purchases,view_costs')->whereNumber('purchase')->name('stock.purchases.show');
-    Route::patch('stock/purchases/{purchase}', [PurchaseController::class, 'update'])->middleware('permission:manage_purchases')->whereNumber('purchase')->name('stock.purchases.update');
-    Route::post('stock/purchases/{purchase}/receive', [PurchaseController::class, 'receive'])->middleware('permission:receive_purchases')->whereNumber('purchase')->name('stock.purchases.receive');
-    Route::post('stock/purchases/{purchase}/payments', [PurchaseController::class, 'payment'])->middleware('permission:manage_purchases')->whereNumber('purchase')->name('stock.purchases.payments.store');
-    Route::post('stock/purchases/{purchase}/returns', [PurchaseController::class, 'returnItems'])->middleware('permission:manage_purchases')->whereNumber('purchase')->name('stock.purchases.returns.store');
-    Route::post('stock/purchases/{purchase}/cancel', [PurchaseController::class, 'cancel'])->middleware('permission:manage_purchases')->whereNumber('purchase')->name('stock.purchases.cancel');
-    Route::post('stock/adjustments', [StockController::class, 'adjustment'])->middleware('permission:adjust_stock')->name('stock.adjustments.store');
-    Route::post('stock/movements/{movement}/reverse', [StockMovementController::class, 'reverse'])->middleware('permission:adjust_stock')->whereNumber('movement')->name('stock.movements.reverse');
-    Route::post('stock/expenses', [StockController::class, 'expense'])->middleware('permission:manage_expenses')->name('stock.expenses.store');
-    Route::post('stock/pos', [StockController::class, 'pos'])->middleware('permission:use_pos')->name('stock.pos.store');
+    Route::patch('stock/purchases/{purchase}', [PurchaseController::class, 'update'])->middleware(['permission:manage_purchases', 'sensitive:purchase.updated,stock_purchase,stock_purchases,route:purchase'])->whereNumber('purchase')->name('stock.purchases.update');
+    Route::post('stock/purchases/{purchase}/receive', [PurchaseController::class, 'receive'])->middleware(['permission:receive_purchases', 'sensitive:purchase.received,stock_purchase,stock_purchases,route:purchase'])->whereNumber('purchase')->name('stock.purchases.receive');
+    Route::post('stock/purchases/{purchase}/payments', [PurchaseController::class, 'payment'])->middleware(['permission:manage_purchases', 'sensitive:purchase.payment_posted,stock_purchase,stock_purchases,route:purchase'])->whereNumber('purchase')->name('stock.purchases.payments.store');
+    Route::post('stock/purchases/{purchase}/returns', [PurchaseController::class, 'returnItems'])->middleware(['permission:manage_purchases', 'sensitive:purchase.return_posted,stock_purchase,stock_purchases,route:purchase'])->whereNumber('purchase')->name('stock.purchases.returns.store');
+    Route::post('stock/purchases/{purchase}/cancel', [PurchaseController::class, 'cancel'])->middleware(['permission:manage_purchases', 'sensitive:purchase.cancelled,stock_purchase,stock_purchases,route:purchase'])->whereNumber('purchase')->name('stock.purchases.cancel');
+    Route::post('stock/adjustments', [StockController::class, 'adjustment'])->middleware(['permission:adjust_stock', 'sensitive:stock.adjusted,product,products,input:product_id'])->name('stock.adjustments.store');
+    Route::post('stock/movements/{movement}/reverse', [StockMovementController::class, 'reverse'])->middleware(['permission:adjust_stock', 'sensitive:stock.adjustment_reversed,stock_movement,stock_movements,route:movement'])->whereNumber('movement')->name('stock.movements.reverse');
+    Route::post('stock/expenses', [StockController::class, 'expense'])->middleware(['permission:manage_expenses', 'sensitive:expense.legacy_created,expense,expenses,input:_none'])->name('stock.expenses.store');
+    Route::post('stock/pos', [StockController::class, 'pos'])->middleware(['permission:use_pos', 'sensitive:pos.legacy_sale,pos_sale,pos_sales,input:_none'])->name('stock.pos.store');
 
     Route::middleware('permission:manage_orders')->group(function (): void {
         Route::get('orders', [AdminOrderController::class, 'index'])->name('orders.index');
