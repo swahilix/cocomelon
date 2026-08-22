@@ -91,6 +91,12 @@ class CheckoutController extends Controller
                 }
 
                 $order->forceFill(['inventory_posted_at' => now()])->save();
+                $order->statusHistory()->create([
+                    'user_id' => $request->user()?->id,
+                    'status' => $order->status,
+                    'payment_status' => $order->payment_status,
+                    'note' => 'Order placed and inventory reserved at checkout.',
+                ]);
 
                 return $order;
             });
