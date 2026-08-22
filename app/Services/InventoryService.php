@@ -83,6 +83,14 @@ class InventoryService
                 throw new RuntimeException('Stock movement was not found.');
             }
 
+            if ($movement->type === 'reversal' || $movement->reversal_of_id !== null) {
+                throw new RuntimeException('A reversal movement cannot be reversed again. Post a controlled stock adjustment instead.');
+            }
+
+            if ((int) $movement->quantity === 0) {
+                throw new RuntimeException('A zero-quantity movement cannot be reversed.');
+            }
+
             if (DB::table('stock_movements')->where('reversal_of_id', $movementId)->exists()) {
                 throw new RuntimeException('This stock movement has already been reversed.');
             }
@@ -173,14 +181,14 @@ class InventoryService
             throw new RuntimeException("Not enough stock for {$product->name}. Available: {$before}.");
         }
 
-        if ($product->track_stock) {
+        if ($product->track_stock && $delta !== 0) {
             $product->stock_quantity = $after;
             $product->save();
         }
 
         $id = DB::table('stock_movements')->insertGetId([
             'product_id' => $product->id,
-            'direction' => $delta > 0 ? 'in' : 'out',
+            'direction' => $delta === 0 ? 'adjustment' : ($delta > 0 ? 'in' : 'out'),
             'type' => $type,
             'quantity' => $delta,
             'balance_before' => $product->track_stock ? $before : null,
