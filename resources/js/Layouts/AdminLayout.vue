@@ -3,11 +3,14 @@ import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import Flash from '../Components/Flash.vue';
 import Icon from '../Components/Icon.vue';
+import { useAdminSelect2 } from '../lib/useAdminSelect2';
 
 const open = ref(false);
 const page = usePage();
 const granted = computed(() => page.props.auth.permissions || []);
 const canAny = (permissions = []) => !permissions.length || permissions.some((permission) => granted.value.includes(permission));
+
+useAdminSelect2('.admin-shell');
 
 const sections = computed(() => [
     {
