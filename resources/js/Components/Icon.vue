@@ -6,20 +6,20 @@ const props = defineProps({
     size: { type: [String, Number], default: 18 },
 });
 
+const aliases = {
+    'arrow-left-2': 'arrow-left',
+    'arrow-right-3': 'arrow-right',
+};
+
+const resolvedName = computed(() => aliases[props.name] || props.name);
 const px = computed(() => Number(props.size) || 18);
 </script>
 
 <template>
     <i
-        class="iconsax inline-flex shrink-0 items-center justify-center align-middle leading-none"
-        :icon-name="name"
-        :style="{
-            fontSize: `${px}px`,
-            width: `${px}px`,
-            minWidth: `${px}px`,
-            height: `${px}px`,
-            lineHeight: 1,
-        }"
+        class="iconsax inline-block shrink-0 align-middle leading-none"
+        :icon-name="resolvedName"
+        :style="{ fontSize: `${px}px` }"
         aria-hidden="true"
     ></i>
 </template>
