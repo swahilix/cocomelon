@@ -76,10 +76,14 @@ class ExpenseController extends Controller
         $monthly = DB::table('expenses')
             ->where('status', 'posted')
             ->where('expense_date', '>=', now()->subMonths(11)->startOfMonth()->toDateString())
-            ->selectRaw("DATE_FORMAT(expense_date, '%Y-%m') as month_key, SUM(amount) as total")
-            ->groupBy('month_key')
-            ->orderBy('month_key')
-            ->get();
+            ->get(['expense_date', 'amount'])
+            ->groupBy(fn ($expense) => Carbon::parse($expense->expense_date)->format('Y-m'))
+            ->map(fn ($rows, $month) => [
+                'month_key' => $month,
+                'total' => (float) $rows->sum('amount'),
+            ])
+            ->sortKeys()
+            ->values();
 
         return Inertia::render('Admin/Expenses/Index', [
             'expenses' => $expenses,
