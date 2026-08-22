@@ -13,6 +13,7 @@ const sections = [
             ['Dashboard', '/admin', 'home-2'],
             ['Products', '/admin/products', 'box'],
             ['Stock management', '/admin/stock', 'shop'],
+            ['Inventory', '/admin/stock/inventory', 'box'],
             ['Services', '/admin/services', 'setting-2'],
             ['Homepage carousel', '/admin/carousel', 'monitor'],
             ['Product reels', '/admin/reels', 'mobile'],
@@ -39,7 +40,11 @@ const sections = [
         ],
     },
 ];
-const active = (url) => url === '/admin' ? page.url === '/admin' : page.url.startsWith(url);
+const active = (url) => {
+    if (url === '/admin') return page.url === '/admin';
+    if (url === '/admin/stock') return page.url === '/admin/stock';
+    return page.url.startsWith(url);
+};
 const logout = () => router.post('/logout');
 </script>
 
