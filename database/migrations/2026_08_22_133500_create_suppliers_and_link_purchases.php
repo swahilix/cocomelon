@@ -18,7 +18,7 @@ return new class extends Migration {
             $table->decimal('opening_balance', 15, 2)->default(0);
             $table->text('notes')->nullable();
             $table->boolean('is_active')->default(true)->index();
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('created_by')->nullable()->index();
             $table->timestamps();
             $table->softDeletes();
         });
