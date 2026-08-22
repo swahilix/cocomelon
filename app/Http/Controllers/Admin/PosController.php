@@ -80,7 +80,7 @@ class PosController extends Controller
                 $reference = $this->reference('POS');
                 $subtotal = (float) collect($validated['items'])->sum(fn ($item) => $item['quantity'] * $item['unit_price']);
                 $discount = min((float) ($validated['discount'] ?? 0), $subtotal);
-                if ($discount > 0 && ! $request->user()?->hasPermission('discount_pos_sale')) {
+                if ($discount > 0 && ! $request->user()?->hasPermission('discount_pos')) {
                     throw new RuntimeException('You do not have permission to apply a POS discount.');
                 }
 
