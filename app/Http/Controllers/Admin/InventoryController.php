@@ -27,7 +27,7 @@ class InventoryController extends Controller
         $products = Product::query()
             ->with(['category:id,name', 'brand:id,name'])
             ->select([
-                'id', 'category_id', 'brand_id', 'name', 'sku', 'stock_quantity', 'low_stock_threshold',
+                'id', 'category_id', 'brand_id', 'name', 'sku', 'stock_quantity', 'average_cost', 'last_purchase_cost', 'low_stock_threshold',
                 'track_stock', 'price', 'sale_price', 'primary_image',
             ])
             ->orderBy('name')
@@ -36,7 +36,7 @@ class InventoryController extends Controller
                 $lastMovement = DB::table('stock_movements')->where('product_id', $product->id)->latest('id')->first();
                 $firstMovement = DB::table('stock_movements')->where('product_id', $product->id)->oldest('id')->first();
                 $movementTotal = $movementTotals->get($product->id);
-                $lastCost = (float) (DB::table('stock_purchase_items')->where('product_id', $product->id)->latest('id')->value('unit_cost') ?? 0);
+                $averageCost = (float) $product->average_cost;
                 $status = ! $product->track_stock
                     ? 'not_tracked'
                     : ($product->stock_quantity <= 0
@@ -69,8 +69,9 @@ class InventoryController extends Controller
                     'price' => $product->current_price,
                     'image_url' => $product->image_url,
                     'status' => $status,
-                    'last_cost' => $lastCost,
-                    'stock_value' => $product->track_stock ? $lastCost * $product->stock_quantity : 0,
+                    'average_cost' => $averageCost,
+                    'last_cost' => (float) $product->last_purchase_cost,
+                    'stock_value' => $product->track_stock ? $averageCost * $product->stock_quantity : 0,
                     'has_movements' => (bool) $lastMovement,
                     'movement_count' => (int) ($movementTotal->movement_count ?? 0),
                     'expected_balance' => $expectedBalance,
