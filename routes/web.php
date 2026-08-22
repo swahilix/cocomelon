@@ -30,7 +30,7 @@ Route::get('/shop', [StorefrontController::class, 'catalog'])->name('catalog');
 Route::get('/shop/category/{category}', [StorefrontController::class, 'productCategory'])->name('categories.products');
 Route::get('/products/{product}', [StorefrontController::class, 'product'])->name('products.show');
 Route::get('/services', [StorefrontController::class, 'services'])->name('services');
-Route::get('/services/category/{category}', [StorefrontController::class, 'productCategory'])->name('categories.services');
+Route::get('/services/category/{category}', [StorefrontController::class, 'serviceCategory'])->name('categories.services');
 Route::get('/services/{service}', [StorefrontController::class, 'service'])->name('services.show');
 Route::post('/services/{service}/inquiry', [ServiceInquiryController::class, 'store'])->name('services.inquiry');
 Route::get('/pages/{page}', [PageController::class, 'show'])->whereIn('page', ['about', 'contact', 'shipping', 'returns', 'privacy', 'terms'])->name('pages.show');
