@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\CatalogController as AdminCatalogController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\InquiryController;
 use App\Http\Controllers\Admin\HeroSlideController;
+use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\MerchantController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
@@ -84,6 +85,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::post('catalog/brands/{brand}/restore', [AdminCatalogController::class, 'restoreBrand'])->whereNumber('brand')->name('catalog.brands.restore');
 
     Route::get('stock', [StockController::class, 'index'])->name('stock.index');
+    Route::get('stock/inventory', InventoryController::class)->name('stock.inventory');
     Route::post('stock/purchases', [StockController::class, 'purchase'])->name('stock.purchases.store');
     Route::post('stock/adjustments', [StockController::class, 'adjustment'])->name('stock.adjustments.store');
     Route::post('stock/expenses', [StockController::class, 'expense'])->name('stock.expenses.store');
