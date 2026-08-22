@@ -70,7 +70,7 @@ class StockController extends Controller
             'stock_value' => $products->sum('stock_value'),
             'today_sales' => (float) DB::table('pos_sales')->whereDate('created_at', $today)->sum('total'),
             'month_sales' => (float) DB::table('pos_sales')->whereDate('created_at', '>=', $monthStart)->sum('total'),
-            'month_purchases' => (float) DB::table('stock_purchases')->where('purchase_date', '>=', $monthStart)->sum('total'),
+            'month_purchases' => (float) DB::table('stock_purchases')->where('purchase_date', '>=', $monthStart)->where('status', '!=', 'cancelled')->sum('total'),
             'month_expenses' => (float) DB::table('expenses')->where('expense_date', '>=', $monthStart)->sum('amount'),
         ];
 
@@ -83,7 +83,7 @@ class StockController extends Controller
             'purchases' => DB::table('stock_purchases')
                 ->leftJoin('suppliers', 'suppliers.id', '=', 'stock_purchases.supplier_id')
                 ->select('stock_purchases.*', DB::raw('COALESCE(suppliers.name, stock_purchases.supplier_name) as display_supplier_name'))
-                ->latest('stock_purchases.id')->limit(20)->get(),
+                ->latest('stock_purchases.id')->limit(30)->get(),
             'sales' => DB::table('pos_sales')->latest('id')->limit(20)->get(),
             'expenses' => DB::table('expenses')->latest('id')->limit(20)->get(),
             'movements' => DB::table('stock_movements')
@@ -94,14 +94,18 @@ class StockController extends Controller
         ]);
     }
 
-    public function purchase(Request $request, InventoryService $inventory): RedirectResponse
+    public function purchase(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id', 'required_without:one_time_supplier_name'],
             'one_time_supplier_name' => ['nullable', 'string', 'max:255', 'required_without:supplier_id'],
             'invoice_number' => ['nullable', 'string', 'max:100'],
             'purchase_date' => ['required', 'date'],
+            'expected_date' => ['nullable', 'date', 'after_or_equal:purchase_date'],
+            'status' => ['required', 'in:draft,ordered'],
             'additional_cost' => ['nullable', 'numeric', 'min:0'],
+            'discount' => ['nullable', 'numeric', 'min:0'],
+            'tax' => ['nullable', 'numeric', 'min:0'],
             'payment_method' => ['required', 'string', 'max:40'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'items' => ['required', 'array', 'min:1'],
@@ -113,19 +117,31 @@ class StockController extends Controller
         $supplier = ! empty($validated['supplier_id']) ? Supplier::active()->findOrFail($validated['supplier_id']) : null;
         $supplierName = $supplier?->name ?: trim((string) ($validated['one_time_supplier_name'] ?? ''));
 
-        DB::transaction(function () use ($validated, $request, $inventory, $supplier, $supplierName): void {
+        $purchaseId = DB::transaction(function () use ($validated, $request, $supplier, $supplierName): int {
             $reference = $this->reference('PUR');
-            $subtotal = collect($validated['items'])->sum(fn ($item) => $item['quantity'] * $item['unit_cost']);
+            $subtotal = (float) collect($validated['items'])->sum(fn ($item) => $item['quantity'] * $item['unit_cost']);
             $additional = (float) ($validated['additional_cost'] ?? 0);
+            $discount = min((float) ($validated['discount'] ?? 0), $subtotal + $additional);
+            $tax = (float) ($validated['tax'] ?? 0);
+            $total = max(0, $subtotal + $additional - $discount + $tax);
+
             $purchaseId = DB::table('stock_purchases')->insertGetId([
                 'reference' => $reference,
                 'supplier_id' => $supplier?->id,
                 'supplier_name' => $supplierName,
                 'invoice_number' => $validated['invoice_number'] ?? null,
                 'purchase_date' => $validated['purchase_date'],
+                'status' => $validated['status'],
+                'expected_date' => $validated['expected_date'] ?? null,
+                'received_date' => null,
                 'subtotal' => $subtotal,
+                'discount' => $discount,
+                'tax' => $tax,
                 'additional_cost' => $additional,
-                'total' => $subtotal + $additional,
+                'total' => $total,
+                'amount_paid' => 0,
+                'balance_due' => $total,
+                'payment_status' => 'unpaid',
                 'payment_method' => $validated['payment_method'],
                 'notes' => $validated['notes'] ?? null,
                 'created_by' => $request->user()?->id,
@@ -134,35 +150,27 @@ class StockController extends Controller
             ]);
 
             foreach ($validated['items'] as $item) {
-                $product = Product::query()->findOrFail($item['product_id']);
-                $lineTotal = $item['quantity'] * $item['unit_cost'];
-
+                $lineTotal = (float) $item['quantity'] * (float) $item['unit_cost'];
                 DB::table('stock_purchase_items')->insert([
                     'stock_purchase_id' => $purchaseId,
-                    'product_id' => $product->id,
+                    'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
+                    'quantity_received' => 0,
+                    'quantity_returned' => 0,
                     'unit_cost' => $item['unit_cost'],
+                    'discount' => 0,
+                    'tax' => 0,
                     'line_total' => $lineTotal,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
-
-                $inventory->increase(
-                    $product,
-                    $item['quantity'],
-                    'purchase',
-                    $reference,
-                    (float) $item['unit_cost'],
-                    $supplierName,
-                    $request->user()?->id,
-                    'stock_purchase',
-                    $purchaseId,
-                    'Purchase received',
-                );
             }
+
+            return $purchaseId;
         });
 
-        return back()->with('success', 'Purchase recorded and stock updated successfully.');
+        return redirect()->route('admin.stock.purchases.show', $purchaseId)
+            ->with('success', 'Purchase created successfully. Stock will update only when received.');
     }
 
     public function adjustment(Request $request, InventoryService $inventory): RedirectResponse
