@@ -27,9 +27,9 @@ return new class extends Migration
             });
         }
 
-        DB::table('payment_methods')->updateOrInsert(
-            ['code' => 'cash'],
-            [
+        $cashExists = DB::table('payment_methods')->where('code', 'cash')->exists();
+        if ($cashExists) {
+            DB::table('payment_methods')->where('code', 'cash')->update([
                 'name' => 'Cash',
                 'type' => 'cash',
                 'is_cash' => true,
@@ -37,9 +37,20 @@ return new class extends Migration
                 'is_active' => true,
                 'sort_order' => 0,
                 'updated_at' => now(),
-                'created_at' => DB::raw('COALESCE(created_at, CURRENT_TIMESTAMP)'),
-            ],
-        );
+            ]);
+        } else {
+            DB::table('payment_methods')->insert([
+                'name' => 'Cash',
+                'code' => 'cash',
+                'type' => 'cash',
+                'is_cash' => true,
+                'is_system' => true,
+                'is_active' => true,
+                'sort_order' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
 
         $this->addPaymentMethodColumn('pos_sales', 'payment_method_id', 'pos_sales_payment_method_idx');
         $this->addPaymentMethodColumn('pos_held_sales', 'payment_method_id', 'pos_hold_payment_method_idx');
