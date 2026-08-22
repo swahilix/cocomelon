@@ -4,7 +4,7 @@ import { reactive } from 'vue';
 import AdminLayout from '../../../Layouts/AdminLayout.vue';
 import Icon from '../../../Components/Icon.vue';
 
-const props = defineProps({ filters: Object, summary: Object, products: Array, categories: Array, costHealth: Object });
+const props = defineProps({ filters: Object, summary: Object, products: Array, categories: Array, cashiers: Array, daily: Array, costHealth: Object });
 const page = usePage();
 const form = reactive({ from: props.filters.from, to: props.filters.to, source: props.filters.source || 'all' });
 const money = (value) => new Intl.NumberFormat('en-TZ', { style: 'currency', currency: page.props.store.currency, maximumFractionDigits: 0 }).format(Number(value || 0));
@@ -59,14 +59,22 @@ const apply = () => router.get('/admin/profit', form, { preserveState: true, pre
         </div>
 
         <section class="card mt-6 overflow-hidden">
-            <div class="border-b border-slate-200 px-5 py-4"><h2 class="font-semibold">Product profitability</h2><p class="mt-1 text-xs text-slate-500">Top products for the selected period. Restocked returns reverse COGS; non-restockable returns retain their cost.</p></div>
+            <div class="border-b border-slate-200 px-5 py-4"><h2 class="font-semibold">Daily result</h2><p class="mt-1 text-xs text-slate-500">Use the date range above for daily, weekly, monthly or custom-period analysis.</p></div>
+            <div class="overflow-x-auto"><table class="admin-table"><thead><tr><th>Date</th><th>Revenue</th><th>COGS</th><th>Gross profit</th><th>Expenses</th><th>Net result</th></tr></thead><tbody><tr v-for="row in daily" :key="row.date"><td class="font-semibold">{{ row.date }}</td><td>{{ money(row.revenue) }}</td><td>{{ money(row.cogs) }}</td><td>{{ money(row.gross_profit) }}</td><td>{{ money(row.expenses) }}</td><td :class="Number(row.net_result) < 0 ? 'font-semibold text-red-600' : 'font-semibold text-emerald-600'">{{ money(row.net_result) }}</td></tr><tr v-if="!daily.length"><td colspan="6" class="py-12 text-center text-slate-400">No activity for this period.</td></tr></tbody></table></div>
+        </section>
+
+        <section v-if="filters.source !== 'online'" class="card mt-6 overflow-hidden">
+            <div class="border-b border-slate-200 px-5 py-4"><h2 class="font-semibold">POS profitability by cashier</h2><p class="mt-1 text-xs text-slate-500">Sales and returns are attributed to the original POS cashier.</p></div>
+            <div class="overflow-x-auto"><table class="admin-table"><thead><tr><th>Cashier</th><th>Revenue</th><th>COGS</th><th>Gross profit</th><th>Margin</th></tr></thead><tbody><tr v-for="row in cashiers" :key="row.cashier"><td class="font-semibold">{{ row.cashier }}</td><td>{{ money(row.revenue) }}</td><td>{{ money(row.cogs) }}</td><td>{{ money(row.gross_profit) }}</td><td>{{ percent(row.margin) }}</td></tr><tr v-if="!cashiers.length"><td colspan="5" class="py-12 text-center text-slate-400">No POS cashier activity for this period.</td></tr></tbody></table></div>
+        </section>
+
+        <section class="card mt-6 overflow-hidden">
+            <div class="border-b border-slate-200 px-5 py-4"><h2 class="font-semibold">Product profitability</h2><p class="mt-1 text-xs text-slate-500">Restocked returns reverse COGS; non-restockable returns retain their cost as a business loss.</p></div>
             <div class="overflow-x-auto">
                 <table class="admin-table">
                     <thead><tr><th>Product</th><th>Category</th><th>Units</th><th>Revenue</th><th>COGS</th><th>Gross profit</th><th>Margin</th></tr></thead>
                     <tbody>
-                        <tr v-for="product in products" :key="`${product.product_id}-${product.product}`">
-                            <td class="font-semibold">{{ product.product }}</td><td>{{ product.category }}</td><td>{{ product.units }}</td><td>{{ money(product.revenue) }}</td><td>{{ money(product.cogs) }}</td><td :class="Number(product.gross_profit) < 0 ? 'font-semibold text-red-600' : 'font-semibold text-emerald-600'">{{ money(product.gross_profit) }}</td><td>{{ percent(product.margin) }}</td>
-                        </tr>
+                        <tr v-for="product in products" :key="`${product.product_id}-${product.product}`"><td class="font-semibold">{{ product.product }}</td><td>{{ product.category }}</td><td>{{ product.units }}</td><td>{{ money(product.revenue) }}</td><td>{{ money(product.cogs) }}</td><td :class="Number(product.gross_profit) < 0 ? 'font-semibold text-red-600' : 'font-semibold text-emerald-600'">{{ money(product.gross_profit) }}</td><td>{{ percent(product.margin) }}</td></tr>
                         <tr v-if="!products.length"><td colspan="7" class="py-12 text-center text-slate-400">No recognized sales for this period.</td></tr>
                     </tbody>
                 </table>
