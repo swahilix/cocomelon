@@ -18,7 +18,7 @@ return new class extends Migration {
             $table->decimal('balance_due', 15, 2)->default(0)->after('amount_paid');
             $table->string('payment_status', 20)->default('unpaid')->after('balance_due')->index();
             $table->timestamp('cancelled_at')->nullable()->after('notes');
-            $table->foreignId('cancelled_by')->nullable()->after('cancelled_at')->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('cancelled_by')->nullable()->after('cancelled_at')->index();
             $table->text('cancellation_reason')->nullable()->after('cancelled_by');
         });
 
@@ -35,7 +35,7 @@ return new class extends Migration {
             $table->string('reference', 50)->unique();
             $table->date('received_date')->index();
             $table->text('notes')->nullable();
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('created_by')->nullable()->index();
             $table->timestamps();
         });
 
@@ -59,7 +59,7 @@ return new class extends Migration {
             $table->string('payment_method', 40);
             $table->string('transaction_reference', 120)->nullable()->index();
             $table->text('notes')->nullable();
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('created_by')->nullable()->index();
             $table->timestamps();
         });
 
@@ -72,7 +72,7 @@ return new class extends Migration {
             $table->decimal('credit_amount', 15, 2)->default(0);
             $table->string('reason', 120);
             $table->text('notes')->nullable();
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('created_by')->nullable()->index();
             $table->timestamps();
         });
 
@@ -87,8 +87,6 @@ return new class extends Migration {
             $table->timestamps();
         });
 
-        // Existing purchases were posted directly to stock in the original module.
-        // Preserve that history by treating them as already received.
         DB::table('stock_purchase_items')->update([
             'quantity_received' => DB::raw('quantity'),
         ]);
@@ -134,7 +132,6 @@ return new class extends Migration {
         });
 
         Schema::table('stock_purchases', function (Blueprint $table) {
-            $table->dropForeign(['cancelled_by']);
             $table->dropColumn([
                 'status', 'expected_date', 'received_date', 'discount', 'tax', 'amount_paid',
                 'balance_due', 'payment_status', 'cancelled_at', 'cancelled_by', 'cancellation_reason',
