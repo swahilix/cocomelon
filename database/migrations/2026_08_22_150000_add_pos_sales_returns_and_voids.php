@@ -11,7 +11,7 @@ return new class extends Migration {
             $table->string('status', 30)->default('completed')->after('payment_reference')->index();
             $table->decimal('refunded_amount', 15, 2)->default(0)->after('status');
             $table->timestamp('voided_at')->nullable()->after('refunded_amount');
-            $table->foreignId('voided_by')->nullable()->after('voided_at')->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('voided_by')->nullable()->after('voided_at')->index();
             $table->string('void_reason', 500)->nullable()->after('voided_by');
         });
 
@@ -28,7 +28,7 @@ return new class extends Migration {
             $table->string('refund_method', 40)->default('cash');
             $table->string('reason', 255);
             $table->text('notes')->nullable();
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('created_by')->nullable()->index();
             $table->timestamps();
         });
 
@@ -55,7 +55,6 @@ return new class extends Migration {
         });
 
         Schema::table('pos_sales', function (Blueprint $table) {
-            $table->dropForeign(['voided_by']);
             $table->dropColumn(['status', 'refunded_amount', 'voided_at', 'voided_by', 'void_reason']);
         });
     }
