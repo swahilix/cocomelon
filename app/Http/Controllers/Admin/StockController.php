@@ -72,7 +72,7 @@ class StockController extends Controller
             'today_sales' => (float) DB::table('pos_sales')->whereDate('created_at', $today)->sum('total'),
             'month_sales' => (float) DB::table('pos_sales')->whereDate('created_at', '>=', $monthStart)->sum('total'),
             'month_purchases' => (float) DB::table('stock_purchases')->where('purchase_date', '>=', $monthStart)->where('status', '!=', 'cancelled')->sum('total'),
-            'month_expenses' => (float) DB::table('expenses')->where('expense_date', '>=', $monthStart)->sum('amount'),
+            'month_expenses' => (float) DB::table('expenses')->where('status', 'posted')->where('expense_date', '>=', $monthStart)->sum('amount'),
         ];
 
         return Inertia::render('Admin/Stock/Index', [
@@ -86,7 +86,7 @@ class StockController extends Controller
                 ->select('stock_purchases.*', DB::raw('COALESCE(suppliers.name, stock_purchases.supplier_name) as display_supplier_name'))
                 ->latest('stock_purchases.id')->limit(30)->get(),
             'sales' => DB::table('pos_sales')->latest('id')->limit(20)->get(),
-            'expenses' => DB::table('expenses')->latest('id')->limit(20)->get(),
+            'expenses' => DB::table('expenses')->where('status', 'posted')->latest('id')->limit(20)->get(),
             'movements' => DB::table('stock_movements')
                 ->join('products', 'products.id', '=', 'stock_movements.product_id')
                 ->leftJoin('users', 'users.id', '=', 'stock_movements.created_by')
@@ -212,15 +212,32 @@ class StockController extends Controller
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
+        $categoryName = match ($validated['category']) {
+            'Salary' => 'Salaries',
+            'Repair' => 'Repairs',
+            default => $validated['category'],
+        };
+        $category = DB::table('expense_categories')->where('name', $categoryName)->first()
+            ?? DB::table('expense_categories')->where('name', 'Miscellaneous')->first();
+
         DB::table('expenses')->insert([
-            ...$validated,
             'reference' => $this->reference('EXP'),
+            'expense_date' => $validated['expense_date'],
+            'category' => $category?->name ?: $validated['category'],
+            'expense_category_id' => $category?->id,
+            'title' => $validated['description'],
+            'description' => $validated['description'],
+            'amount' => $validated['amount'],
+            'payment_method' => $validated['payment_method'],
+            'payee' => $validated['payee'] ?? null,
+            'status' => 'posted',
+            'notes' => $validated['notes'] ?? null,
             'created_by' => $request->user()?->id,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        return back()->with('success', 'Expense recorded successfully.');
+        return back()->with('success', 'Expense recorded successfully. For receipts and full expense controls, use Expense management.');
     }
 
     public function pos(Request $request, InventoryService $inventory): RedirectResponse
