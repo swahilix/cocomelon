@@ -171,7 +171,6 @@ function clearSale() {
         </div>
 
         <div class="grid gap-2 lg:h-[calc(100vh-82px)] lg:min-h-[620px] lg:grid-cols-[minmax(0,7fr)_minmax(360px,5fr)]">
-            <!-- LEFT: SALES INVOICE -->
             <section class="order-2 flex min-h-[620px] min-w-0 flex-col overflow-hidden rounded-[9px] border border-slate-200 bg-white shadow-sm lg:order-1 lg:min-h-0">
                 <div class="flex h-11 shrink-0 items-center justify-between border-b border-slate-200 px-3">
                     <div class="flex items-center gap-2">
@@ -193,11 +192,11 @@ function clearSale() {
                                 <option value="">Walk-in customer</option>
                                 <option v-for="customer in customers" :key="customer.id" :value="customer.id">{{ customer.name }}{{ customer.phone ? ` · ${customer.phone}` : '' }}</option>
                             </select>
-                            <button type="button" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-r-[8px] border border-l-0 border-slate-300 text-prinx-600 hover:bg-prinx-50" title="New customer" @click="showNewCustomer = !showNewCustomer"><Icon name="profile-add" :size="16" /></button>
+                            <button type="button" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-r-[8px] border border-l-0 border-slate-300 text-prinx-600 hover:bg-prinx-50" title="New customer" @click="showNewCustomer = !showNewCustomer"><Icon name="profile" :size="16" /></button>
                         </div>
 
                         <div class="flex min-w-0">
-                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-l-[8px] border border-r-0 border-slate-300 bg-slate-50 text-slate-500"><Icon name="scanner" :size="16" /></span>
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-l-[8px] border border-r-0 border-slate-300 bg-slate-50 text-slate-500"><Icon name="search-normal" :size="16" /></span>
                             <input v-model="scanSearch" class="h-9 min-w-0 flex-1 rounded-r-[8px] border border-slate-300 px-2.5 text-xs outline-none placeholder:text-slate-400 focus:border-prinx-500" placeholder="Item name / SKU / barcode" autofocus @keyup.enter="scanEnter">
                         </div>
                     </div>
@@ -252,14 +251,13 @@ function clearSale() {
                         <input v-model="form.notes" class="input md:col-span-3" placeholder="Sale note (optional)">
                         <div class="grid grid-cols-3 gap-2 md:col-span-4">
                             <button type="button" class="flex h-10 items-center justify-center gap-1.5 rounded-[8px] bg-rose-700 px-3 text-xs font-semibold text-white transition hover:bg-rose-800 disabled:opacity-50" :disabled="!form.items.length || form.processing" @click="holdSale"><Icon name="pause-circle" :size="16" />Hold</button>
-                            <button type="button" class="flex h-10 items-center justify-center gap-1.5 rounded-[8px] bg-emerald-600 px-3 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50" :disabled="!form.items.length || !currentRegister || form.processing" @click="payExactCash"><Icon name="wallet-money" :size="16" />Exact cash</button>
+                            <button type="button" class="flex h-10 items-center justify-center gap-1.5 rounded-[8px] bg-emerald-600 px-3 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50" :disabled="!form.items.length || !currentRegister || form.processing" @click="payExactCash"><Icon name="wallet" :size="16" />Exact cash</button>
                             <button type="submit" class="flex h-10 items-center justify-center gap-1.5 rounded-[8px] bg-prinx-500 px-3 text-xs font-semibold text-white transition hover:bg-prinx-600 disabled:cursor-not-allowed disabled:opacity-50" :disabled="!form.items.length || !currentRegister || form.processing"><Icon :name="form.processing ? 'refresh-2' : 'tick-circle'" :size="16" />{{ form.processing ? 'Processing...' : 'Complete sale' }}</button>
                         </div>
                     </div>
                 </form>
             </section>
 
-            <!-- RIGHT: PRODUCT BROWSER -->
             <aside class="order-1 flex min-h-[470px] min-w-0 flex-col overflow-hidden rounded-[9px] border border-slate-200 bg-white shadow-sm lg:order-2 lg:min-h-0">
                 <div class="shrink-0 border-b border-slate-200 p-2.5">
                     <div class="grid grid-cols-2 gap-2">
