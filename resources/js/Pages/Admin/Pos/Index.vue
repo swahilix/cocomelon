@@ -196,7 +196,7 @@ function clearSale() {
                                 <option value="">Walk-in customer</option>
                                 <option v-for="customer in customers" :key="customer.id" :value="customer.id">{{ customer.name }}{{ customer.phone ? ` · ${customer.phone}` : '' }}</option>
                             </select>
-                            <button type="button" class="flex h-9 w-9 items-center justify-center rounded-[8px] border border-slate-300 bg-white text-base font-semibold text-prinx-600 transition hover:border-prinx-300 hover:bg-prinx-50" title="New customer" @click="showNewCustomer = !showNewCustomer">+</button>
+                            <button type="button" class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-[8px] border border-slate-300 bg-white text-prinx-600 transition hover:border-prinx-300 hover:bg-prinx-50" title="New customer" aria-label="New customer" @click="showNewCustomer = !showNewCustomer"><Icon name="add-circle" :size="18" /></button>
                         </div>
 
                         <input v-model="scanSearch" class="h-9 min-w-0 w-full rounded-[8px] border border-slate-300 bg-white px-3 text-xs outline-none placeholder:text-slate-400 focus:border-prinx-500" placeholder="Item name / SKU / barcode" autofocus @keyup.enter="scanEnter">
