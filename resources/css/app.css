@@ -61,6 +61,30 @@
     .admin-shell .empty-state { @apply min-h-24 py-6 text-[12px]; }
     .admin-shell .form-section { @apply rounded-[9px] p-3 sm:p-4; }
 
+    /* POS customer / scan row: remove the broken empty addon boxes. */
+    .pos-shell main [class*="rounded-l-[8px]"][class*="border-r-0"] { display: none; }
+    .pos-shell main select.rounded-none {
+        height: 36px;
+        border-radius: 8px 0 0 8px !important;
+    }
+    .pos-shell main [title="New customer"] {
+        width: 36px !important;
+        height: 36px !important;
+        border-radius: 0 8px 8px 0 !important;
+        border-left-width: 0 !important;
+        background: #fff;
+        color: #0f172a;
+        font-size: 20px;
+        font-weight: 500;
+        line-height: 1;
+    }
+    .pos-shell main [title="New customer"] .iconsax { display: none; }
+    .pos-shell main [title="New customer"]::before { content: "+"; transform: translateY(-1px); }
+    .pos-shell main input[placeholder="Item name / SKU / barcode"] {
+        height: 36px;
+        border-radius: 8px !important;
+    }
+
     .scrollbar-hidden { scrollbar-width: none; -ms-overflow-style: none; }
     .scrollbar-hidden::-webkit-scrollbar { display: none; }
     .category-carousel { display: flex; gap: 0.75rem; overflow-x: auto; padding-bottom: 0.5rem; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none; }
