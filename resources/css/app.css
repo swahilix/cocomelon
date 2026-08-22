@@ -61,25 +61,86 @@
     .admin-shell .empty-state { @apply min-h-24 py-6 text-[12px]; }
     .admin-shell .form-section { @apply rounded-[9px] p-3 sm:p-4; }
 
-    /* POS customer / scan row: remove the broken empty addon boxes. */
-    .pos-shell main [class*="rounded-l-[8px]"][class*="border-r-0"] { display: none; }
-    .pos-shell main select.rounded-none {
+    /* Select2 is initialized only inside the admin and POS shells. */
+    .admin-shell .select2-container,
+    .pos-shell .select2-container { min-width: 0; font-size: 13px; }
+
+    .admin-shell .select2-container--default .select2-selection--single,
+    .pos-shell .select2-container--default .select2-selection--single {
         height: 36px;
-        border-radius: 8px 0 0 8px !important;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: #fff;
+        outline: none;
+        transition: border-color .15s ease, box-shadow .15s ease;
     }
-    .pos-shell main [title="New customer"] {
+
+    .admin-shell .select2-container--default.select2-container--focus .select2-selection--single,
+    .admin-shell .select2-container--default.select2-container--open .select2-selection--single,
+    .pos-shell .select2-container--default.select2-container--focus .select2-selection--single,
+    .pos-shell .select2-container--default.select2-container--open .select2-selection--single {
+        border-color: #ff4d0a;
+        box-shadow: 0 0 0 2px rgba(255, 77, 10, .10);
+    }
+
+    .admin-shell .select2-container--default .select2-selection--single .select2-selection__rendered,
+    .pos-shell .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 34px;
+        padding-left: 10px;
+        padding-right: 30px;
+        color: #0f172a;
+    }
+
+    .admin-shell .select2-container--default .select2-selection--single .select2-selection__placeholder,
+    .pos-shell .select2-container--default .select2-selection--single .select2-selection__placeholder { color: #94a3b8; }
+
+    .admin-shell .select2-container--default .select2-selection--single .select2-selection__arrow,
+    .pos-shell .select2-container--default .select2-selection--single .select2-selection__arrow {
+        top: 1px;
+        right: 6px;
+        height: 34px;
+    }
+
+    .admin-shell .select2-container--default.select2-container--disabled .select2-selection--single,
+    .pos-shell .select2-container--default.select2-container--disabled .select2-selection--single {
+        background: #f1f5f9;
+        color: #64748b;
+        cursor: not-allowed;
+    }
+
+    .admin-shell .select2-container--default .select2-selection--multiple,
+    .pos-shell .select2-container--default .select2-selection--multiple {
+        min-height: 36px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 2px 5px;
+        background: #fff;
+    }
+
+    .admin-shell .select2-container--default.select2-container--focus .select2-selection--multiple,
+    .pos-shell .select2-container--default.select2-container--focus .select2-selection--multiple {
+        border-color: #ff4d0a;
+        box-shadow: 0 0 0 2px rgba(255, 77, 10, .10);
+    }
+
+    /* POS customer select and add button are one joined input group. */
+    .pos-customer-group .select2-container { flex: 1 1 auto; width: auto !important; min-width: 0; }
+    .pos-customer-group .select2-container--default .select2-selection--single {
+        border-radius: 8px 0 0 8px !important;
+        border-right-width: 0 !important;
+        box-shadow: none !important;
+    }
+    .pos-customer-group .select2-container--default.select2-container--focus .select2-selection--single,
+    .pos-customer-group .select2-container--default.select2-container--open .select2-selection--single {
+        border-color: #ff4d0a;
+    }
+    .pos-customer-add {
         width: 36px !important;
         height: 36px !important;
         border-radius: 0 8px 8px 0 !important;
-        border-left-width: 0 !important;
-        background: #fff;
-        color: #0f172a;
-        font-size: 20px;
-        font-weight: 500;
-        line-height: 1;
     }
-    .pos-shell main [title="New customer"] .iconsax { display: none; }
-    .pos-shell main [title="New customer"]::before { content: "+"; transform: translateY(-1px); }
+    .pos-customer-group:focus-within .pos-customer-add { border-color: #ff4d0a; }
+
     .pos-shell main input[placeholder="Item name / SKU / barcode"] {
         height: 36px;
         border-radius: 8px !important;
@@ -93,6 +154,41 @@
     .category-selector-card { flex: 0 0 calc((100% - 0.75rem) / 2); min-width: 0; scroll-snap-align: start; }
 }
 
+/* Select2 dropdown is appended to body, so these rules intentionally live outside shell scope. */
+.select2-container--open { z-index: 99999; }
+.select2-dropdown {
+    overflow: hidden;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    background: #fff;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, .14);
+}
+.select2-container--open .select2-dropdown--below { margin-top: 4px; }
+.select2-container--open .select2-dropdown--above { margin-top: -4px; }
+.select2-search--dropdown { padding: 7px; }
+.select2-search--dropdown .select2-search__field {
+    height: 34px;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 7px;
+    padding: 0 9px;
+    outline: none;
+    font-size: 13px;
+}
+.select2-search--dropdown .select2-search__field:focus {
+    border-color: #ff4d0a !important;
+    box-shadow: 0 0 0 2px rgba(255, 77, 10, .10);
+}
+.select2-results__options { padding: 4px; }
+.select2-results__option {
+    margin: 1px 0;
+    border-radius: 6px;
+    padding: 7px 9px !important;
+    font-size: 13px;
+    color: #334155;
+}
+.select2-container--default .select2-results__option--highlighted[aria-selected] { background: #fff1eb; color: #c2410c; }
+.select2-container--default .select2-results__option[aria-selected=true] { background: #ff4d0a; color: #fff; }
+
 @layer utilities {
     /* Prinx uses a restrained 400 / 500 / 600 / 700 hierarchy.
        Legacy utility names are softened here so older screens inherit the
@@ -104,6 +200,7 @@
 
 @media (max-width: 639px) {
     input, select, textarea { font-size: 16px; }
+    .select2-search--dropdown .select2-search__field { font-size: 16px; }
     .admin-table { font-size: 12px; }
     .admin-table th, .admin-table td { white-space: nowrap; }
 }
@@ -136,4 +233,6 @@
     .card { border-color: #e2e8f0 !important; box-shadow: none !important; }
     .admin-table th { background: #f8fafc !important; }
     a { color: inherit !important; text-decoration: none !important; }
+    .select2-container { display: none !important; }
+    select.select2-hidden-accessible { position: static !important; width: auto !important; height: auto !important; clip: auto !important; clip-path: none !important; overflow: visible !important; }
 }
