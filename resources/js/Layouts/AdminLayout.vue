@@ -10,19 +10,19 @@ const sections = [
     {
         label: 'Store management',
         items: [
-            ['Dashboard', '/admin', 'category'],
+            ['Dashboard', '/admin', 'home-2'],
             ['Products', '/admin/products', 'box'],
             ['Services', '/admin/services', 'setting-2'],
-            ['Homepage carousel', '/admin/carousel', 'gallery'],
-            ['Product reels', '/admin/reels', 'video-play'],
-            ['Categories & brands', '/admin/catalog', 'element-3'],
+            ['Homepage carousel', '/admin/carousel', 'monitor'],
+            ['Product reels', '/admin/reels', 'mobile'],
+            ['Categories & brands', '/admin/catalog', 'shop'],
         ],
     },
     {
         label: 'Sales & customers',
         items: [
-            ['Orders', '/admin/orders', 'receipt-item'],
-            ['Service requests', '/admin/inquiries', 'message-question'],
+            ['Orders', '/admin/orders', 'shopping-cart'],
+            ['Service requests', '/admin/inquiries', 'sms'],
         ],
     },
     {
@@ -34,7 +34,7 @@ const sections = [
     {
         label: 'System',
         items: [
-            ['System monitoring', '/admin/system-monitor', 'monitor-recorder'],
+            ['System monitoring', '/admin/system-monitor', 'monitor'],
         ],
     },
 ];
