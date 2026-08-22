@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ProductReelController;
 use App\Http\Controllers\Admin\ServiceController as AdminServiceController;
 use App\Http\Controllers\Admin\StockController;
+use App\Http\Controllers\Admin\StockMovementController;
 use App\Http\Controllers\Admin\SystemMonitorController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
@@ -88,6 +89,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('stock/inventory', InventoryController::class)->name('stock.inventory');
     Route::post('stock/purchases', [StockController::class, 'purchase'])->name('stock.purchases.store');
     Route::post('stock/adjustments', [StockController::class, 'adjustment'])->name('stock.adjustments.store');
+    Route::post('stock/movements/{movement}/reverse', [StockMovementController::class, 'reverse'])->whereNumber('movement')->name('stock.movements.reverse');
     Route::post('stock/expenses', [StockController::class, 'expense'])->name('stock.expenses.store');
     Route::post('stock/pos', [StockController::class, 'pos'])->name('stock.pos.store');
 
