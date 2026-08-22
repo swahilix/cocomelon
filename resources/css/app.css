@@ -39,6 +39,28 @@
     .form-section { @apply rounded-[10px] border border-slate-200 bg-white p-4 sm:p-5; }
     .mobile-action-bar { @apply fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 py-3 shadow-[0_-10px_30px_rgba(15,23,42,0.10)] backdrop-blur xl:hidden; }
 
+    /* Admin-only compact density. Public storefront sizing is unchanged. */
+    .admin-shell { font-size: 13px; }
+    .admin-shell .btn-primary,
+    .admin-shell .btn-dark,
+    .admin-shell .btn-light,
+    .admin-shell .btn-danger { @apply min-h-9 gap-1.5 rounded-[8px] px-3 py-2 text-[13px]; }
+    .admin-shell .input { @apply rounded-[8px] px-2.5 py-2 text-[13px] focus:ring-2; }
+    .admin-shell .label { @apply mb-1 text-[12px]; }
+    .admin-shell .error { @apply text-[11px]; }
+    .admin-shell .section-kicker { @apply text-[10px] tracking-[0.15em]; }
+    .admin-shell .section-title { @apply mt-1 text-xl sm:mt-1 sm:text-2xl; }
+    .admin-shell .status { @apply rounded-[7px] px-2 py-0.5 text-[11px]; }
+    .admin-shell .admin-table { @apply text-[12px]; }
+    .admin-shell .admin-table th { @apply px-2.5 py-2 text-[9px] tracking-[0.08em] sm:px-3 sm:py-2.5; }
+    .admin-shell .admin-table td { @apply px-2.5 py-2.5 sm:px-3 sm:py-3; }
+    .admin-shell .metric-card { @apply rounded-[9px] p-3 sm:p-3.5; }
+    .admin-shell .tab-button { @apply gap-1.5 px-2.5 py-1.5 text-[12px] sm:px-3 sm:py-2; }
+    .admin-shell .admin-toolbar { @apply gap-2; }
+    .admin-shell .admin-actions { @apply gap-1.5; }
+    .admin-shell .empty-state { @apply min-h-24 py-6 text-[12px]; }
+    .admin-shell .form-section { @apply rounded-[9px] p-3 sm:p-4; }
+
     .scrollbar-hidden { scrollbar-width: none; -ms-overflow-style: none; }
     .scrollbar-hidden::-webkit-scrollbar { display: none; }
     .category-carousel { display: flex; gap: 0.75rem; overflow-x: auto; padding-bottom: 0.5rem; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none; }
@@ -65,6 +87,16 @@
 @media (min-width: 640px) {
     .category-carousel-card { flex-basis: calc((100% - 1.5rem) / 3); }
     .category-selector-card { flex-basis: calc((100% - 1.5rem) / 3); }
+
+    /* Tighten legacy page utilities inside admin without touching storefront pages. */
+    .admin-shell [class~="p-5"] { padding: 1rem; }
+    .admin-shell [class~="p-6"] { padding: 1.125rem; }
+    .admin-shell [class~="px-5"] { padding-left: 1rem; padding-right: 1rem; }
+    .admin-shell [class~="py-4"] { padding-top: .75rem; padding-bottom: .75rem; }
+    .admin-shell [class~="gap-6"] { gap: 1rem; }
+    .admin-shell [class~="mt-6"] { margin-top: 1rem; }
+    .admin-shell [class~="mb-6"] { margin-bottom: 1rem; }
+    .admin-shell [class~="space-y-6"] > :not([hidden]) ~ :not([hidden]) { margin-top: 1rem; }
 }
 
 @media (min-width: 1024px) {
@@ -76,7 +108,7 @@
     body { background: #fff !important; }
     aside, header, .print-hidden, .mobile-action-bar { display: none !important; }
     main { padding: 0 !important; }
-    .lg\:pl-72 { padding-left: 0 !important; }
+    .admin-content { padding-left: 0 !important; }
     .card { border-color: #e2e8f0 !important; box-shadow: none !important; }
     .admin-table th { background: #f8fafc !important; }
     a { color: inherit !important; text-decoration: none !important; }
