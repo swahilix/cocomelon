@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('audit_logs', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->unsignedBigInteger('user_id')->nullable()->index();
             $table->string('action', 100)->index();
             $table->string('subject_type', 120)->nullable()->index();
             $table->unsignedBigInteger('subject_id')->nullable()->index();
@@ -26,7 +26,7 @@ return new class extends Migration
 
         Schema::create('posting_guards', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->unsignedBigInteger('user_id')->nullable()->index();
             $table->string('action', 100)->index();
             $table->string('idempotency_key', 120);
             $table->string('request_hash', 64)->nullable();
