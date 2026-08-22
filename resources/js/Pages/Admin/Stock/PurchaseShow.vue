@@ -4,50 +4,16 @@ import { computed } from 'vue';
 import AdminLayout from '../../../Layouts/AdminLayout.vue';
 import Icon from '../../../Components/Icon.vue';
 
-const props = defineProps({
-    purchase: Object,
-    items: Array,
-    receipts: Array,
-    payments: Array,
-    returns: Array,
-    returnCredit: Number,
-});
-
+const props = defineProps({ purchase: Object, items: Array, receipts: Array, payments: Array, returns: Array, returnCredit: Number });
 const page = usePage();
 const today = new Date().toISOString().slice(0, 10);
-const money = (value) => new Intl.NumberFormat('en-TZ', {
-    style: 'currency',
-    currency: page.props.store.currency,
-    maximumFractionDigits: 0,
-}).format(Number(value || 0));
+const money = (value) => new Intl.NumberFormat('en-TZ', { style: 'currency', currency: page.props.store.currency, maximumFractionDigits: 0 }).format(Number(value || 0));
+const printPurchase = () => window.print();
 
-const receiveForm = useForm({
-    received_date: today,
-    notes: '',
-    items: props.items.map((item) => ({ purchase_item_id: item.id, quantity: 0 })),
-});
-
-const paymentForm = useForm({
-    payment_date: today,
-    amount: Number(props.purchase.balance_due || 0),
-    payment_method: 'cash',
-    transaction_reference: '',
-    notes: '',
-});
-
-const returnForm = useForm({
-    return_date: today,
-    reason: 'Return to supplier',
-    notes: '',
-    items: props.items.map((item) => ({ purchase_item_id: item.id, quantity: 0, credit_amount: null })),
-});
-
-const statusForm = useForm({
-    status: ['draft', 'ordered'].includes(props.purchase.status) ? props.purchase.status : 'ordered',
-    expected_date: props.purchase.expected_date || '',
-    notes: props.purchase.notes || '',
-});
-
+const receiveForm = useForm({ received_date: today, notes: '', items: props.items.map((item) => ({ purchase_item_id: item.id, quantity: 0 })) });
+const paymentForm = useForm({ payment_date: today, amount: Number(props.purchase.balance_due || 0), payment_method: 'cash', transaction_reference: '', notes: '' });
+const returnForm = useForm({ return_date: today, reason: 'Return to supplier', notes: '', items: props.items.map((item) => ({ purchase_item_id: item.id, quantity: 0, credit_amount: null })) });
+const statusForm = useForm({ status: ['draft', 'ordered'].includes(props.purchase.status) ? props.purchase.status : 'ordered', expected_date: props.purchase.expected_date || '', notes: props.purchase.notes || '' });
 const cancelForm = useForm({ reason: '' });
 
 const totalOrdered = computed(() => props.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0));
@@ -55,30 +21,9 @@ const totalReceived = computed(() => props.items.reduce((sum, item) => sum + Num
 const totalReturned = computed(() => props.items.reduce((sum, item) => sum + Number(item.quantity_returned || 0), 0));
 const hasReceivable = computed(() => props.items.some((item) => Number(item.remaining_quantity || 0) > 0));
 const hasReturnable = computed(() => props.items.some((item) => Number(item.returnable_quantity || 0) > 0));
-
-const statusLabel = (value) => ({
-    draft: 'Draft',
-    ordered: 'Ordered',
-    partially_received: 'Partially received',
-    received: 'Received',
-    cancelled: 'Cancelled',
-}[value] || value);
-
-const statusClass = (value) => ({
-    draft: 'border-slate-200 bg-slate-50 text-slate-700',
-    ordered: 'border-blue-200 bg-blue-50 text-blue-700',
-    partially_received: 'border-amber-200 bg-amber-50 text-amber-700',
-    received: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-    cancelled: 'border-red-200 bg-red-50 text-red-700',
-}[value] || 'border-slate-200 bg-slate-50 text-slate-700');
-
-const paymentClass = (value) => ({
-    unpaid: 'border-red-200 bg-red-50 text-red-700',
-    partially_paid: 'border-amber-200 bg-amber-50 text-amber-700',
-    paid: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-    cancelled: 'border-slate-200 bg-slate-50 text-slate-500',
-}[value] || 'border-slate-200 bg-slate-50 text-slate-700');
-
+const statusLabel = (value) => ({ draft: 'Draft', ordered: 'Ordered', partially_received: 'Partially received', received: 'Received', cancelled: 'Cancelled' }[value] || value);
+const statusClass = (value) => ({ draft: 'border-slate-200 bg-slate-50 text-slate-700', ordered: 'border-blue-200 bg-blue-50 text-blue-700', partially_received: 'border-amber-200 bg-amber-50 text-amber-700', received: 'border-emerald-200 bg-emerald-50 text-emerald-700', cancelled: 'border-red-200 bg-red-50 text-red-700' }[value] || 'border-slate-200 bg-slate-50 text-slate-700');
+const paymentClass = (value) => ({ unpaid: 'border-red-200 bg-red-50 text-red-700', partially_paid: 'border-amber-200 bg-amber-50 text-amber-700', paid: 'border-emerald-200 bg-emerald-50 text-emerald-700', cancelled: 'border-slate-200 bg-slate-50 text-slate-500' }[value] || 'border-slate-200 bg-slate-50 text-slate-700');
 const submitReceive = () => receiveForm.post(`/admin/stock/purchases/${props.purchase.id}/receive`, { preserveScroll: true });
 const submitPayment = () => paymentForm.post(`/admin/stock/purchases/${props.purchase.id}/payments`, { preserveScroll: true });
 const submitReturn = () => returnForm.post(`/admin/stock/purchases/${props.purchase.id}/returns`, { preserveScroll: true });
@@ -90,119 +35,36 @@ const cancelPurchase = () => cancelForm.post(`/admin/stock/purchases/${props.pur
     <AdminLayout>
         <Head :title="`Purchase ${purchase.reference}`" />
 
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-                <div class="flex items-center gap-2 text-sm text-slate-500">
-                    <Link href="/admin/stock?tab=purchases" class="hover:text-prinx-600">Purchases</Link>
-                    <span>·</span>
-                    <span>{{ purchase.reference }}</span>
-                </div>
-                <h1 class="section-title mt-1">Purchase {{ purchase.reference }}</h1>
-                <p class="mt-2 text-sm text-slate-500">{{ purchase.saved_supplier_name || purchase.supplier_name || 'One-time supplier' }} · {{ purchase.purchase_date }}</p>
-            </div>
-            <div class="flex flex-wrap gap-2">
-                <span :class="['inline-flex items-center rounded-[8px] border px-3 py-2 text-xs font-semibold', statusClass(purchase.status)]">{{ statusLabel(purchase.status) }}</span>
-                <span :class="['inline-flex items-center rounded-[8px] border px-3 py-2 text-xs font-semibold', paymentClass(purchase.payment_status)]">{{ purchase.payment_status?.replace('_', ' ') }}</span>
-            </div>
+        <div class="admin-toolbar">
+            <div><div class="print-hidden flex items-center gap-2 text-sm text-slate-500"><Link href="/admin/stock?tab=purchases" class="hover:text-prinx-600">Purchases</Link><span>·</span><span>{{ purchase.reference }}</span></div><h1 class="section-title mt-1">Purchase {{ purchase.reference }}</h1><p class="mt-2 text-sm text-slate-500">{{ purchase.saved_supplier_name || purchase.supplier_name || 'One-time supplier' }} · {{ purchase.purchase_date }}</p><p class="hidden text-xs text-slate-500 print:block">{{ page.props.store.name }} · {{ page.props.store.address || '' }} · {{ page.props.store.phone || '' }}</p></div>
+            <div class="admin-actions"><span :class="['inline-flex items-center rounded-[8px] border px-3 py-2 text-xs font-semibold', statusClass(purchase.status)]">{{ statusLabel(purchase.status) }}</span><span :class="['inline-flex items-center rounded-[8px] border px-3 py-2 text-xs font-semibold', paymentClass(purchase.payment_status)]">{{ purchase.payment_status?.replace('_', ' ') }}</span><button class="print-hidden btn-light" @click="printPurchase"><Icon name="printer" :size="16" /> Print</button></div>
         </div>
 
-        <div class="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <div class="metric-card"><p class="text-[10px] font-semibold uppercase tracking-[.14em] text-slate-400">Purchase total</p><b class="mt-2 block text-xl">{{ money(purchase.total) }}</b></div>
-            <div class="metric-card"><p class="text-[10px] font-semibold uppercase tracking-[.14em] text-emerald-600">Paid</p><b class="mt-2 block text-xl">{{ money(purchase.amount_paid) }}</b></div>
-            <div class="metric-card"><p class="text-[10px] font-semibold uppercase tracking-[.14em] text-red-600">Balance due</p><b class="mt-2 block text-xl">{{ money(purchase.balance_due) }}</b></div>
-            <div class="metric-card"><p class="text-[10px] font-semibold uppercase tracking-[.14em] text-blue-600">Received</p><b class="mt-2 block text-xl">{{ totalReceived }} / {{ totalOrdered }}</b></div>
-            <div class="metric-card"><p class="text-[10px] font-semibold uppercase tracking-[.14em] text-amber-600">Supplier credits</p><b class="mt-2 block text-xl">{{ money(returnCredit) }}</b><p class="mt-1 text-xs text-slate-500">{{ totalReturned }} units returned</p></div>
-        </div>
+        <div class="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5"><div class="metric-card"><p class="text-[10px] font-semibold uppercase tracking-[.14em] text-slate-400">Purchase total</p><b class="mt-2 block text-xl">{{ money(purchase.total) }}</b></div><div class="metric-card"><p class="text-[10px] font-semibold uppercase tracking-[.14em] text-emerald-600">Paid</p><b class="mt-2 block text-xl">{{ money(purchase.amount_paid) }}</b></div><div class="metric-card"><p class="text-[10px] font-semibold uppercase tracking-[.14em] text-red-600">Balance due</p><b class="mt-2 block text-xl">{{ money(purchase.balance_due) }}</b></div><div class="metric-card"><p class="text-[10px] font-semibold uppercase tracking-[.14em] text-blue-600">Received</p><b class="mt-2 block text-xl">{{ totalReceived }} / {{ totalOrdered }}</b></div><div class="metric-card"><p class="text-[10px] font-semibold uppercase tracking-[.14em] text-amber-600">Supplier credits</p><b class="mt-2 block text-xl">{{ money(returnCredit) }}</b><p class="mt-1 text-xs text-slate-500">{{ totalReturned }} units returned</p></div></div>
 
-        <div v-if="statusForm.errors.purchase || receiveForm.errors.receive || paymentForm.errors.payment || returnForm.errors.return || cancelForm.errors.cancel" class="mt-5 rounded-[8px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {{ statusForm.errors.purchase || receiveForm.errors.receive || paymentForm.errors.payment || returnForm.errors.return || cancelForm.errors.cancel }}
-        </div>
+        <div v-if="statusForm.errors.purchase || receiveForm.errors.receive || paymentForm.errors.payment || returnForm.errors.return || cancelForm.errors.cancel" class="print-hidden mt-5 rounded-[8px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ statusForm.errors.purchase || receiveForm.errors.receive || paymentForm.errors.payment || returnForm.errors.return || cancelForm.errors.cancel }}</div>
 
-        <div class="mt-6 grid gap-6 xl:grid-cols-[1.35fr_.65fr]">
+        <div class="mt-6 grid gap-6 xl:grid-cols-[1.35fr_.65fr] print:block">
             <div class="space-y-6">
-                <section class="card overflow-hidden">
-                    <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-                        <div><h2 class="font-semibold">Purchase items</h2><p class="mt-1 text-xs text-slate-500">Ordered, received and returned quantities.</p></div>
-                        <Icon name="box" :size="21" class="text-prinx-600" />
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="admin-table min-w-[850px]">
-                            <thead><tr><th>Product</th><th>Ordered</th><th>Received</th><th>Returned</th><th>Remaining</th><th>Unit cost</th><th>Total</th></tr></thead>
-                            <tbody>
-                                <tr v-for="item in items" :key="item.id">
-                                    <td><p class="font-semibold">{{ item.product_name }}</p><p class="text-xs text-slate-500">{{ item.sku }}</p></td>
-                                    <td>{{ item.quantity }}</td>
-                                    <td class="font-semibold text-emerald-700">{{ item.quantity_received }}</td>
-                                    <td class="font-semibold text-amber-700">{{ item.quantity_returned }}</td>
-                                    <td>{{ item.remaining_quantity }}</td>
-                                    <td>{{ money(item.unit_cost) }}</td>
-                                    <td class="font-semibold">{{ money(item.line_total) }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
+                <section class="card overflow-hidden"><div class="flex items-center justify-between border-b border-slate-200 px-5 py-4"><div><h2 class="font-semibold">Purchase items</h2><p class="mt-1 text-xs text-slate-500">Ordered, received and returned quantities.</p></div><Icon name="box" :size="21" class="print-hidden text-prinx-600" /></div><div class="overflow-x-auto"><table class="admin-table min-w-[850px] print:min-w-0"><thead><tr><th>Product</th><th>Ordered</th><th>Received</th><th>Returned</th><th>Remaining</th><th>Unit cost</th><th>Total</th></tr></thead><tbody><tr v-for="item in items" :key="item.id"><td><p class="font-semibold">{{ item.product_name }}</p><p class="text-xs text-slate-500">{{ item.sku }}</p></td><td>{{ item.quantity }}</td><td class="font-semibold text-emerald-700">{{ item.quantity_received }}</td><td class="font-semibold text-amber-700">{{ item.quantity_returned }}</td><td>{{ item.remaining_quantity }}</td><td>{{ money(item.unit_cost) }}</td><td class="font-semibold">{{ money(item.line_total) }}</td></tr></tbody></table></div></section>
 
-                <form v-if="hasReceivable && purchase.status !== 'cancelled'" class="card p-5" @submit.prevent="submitReceive">
-                    <div class="flex items-center justify-between"><div><h2 class="font-semibold">Receive stock</h2><p class="mt-1 text-xs text-slate-500">Only quantities posted here increase inventory.</p></div><Icon name="box-add" :size="22" class="text-prinx-600" /></div>
-                    <div class="mt-4 grid gap-3 sm:grid-cols-2"><div><label class="label">Received date</label><input v-model="receiveForm.received_date" type="date" class="input"></div><div><label class="label">Receipt note</label><input v-model="receiveForm.notes" class="input" placeholder="Delivery note, condition, remarks"></div></div>
-                    <div class="mt-4 space-y-2">
-                        <div v-for="(row, index) in receiveForm.items" :key="row.purchase_item_id" class="grid items-center gap-3 rounded-[8px] border border-slate-200 p-3 sm:grid-cols-[1fr_120px]">
-                            <div><p class="text-sm font-semibold">{{ items[index].product_name }}</p><p class="text-xs text-slate-500">Remaining to receive: {{ items[index].remaining_quantity }}</p></div>
-                            <input v-model.number="row.quantity" type="number" min="0" :max="items[index].remaining_quantity" class="input" placeholder="Qty">
-                        </div>
-                    </div>
-                    <button class="btn-primary mt-4" :disabled="receiveForm.processing"><Icon name="tick-circle" :size="17" /> Post receipt</button>
-                </form>
+                <form v-if="hasReceivable && purchase.status !== 'cancelled'" class="print-hidden card p-5" @submit.prevent="submitReceive"><div class="flex items-center justify-between"><div><h2 class="font-semibold">Receive stock</h2><p class="mt-1 text-xs text-slate-500">Only quantities posted here increase inventory.</p></div><Icon name="box-add" :size="22" class="text-prinx-600" /></div><div class="mt-4 grid gap-3 sm:grid-cols-2"><div><label class="label">Received date</label><input v-model="receiveForm.received_date" type="date" class="input"></div><div><label class="label">Receipt note</label><input v-model="receiveForm.notes" class="input" placeholder="Delivery note, condition, remarks"></div></div><div class="mt-4 space-y-2"><div v-for="(row, index) in receiveForm.items" :key="row.purchase_item_id" class="grid items-center gap-3 rounded-[8px] border border-slate-200 p-3 sm:grid-cols-[1fr_120px]"><div><p class="text-sm font-semibold">{{ items[index].product_name }}</p><p class="text-xs text-slate-500">Remaining to receive: {{ items[index].remaining_quantity }}</p></div><input v-model.number="row.quantity" type="number" min="0" :max="items[index].remaining_quantity" class="input" placeholder="Qty"></div></div><button class="btn-primary mt-4" :disabled="receiveForm.processing"><Icon name="tick-circle" :size="17" /> {{ receiveForm.processing ? 'Posting...' : 'Post receipt' }}</button></form>
 
-                <form v-if="hasReturnable && purchase.status !== 'cancelled'" class="card p-5" @submit.prevent="submitReturn">
-                    <div class="flex items-center justify-between"><div><h2 class="font-semibold">Return to supplier</h2><p class="mt-1 text-xs text-slate-500">Returned received stock is deducted from inventory.</p></div><Icon name="undo" :size="22" class="text-amber-600" /></div>
-                    <div class="mt-4 grid gap-3 sm:grid-cols-2"><div><label class="label">Return date</label><input v-model="returnForm.return_date" type="date" class="input"></div><div><label class="label">Reason</label><input v-model="returnForm.reason" class="input" required></div><div class="sm:col-span-2"><label class="label">Notes</label><input v-model="returnForm.notes" class="input" placeholder="Supplier return details"></div></div>
-                    <div class="mt-4 space-y-2">
-                        <div v-for="(row, index) in returnForm.items" :key="row.purchase_item_id" class="grid items-center gap-3 rounded-[8px] border border-slate-200 p-3 sm:grid-cols-[1fr_110px_150px]">
-                            <div><p class="text-sm font-semibold">{{ items[index].product_name }}</p><p class="text-xs text-slate-500">Returnable: {{ items[index].returnable_quantity }}</p></div>
-                            <input v-model.number="row.quantity" type="number" min="0" :max="items[index].returnable_quantity" class="input" placeholder="Qty">
-                            <input v-model.number="row.credit_amount" type="number" min="0" step="0.01" class="input" placeholder="Credit (auto if blank)">
-                        </div>
-                    </div>
-                    <button class="btn-light mt-4 border-amber-300 text-amber-700" :disabled="returnForm.processing"><Icon name="undo" :size="16" /> Post supplier return</button>
-                </form>
+                <form v-if="hasReturnable && purchase.status !== 'cancelled'" class="print-hidden card p-5" @submit.prevent="submitReturn"><div class="flex items-center justify-between"><div><h2 class="font-semibold">Return to supplier</h2><p class="mt-1 text-xs text-slate-500">Returned received stock is deducted from inventory.</p></div><Icon name="undo" :size="22" class="text-amber-600" /></div><div class="mt-4 grid gap-3 sm:grid-cols-2"><div><label class="label">Return date</label><input v-model="returnForm.return_date" type="date" class="input"></div><div><label class="label">Reason</label><input v-model="returnForm.reason" class="input" required></div><div class="sm:col-span-2"><label class="label">Notes</label><input v-model="returnForm.notes" class="input" placeholder="Supplier return details"></div></div><div class="mt-4 space-y-2"><div v-for="(row, index) in returnForm.items" :key="row.purchase_item_id" class="grid items-center gap-3 rounded-[8px] border border-slate-200 p-3 sm:grid-cols-[1fr_110px_150px]"><div><p class="text-sm font-semibold">{{ items[index].product_name }}</p><p class="text-xs text-slate-500">Returnable: {{ items[index].returnable_quantity }}</p></div><input v-model.number="row.quantity" type="number" min="0" :max="items[index].returnable_quantity" class="input" placeholder="Qty"><input v-model.number="row.credit_amount" type="number" min="0" step="0.01" class="input" placeholder="Credit (auto if blank)"></div></div><button class="btn-light mt-4 border-amber-300 text-amber-700" :disabled="returnForm.processing"><Icon name="undo" :size="16" /> {{ returnForm.processing ? 'Posting...' : 'Post supplier return' }}</button></form>
 
-                <section class="card overflow-hidden">
-                    <div class="border-b border-slate-200 px-5 py-4"><h2 class="font-semibold">Receipt history</h2></div>
-                    <div class="overflow-x-auto"><table class="admin-table"><thead><tr><th>Reference</th><th>Date</th><th>Received by</th><th>Notes</th></tr></thead><tbody><tr v-for="receipt in receipts" :key="receipt.id"><td class="font-semibold">{{ receipt.reference }}</td><td>{{ receipt.received_date }}</td><td>{{ receipt.received_by || 'Administrator' }}</td><td>{{ receipt.notes || '—' }}</td></tr><tr v-if="!receipts.length"><td colspan="4" class="py-10 text-center text-slate-400">No receipt postings yet.</td></tr></tbody></table></div>
-                </section>
+                <section class="card overflow-hidden"><div class="border-b border-slate-200 px-5 py-4"><h2 class="font-semibold">Receipt history</h2></div><div class="overflow-x-auto"><table class="admin-table"><thead><tr><th>Reference</th><th>Date</th><th>Received by</th><th>Notes</th></tr></thead><tbody><tr v-for="receipt in receipts" :key="receipt.id"><td class="font-semibold">{{ receipt.reference }}</td><td>{{ receipt.received_date }}</td><td>{{ receipt.received_by || 'Administrator' }}</td><td>{{ receipt.notes || '—' }}</td></tr><tr v-if="!receipts.length"><td colspan="4" class="py-10 text-center text-slate-400">No receipt postings yet.</td></tr></tbody></table></div></section>
             </div>
 
-            <div class="space-y-6">
-                <section v-if="['draft','ordered'].includes(purchase.status)" class="card p-5">
-                    <h2 class="font-semibold">Purchase status</h2>
-                    <div class="mt-4 space-y-3"><div><label class="label">Status</label><select v-model="statusForm.status" class="input"><option value="draft">Draft</option><option value="ordered">Ordered</option></select></div><div><label class="label">Expected date</label><input v-model="statusForm.expected_date" type="date" class="input"></div><div><label class="label">Notes</label><textarea v-model="statusForm.notes" rows="3" class="input"></textarea></div></div>
-                    <button class="btn-light mt-4" :disabled="statusForm.processing" @click="updateStatus"><Icon name="edit-2" :size="16" /> Update purchase</button>
-                </section>
+            <div class="space-y-6 print:mt-6">
+                <section v-if="['draft','ordered'].includes(purchase.status)" class="print-hidden card p-5"><h2 class="font-semibold">Purchase status</h2><div class="mt-4 space-y-3"><div><label class="label">Status</label><select v-model="statusForm.status" class="input"><option value="draft">Draft</option><option value="ordered">Ordered</option></select></div><div><label class="label">Expected date</label><input v-model="statusForm.expected_date" type="date" class="input"></div><div><label class="label">Notes</label><textarea v-model="statusForm.notes" rows="3" class="input"></textarea></div></div><button class="btn-light mt-4" :disabled="statusForm.processing" @click="updateStatus"><Icon name="edit-2" :size="16" /> {{ statusForm.processing ? 'Saving...' : 'Update purchase' }}</button></section>
 
-                <form v-if="Number(purchase.balance_due) > 0 && purchase.status !== 'cancelled'" class="card p-5" @submit.prevent="submitPayment">
-                    <div class="flex items-center justify-between"><div><h2 class="font-semibold">Record payment</h2><p class="mt-1 text-xs text-slate-500">Balance {{ money(purchase.balance_due) }}</p></div><Icon name="wallet" :size="21" class="text-prinx-600" /></div>
-                    <div class="mt-4 space-y-3"><div><label class="label">Payment date</label><input v-model="paymentForm.payment_date" type="date" class="input"></div><div><label class="label">Amount</label><input v-model.number="paymentForm.amount" type="number" min="0.01" :max="purchase.balance_due" step="0.01" class="input"></div><div><label class="label">Method</label><select v-model="paymentForm.payment_method" class="input"><option value="cash">Cash</option><option value="mobile_money">Mobile money</option><option value="bank">Bank transfer</option><option value="card">Card</option><option value="other">Other</option></select></div><div><label class="label">Transaction reference</label><input v-model="paymentForm.transaction_reference" class="input" placeholder="Optional"></div><div><label class="label">Notes</label><textarea v-model="paymentForm.notes" rows="2" class="input"></textarea></div></div>
-                    <button class="btn-primary mt-4" :disabled="paymentForm.processing"><Icon name="tick-circle" :size="16" /> Record payment</button>
-                </form>
+                <form v-if="Number(purchase.balance_due) > 0 && purchase.status !== 'cancelled'" class="print-hidden card p-5" @submit.prevent="submitPayment"><div class="flex items-center justify-between"><div><h2 class="font-semibold">Record payment</h2><p class="mt-1 text-xs text-slate-500">Balance {{ money(purchase.balance_due) }}</p></div><Icon name="wallet" :size="21" class="text-prinx-600" /></div><div class="mt-4 space-y-3"><div><label class="label">Payment date</label><input v-model="paymentForm.payment_date" type="date" class="input"></div><div><label class="label">Amount</label><input v-model.number="paymentForm.amount" type="number" min="0.01" :max="purchase.balance_due" step="0.01" class="input"></div><div><label class="label">Method</label><select v-model="paymentForm.payment_method" class="input"><option value="cash">Cash</option><option value="mobile_money">Mobile money</option><option value="bank">Bank transfer</option><option value="card">Card</option><option value="other">Other</option></select></div><div><label class="label">Transaction reference</label><input v-model="paymentForm.transaction_reference" class="input" placeholder="Optional"></div><div><label class="label">Notes</label><textarea v-model="paymentForm.notes" rows="2" class="input"></textarea></div></div><button class="btn-primary mt-4" :disabled="paymentForm.processing"><Icon name="tick-circle" :size="16" /> {{ paymentForm.processing ? 'Recording...' : 'Record payment' }}</button></form>
 
-                <section class="card overflow-hidden">
-                    <div class="border-b border-slate-200 px-5 py-4"><h2 class="font-semibold">Payments</h2></div>
-                    <div class="divide-y divide-slate-100"><div v-for="payment in payments" :key="payment.id" class="p-4"><div class="flex justify-between gap-3"><div><p class="font-semibold">{{ payment.reference }}</p><p class="mt-1 text-xs text-slate-500">{{ payment.payment_date }} · {{ payment.payment_method }}</p></div><b>{{ money(payment.amount) }}</b></div><p v-if="payment.transaction_reference" class="mt-1 text-xs text-slate-500">Ref: {{ payment.transaction_reference }}</p></div><div v-if="!payments.length" class="p-8 text-center text-sm text-slate-400">No payments recorded.</div></div>
-                </section>
+                <section class="card overflow-hidden"><div class="border-b border-slate-200 px-5 py-4"><h2 class="font-semibold">Payments</h2></div><div class="divide-y divide-slate-100"><div v-for="payment in payments" :key="payment.id" class="p-4"><div class="flex justify-between gap-3"><div><p class="font-semibold">{{ payment.reference }}</p><p class="mt-1 text-xs text-slate-500">{{ payment.payment_date }} · {{ payment.payment_method }}</p></div><b>{{ money(payment.amount) }}</b></div><p v-if="payment.transaction_reference" class="mt-1 text-xs text-slate-500">Ref: {{ payment.transaction_reference }}</p></div><div v-if="!payments.length" class="empty-state">No payments recorded.</div></div></section>
 
-                <section class="card overflow-hidden">
-                    <div class="border-b border-slate-200 px-5 py-4"><h2 class="font-semibold">Supplier returns</h2></div>
-                    <div class="divide-y divide-slate-100"><div v-for="item in returns" :key="item.id" class="p-4"><div class="flex justify-between"><div><p class="font-semibold">{{ item.reference }}</p><p class="mt-1 text-xs text-slate-500">{{ item.return_date }} · {{ item.reason }}</p></div><b>{{ money(item.credit_amount) }}</b></div></div><div v-if="!returns.length" class="p-8 text-center text-sm text-slate-400">No supplier returns.</div></div>
-                </section>
+                <section class="card overflow-hidden"><div class="border-b border-slate-200 px-5 py-4"><h2 class="font-semibold">Supplier returns</h2></div><div class="divide-y divide-slate-100"><div v-for="item in returns" :key="item.id" class="p-4"><div class="flex justify-between"><div><p class="font-semibold">{{ item.reference }}</p><p class="mt-1 text-xs text-slate-500">{{ item.return_date }} · {{ item.reason }}</p></div><b>{{ money(item.credit_amount) }}</b></div></div><div v-if="!returns.length" class="empty-state">No supplier returns.</div></div></section>
 
-                <form v-if="['draft','ordered'].includes(purchase.status) && totalReceived === 0 && Number(purchase.amount_paid) === 0" class="card border-red-200 p-5" @submit.prevent="cancelPurchase">
-                    <h2 class="font-semibold text-red-700">Cancel purchase</h2>
-                    <p class="mt-1 text-xs text-slate-500">Only untouched purchases can be cancelled. No stock will be changed.</p>
-                    <textarea v-model="cancelForm.reason" rows="3" class="input mt-4" placeholder="Cancellation reason" required></textarea>
-                    <button class="mt-4 inline-flex items-center gap-2 rounded-[8px] border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50" :disabled="cancelForm.processing"><Icon name="close-circle" :size="16" /> Cancel purchase</button>
-                </form>
+                <form v-if="['draft','ordered'].includes(purchase.status) && totalReceived === 0 && Number(purchase.amount_paid) === 0" class="print-hidden card border-red-200 p-5" @submit.prevent="cancelPurchase"><h2 class="font-semibold text-red-700">Cancel purchase</h2><p class="mt-1 text-xs text-slate-500">Only untouched purchases can be cancelled. No stock will be changed.</p><textarea v-model="cancelForm.reason" rows="3" class="input mt-4" placeholder="Cancellation reason" required></textarea><button class="btn-danger mt-4" :disabled="cancelForm.processing"><Icon name="close-circle" :size="16" /> {{ cancelForm.processing ? 'Cancelling...' : 'Cancel purchase' }}</button></form>
             </div>
         </div>
     </AdminLayout>
