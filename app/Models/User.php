@@ -26,8 +26,15 @@ class User extends Authenticatable
 
     public function permissionSlugs(): array
     {
-        if (! $this->is_admin || ! $this->role_id) {
+        if (! $this->is_admin) {
             return [];
+        }
+
+        // Backward compatibility: before role-based access was introduced,
+        // is_admin=true represented a full administrator. Existing production
+        // records and older test fixtures may therefore have no role_id yet.
+        if (! $this->role_id) {
+            return Permission::query()->pluck('slug')->values()->all();
         }
 
         if ($this->relationLoaded('role') && $this->role?->relationLoaded('permissions')) {
@@ -44,8 +51,12 @@ class User extends Authenticatable
 
     public function hasPermission(string $permission): bool
     {
-        if (! $this->is_admin || ! $this->role_id) {
+        if (! $this->is_admin) {
             return false;
+        }
+
+        if (! $this->role_id) {
+            return true;
         }
 
         return in_array($permission, $this->permissionSlugs(), true);
@@ -53,6 +64,14 @@ class User extends Authenticatable
 
     public function hasAnyPermission(array $permissions): bool
     {
+        if (! $this->is_admin) {
+            return false;
+        }
+
+        if (! $this->role_id) {
+            return ! empty($permissions);
+        }
+
         $granted = $this->permissionSlugs();
         return (bool) array_intersect($permissions, $granted);
     }
