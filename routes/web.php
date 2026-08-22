@@ -85,6 +85,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 
     Route::get('stock', [StockController::class, 'index'])->name('stock.index');
     Route::post('stock/purchases', [StockController::class, 'purchase'])->name('stock.purchases.store');
+    Route::post('stock/adjustments', [StockController::class, 'adjustment'])->name('stock.adjustments.store');
     Route::post('stock/expenses', [StockController::class, 'expense'])->name('stock.expenses.store');
     Route::post('stock/pos', [StockController::class, 'pos'])->name('stock.pos.store');
 
