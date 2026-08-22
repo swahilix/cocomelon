@@ -19,7 +19,7 @@ return new class extends Migration {
                 $table->decimal('total', 15, 2)->default(0);
                 $table->string('payment_method', 40)->default('cash');
                 $table->text('notes')->nullable();
-                $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+                $table->unsignedBigInteger('created_by')->nullable()->index();
                 $table->timestamps();
             });
         }
@@ -50,7 +50,7 @@ return new class extends Migration {
                 $table->decimal('change_due', 15, 2)->default(0);
                 $table->string('payment_method', 40)->default('cash');
                 $table->text('notes')->nullable();
-                $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+                $table->unsignedBigInteger('created_by')->nullable()->index();
                 $table->timestamps();
                 $table->index('created_at');
             });
@@ -83,7 +83,7 @@ return new class extends Migration {
                 $table->string('payment_method', 40)->default('cash');
                 $table->string('payee')->nullable();
                 $table->text('notes')->nullable();
-                $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+                $table->unsignedBigInteger('created_by')->nullable()->index();
                 $table->timestamps();
             });
         }
@@ -99,7 +99,7 @@ return new class extends Migration {
                 $table->decimal('unit_cost', 15, 2)->nullable();
                 $table->string('reference', 80)->nullable()->index();
                 $table->text('notes')->nullable();
-                $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+                $table->unsignedBigInteger('created_by')->nullable()->index();
                 $table->timestamps();
                 $table->index(['product_id', 'created_at']);
             });
