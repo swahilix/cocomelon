@@ -167,6 +167,18 @@ Add:
 
 # Phase 2 — Supplier management
 
+Status: **Completed — 2026-08-22.**
+
+Implemented decisions:
+
+- Added persistent supplier records with business name, contact person, phone, email, address, tax/TIN/reference, opening balance, notes and active/inactive status.
+- Existing `stock_purchases.supplier_name` remains as a historical display snapshot while new purchases can also store `supplier_id`.
+- Purchase creation now uses a saved supplier dropdown by default and still supports an explicit one-time supplier.
+- Supplier detail pages show linked purchase history, paid amount, outstanding balance, recent payment-equivalent purchases and products commonly supplied.
+- Until Phase 3 introduces dedicated purchase payment records, a purchase with payment method `credit` is treated as unpaid and other purchase payment methods are treated as paid at purchase time.
+- Supplier balances currently equal opening balance plus linked credit purchases. Phase 3 will replace this simplified calculation with actual purchase-payment records and partial-payment support.
+- Deactivating a supplier preserves all historical purchases and account history.
+
 ## 2.1 Suppliers
 
 Create supplier management with:
@@ -198,7 +210,7 @@ Replace free-text supplier entry with supplier selection while retaining an opti
 
 - Purchases can be traced to suppliers.
 - Supplier purchase and payment history is visible.
-- Supplier balances can be calculated reliably.
+- Supplier balances can be calculated reliably under the current paid-vs-credit purchase model, pending full payment records in Phase 3.
 
 ---
 
@@ -831,7 +843,7 @@ Provide an explicit administrator reconciliation action only after review.
 We will implement in this exact order unless a discovered dependency requires a small adjustment:
 
 1. **Phase 1 — Inventory foundation hardening** ✅
-2. **Phase 2 — Suppliers**
+2. **Phase 2 — Suppliers** ✅
 3. **Phase 3 — Purchasing workflow**
 4. **Phase 4 — POS redesign**
 5. **Phase 5 — Sales, returns and voids**
