@@ -181,6 +181,17 @@ class InventoryService
             throw new RuntimeException("Not enough stock for {$product->name}. Available: {$before}.");
         }
 
+        if ($product->track_stock && $delta > 0 && $unitCost !== null && in_array($type, ['purchase_receipt', 'purchase'], true)) {
+            $oldAverage = (float) $product->average_cost;
+            $receiptCost = max(0, $unitCost);
+            $newAverage = ($before <= 0 || $oldAverage <= 0)
+                ? $receiptCost
+                : (($before * $oldAverage) + ($delta * $receiptCost)) / ($before + $delta);
+
+            $product->average_cost = round($newAverage, 4);
+            $product->last_purchase_cost = round($receiptCost, 4);
+        }
+
         if ($product->track_stock && $delta !== 0) {
             $product->stock_quantity = $after;
             $product->save();
