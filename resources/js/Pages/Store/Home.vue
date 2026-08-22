@@ -22,7 +22,7 @@ const homeServices = [
     {
         name: 'Network & Installation',
         description: 'Network setup, installation and technical configuration for homes, offices and business environments.',
-        icon: 'hierarchy-square-3',
+        icon: 'wifi',
         href: '/services?category=network-installation',
         comingSoon: false,
     },
