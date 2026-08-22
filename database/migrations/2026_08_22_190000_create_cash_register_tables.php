@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -12,7 +11,7 @@ return new class extends Migration
         Schema::create('cash_register_sessions', function (Blueprint $table): void {
             $table->id();
             $table->string('reference')->unique();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->unsignedBigInteger('user_id')->index();
             $table->decimal('opening_cash', 15, 2)->default(0);
             $table->decimal('expected_cash', 15, 2)->nullable();
             $table->decimal('counted_cash', 15, 2)->nullable();
@@ -22,7 +21,7 @@ return new class extends Migration
             $table->string('status', 20)->default('open')->index();
             $table->text('opening_notes')->nullable();
             $table->text('closing_notes')->nullable();
-            $table->foreignId('closed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('closed_by')->nullable()->index();
             $table->timestamps();
 
             $table->index(['user_id', 'status']);
@@ -40,7 +39,7 @@ return new class extends Migration
             $table->unsignedBigInteger('source_id')->nullable()->index();
             $table->string('reason', 255)->nullable();
             $table->text('notes')->nullable();
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('created_by')->nullable()->index();
             $table->timestamps();
 
             $table->index(['cash_register_session_id', 'created_at']);
