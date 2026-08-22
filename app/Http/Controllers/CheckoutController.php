@@ -53,6 +53,11 @@ class CheckoutController extends Controller
                     'discount_total' => 0,
                     'grand_total' => $summary['total'],
                     'currency' => config('store.currency'),
+                    // Keep the in-memory model aligned with the database defaults.
+                    // The initial history entry below reads these values before any
+                    // model refresh, so relying only on DB defaults leaves them null.
+                    'payment_status' => 'pending',
+                    'status' => 'pending',
                 ]);
 
                 foreach ($summary['items'] as $line) {
