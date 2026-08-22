@@ -8,7 +8,7 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('pos_sales', function (Blueprint $table) {
-            $table->string('status', 30)->default('completed')->after('payment_reference')->index();
+            $table->string('status', 30)->default('completed')->index();
             $table->decimal('refunded_amount', 15, 2)->default(0)->after('status');
             $table->timestamp('voided_at')->nullable()->after('refunded_amount');
             $table->unsignedBigInteger('voided_by')->nullable()->after('voided_at')->index();
