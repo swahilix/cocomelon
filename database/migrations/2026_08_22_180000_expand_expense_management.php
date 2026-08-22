@@ -16,7 +16,7 @@ return new class extends Migration {
             $table->text('description')->nullable();
             $table->boolean('is_active')->default(true)->index();
             $table->unsignedInteger('sort_order')->default(0);
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('created_by')->nullable()->index();
             $table->timestamps();
         });
 
@@ -46,7 +46,7 @@ return new class extends Migration {
             $table->date('recurring_until')->nullable()->after('recurring_interval');
             $table->string('status', 20)->default('posted')->after('recurring_until')->index();
             $table->timestamp('voided_at')->nullable()->after('status');
-            $table->foreignId('voided_by')->nullable()->after('voided_at')->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('voided_by')->nullable()->after('voided_at')->index();
             $table->text('void_reason')->nullable()->after('voided_by');
             $table->index(['expense_category_id', 'expense_date']);
         });
@@ -69,7 +69,6 @@ return new class extends Migration {
     {
         Schema::table('expenses', function (Blueprint $table): void {
             $table->dropForeign(['expense_category_id']);
-            $table->dropForeign(['voided_by']);
             $table->dropIndex(['expense_category_id', 'expense_date']);
             $table->dropColumn([
                 'expense_category_id', 'title', 'payment_reference', 'receipt_path', 'receipt_original_name',
