@@ -14,6 +14,7 @@ const sections = [
             ['Products', '/admin/products', 'box'],
             ['Stock management', '/admin/stock', 'shop'],
             ['Inventory', '/admin/stock/inventory', 'box'],
+            ['Suppliers', '/admin/suppliers', 'profile'],
             ['Services', '/admin/services', 'setting-2'],
             ['Homepage carousel', '/admin/carousel', 'monitor'],
             ['Product reels', '/admin/reels', 'mobile'],
