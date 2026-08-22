@@ -175,8 +175,6 @@ Implemented decisions:
 - Existing `stock_purchases.supplier_name` remains as a historical display snapshot while new purchases can also store `supplier_id`.
 - Purchase creation now uses a saved supplier dropdown by default and still supports an explicit one-time supplier.
 - Supplier detail pages show linked purchase history, paid amount, outstanding balance, recent payment-equivalent purchases and products commonly supplied.
-- Until Phase 3 introduces dedicated purchase payment records, a purchase with payment method `credit` is treated as unpaid and other purchase payment methods are treated as paid at purchase time.
-- Supplier balances currently equal opening balance plus linked credit purchases. Phase 3 will replace this simplified calculation with actual purchase-payment records and partial-payment support.
 - Deactivating a supplier preserves all historical purchases and account history.
 
 ## 2.1 Suppliers
@@ -210,11 +208,29 @@ Replace free-text supplier entry with supplier selection while retaining an opti
 
 - Purchases can be traced to suppliers.
 - Supplier purchase and payment history is visible.
-- Supplier balances can be calculated reliably under the current paid-vs-credit purchase model, pending full payment records in Phase 3.
+- Supplier balances can be calculated reliably.
 
 ---
 
 # Phase 3 — Complete purchasing workflow
+
+Status: **Completed — 2026-08-22.**
+
+Implemented decisions:
+
+- Purchase creation no longer changes stock. New purchases begin as `draft` or `ordered` and inventory changes only through an explicit receipt posting.
+- Purchase lifecycle supports Draft, Ordered, Partially received, Received and Cancelled.
+- Purchase totals preserve subtotal, discount, tax, additional/shipping cost, grand total, amount paid and balance due.
+- Purchase lines preserve ordered quantity, received quantity, returned quantity, unit cost and historical line total.
+- Each receipt has its own reference, received date, notes, user and item-level quantities. Receiving beyond the remaining ordered quantity is blocked.
+- Partial receipts post only the received quantity to `InventoryService`; full receipt status is set automatically when every line is complete.
+- Dedicated purchase payment records support partial payments, payment date, method, transaction reference, notes and user attribution.
+- Purchase payment status is recalculated as unpaid, partially paid or paid from actual payment records.
+- Supplier returns preserve their own reference, date, reason, note and credit amount. Only already-received and not-yet-returned quantities may be returned.
+- Supplier returns reduce stock through `InventoryService` and supplier credit reduces the outstanding purchase/supplier balance.
+- Untouched purchases can be cancelled without affecting stock; received purchases must use supplier returns instead.
+- Legacy purchases are migrated as already received. Legacy non-credit purchases are converted into payment records so historical balances remain stable.
+- Supplier pages now calculate paid amount and outstanding balances from real purchase payment and return-credit records rather than the old payment-method shortcut.
 
 ## 3.1 Purchase lifecycle
 
@@ -303,7 +319,7 @@ Returning received stock should create a stock-out movement.
 
 - Purchase ordering, receiving, payment and returns are distinct and auditable.
 - Partial receipts work correctly.
-- Supplier balances match purchase payments.
+- Supplier balances match purchase payments and supplier-return credits.
 
 ---
 
@@ -844,7 +860,7 @@ We will implement in this exact order unless a discovered dependency requires a 
 
 1. **Phase 1 — Inventory foundation hardening** ✅
 2. **Phase 2 — Suppliers** ✅
-3. **Phase 3 — Purchasing workflow**
+3. **Phase 3 — Purchasing workflow** ✅
 4. **Phase 4 — POS redesign**
 5. **Phase 5 — Sales, returns and voids**
 6. **Phase 6 — Online order inventory integration**
