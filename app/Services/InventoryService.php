@@ -181,15 +181,30 @@ class InventoryService
             throw new RuntimeException("Not enough stock for {$product->name}. Available: {$before}.");
         }
 
-        if ($product->track_stock && $delta > 0 && $unitCost !== null && in_array($type, ['purchase_receipt', 'purchase'], true)) {
+        if ($product->track_stock && $unitCost !== null) {
             $oldAverage = (float) $product->average_cost;
-            $receiptCost = max(0, $unitCost);
-            $newAverage = ($before <= 0 || $oldAverage <= 0)
-                ? $receiptCost
-                : (($before * $oldAverage) + ($delta * $receiptCost)) / ($before + $delta);
+            $movementCost = max(0, $unitCost);
+            $costedInboundTypes = ['purchase_receipt', 'purchase', 'pos_return', 'pos_void', 'online_order_cancellation'];
 
-            $product->average_cost = round($newAverage, 4);
-            $product->last_purchase_cost = round($receiptCost, 4);
+            if ($delta > 0 && in_array($type, $costedInboundTypes, true)) {
+                $newAverage = ($before <= 0 || $oldAverage <= 0)
+                    ? $movementCost
+                    : (($before * $oldAverage) + ($delta * $movementCost)) / ($before + $delta);
+                $product->average_cost = round($newAverage, 4);
+
+                if (in_array($type, ['purchase_receipt', 'purchase'], true)) {
+                    $product->last_purchase_cost = round($movementCost, 4);
+                }
+            }
+
+            if ($delta < 0 && $type === 'purchase_return') {
+                if ($after <= 0) {
+                    $product->average_cost = 0;
+                } else {
+                    $remainingValue = max(0, ($before * $oldAverage) - (abs($delta) * $movementCost));
+                    $product->average_cost = round($remainingValue / $after, 4);
+                }
+            }
         }
 
         if ($product->track_stock && $delta !== 0) {
