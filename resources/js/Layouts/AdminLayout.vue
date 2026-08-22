@@ -26,6 +26,7 @@ const sections = [
         items: [
             ['Point of sale', '/admin/pos', 'shop'],
             ['Sales', '/admin/sales', 'receipt-item'],
+            ['Expenses', '/admin/expenses', 'wallet'],
             ['Profit & costing', '/admin/profit', 'wallet'],
             ['Orders', '/admin/orders', 'shopping-cart'],
             ['Service requests', '/admin/inquiries', 'sms'],
