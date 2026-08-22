@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
+use App\Services\AuditService;
 use App\Services\CashRegisterService;
 use App\Services\InventoryService;
+use App\Services\PostingGuard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -121,7 +123,7 @@ class SalesController extends Controller
         ]);
     }
 
-    public function returnPos(Request $request, int $sale, InventoryService $inventory, CashRegisterService $registers): RedirectResponse
+    public function returnPos(Request $request, int $sale, InventoryService $inventory, CashRegisterService $registers, PostingGuard $guard, AuditService $audit): RedirectResponse
     {
         $validated = $request->validate([
             'return_date' => ['required', 'date'],
@@ -132,16 +134,18 @@ class SalesController extends Controller
             'items.*.sale_item_id' => ['required', 'integer', 'exists:pos_sale_items,id'],
             'items.*.quantity' => ['required', 'integer', 'min:0'],
             'items.*.restock' => ['required', 'boolean'],
+            '_operation_id' => ['nullable', 'string', 'max:120'],
         ]);
 
         try {
-            DB::transaction(function () use ($validated, $sale, $request, $inventory, $registers): void {
+            DB::transaction(function () use ($validated, $sale, $request, $inventory, $registers, $guard, $audit): void {
                 $register = $registers->requireOpenSession($request->user()?->id);
                 $saleRow = DB::table('pos_sales')->where('id', $sale)->lockForUpdate()->first();
                 if (! $saleRow || $saleRow->status === 'voided') {
                     throw new RuntimeException('This POS sale cannot be returned.');
                 }
 
+                $guard->claim($request, 'pos.return', 'pos_sale', $sale);
                 $selected = collect($validated['items'])->filter(fn ($i) => (int) $i['quantity'] > 0);
                 if ($selected->isEmpty()) {
                     throw new RuntimeException('Select at least one quantity to return.');
@@ -163,6 +167,7 @@ class SalesController extends Controller
                 ]);
 
                 $refund = 0.0;
+                $returned = [];
                 foreach ($selected as $input) {
                     $item = DB::table('pos_sale_items')->where('id', $input['sale_item_id'])->where('pos_sale_id', $sale)->lockForUpdate()->first();
                     if (! $item) throw new RuntimeException('A selected sale item is invalid.');
@@ -173,6 +178,7 @@ class SalesController extends Controller
 
                     $lineRefund = $qty * (float) $item->unit_price;
                     $refund += $lineRefund;
+                    $returned[] = ['sale_item_id' => $item->id, 'product_id' => $item->product_id, 'quantity' => $qty, 'restock' => (bool) $input['restock'], 'refund' => $lineRefund];
 
                     DB::table('pos_sale_return_items')->insert([
                         'pos_sale_return_id' => $returnId,
@@ -223,6 +229,15 @@ class SalesController extends Controller
                         $returnId,
                     );
                 }
+
+                $after = DB::table('pos_sales')->where('id', $sale)->first();
+                $audit->record($request, 'pos.refund_posted', 'pos_sale', $sale, $saleRow->reference, $saleRow, $after, [
+                    'return_id' => $returnId,
+                    'return_reference' => $returnReference,
+                    'refund_method' => $validated['refund_method'],
+                    'refund_amount' => $refund,
+                    'items' => $returned,
+                ]);
             });
         } catch (Throwable $e) {
             return back()->withErrors(['return' => $e->getMessage()]);
@@ -231,17 +246,21 @@ class SalesController extends Controller
         return back()->with('success', 'POS return recorded successfully.');
     }
 
-    public function voidPos(Request $request, int $sale, InventoryService $inventory, CashRegisterService $registers): RedirectResponse
+    public function voidPos(Request $request, int $sale, InventoryService $inventory, CashRegisterService $registers, PostingGuard $guard, AuditService $audit): RedirectResponse
     {
-        $validated = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:500']]);
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'min:3', 'max:500'],
+            '_operation_id' => ['nullable', 'string', 'max:120'],
+        ]);
 
         try {
-            DB::transaction(function () use ($sale, $validated, $request, $inventory, $registers): void {
+            DB::transaction(function () use ($sale, $validated, $request, $inventory, $registers, $guard, $audit): void {
                 $register = $registers->requireOpenSession($request->user()?->id);
                 $saleRow = DB::table('pos_sales')->where('id', $sale)->lockForUpdate()->first();
                 if (! $saleRow || $saleRow->status === 'voided') throw new RuntimeException('Sale is already voided or unavailable.');
                 if ((float) $saleRow->refunded_amount > 0) throw new RuntimeException('A sale with posted returns cannot be voided.');
 
+                $guard->claim($request, 'pos.void', 'pos_sale', $sale);
                 $items = DB::table('pos_sale_items')->where('pos_sale_id', $sale)->get();
                 foreach ($items as $item) {
                     $inventory->increase(
@@ -279,6 +298,9 @@ class SalesController extends Controller
                         $sale,
                     );
                 }
+
+                $after = DB::table('pos_sales')->where('id', $sale)->first();
+                $audit->record($request, 'pos.sale_voided', 'pos_sale', $sale, $saleRow->reference, $saleRow, $after, ['reason' => $validated['reason']]);
             });
         } catch (Throwable $e) {
             return back()->withErrors(['void' => $e->getMessage()]);
