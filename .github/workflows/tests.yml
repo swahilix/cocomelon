@@ -212,6 +212,71 @@ jobs:
             "$PHP_BIN" -v | head -1
 
             "$PHP_BIN" artisan optimize:clear
+
+            # Production previously received the stock foundation from an older
+            # commerce migration that was removed from the canonical repository.
+            # If the replacement migration is absent from Laravel's history but
+            # its complete compatible schema is already present, baseline it once
+            # so migrate --force can continue with the follow-up migrations.
+            "$PHP_BIN" -r '
+              require "vendor/autoload.php";
+              $app = require "bootstrap/app.php";
+              $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+              $migration = "2026_08_22_120000_create_stock_management_tables";
+              $schema = Illuminate\Support\Facades\Schema::getFacadeRoot();
+              $db = Illuminate\Support\Facades\DB::getFacadeRoot();
+
+              if (! $schema->hasTable("migrations")) {
+                  echo "Migration table does not exist yet; normal migration bootstrap will run.\n";
+                  exit(0);
+              }
+
+              if ($db->table("migrations")->where("migration", $migration)->exists()) {
+                  echo "Stock foundation migration already recorded.\n";
+                  exit(0);
+              }
+
+              $expected = [
+                  "stock_purchases" => ["id", "reference", "supplier_name", "invoice_number", "purchase_date", "subtotal", "additional_cost", "total", "payment_method", "notes", "created_by", "created_at", "updated_at"],
+                  "stock_purchase_items" => ["id", "stock_purchase_id", "product_id", "quantity", "unit_cost", "line_total", "created_at", "updated_at"],
+                  "pos_sales" => ["id", "reference", "customer_name", "customer_phone", "subtotal", "discount", "total", "amount_paid", "change_due", "payment_method", "notes", "created_by", "created_at", "updated_at"],
+                  "pos_sale_items" => ["id", "pos_sale_id", "product_id", "product_name", "sku", "quantity", "unit_price", "unit_cost", "line_total", "created_at", "updated_at"],
+                  "expenses" => ["id", "reference", "expense_date", "category", "description", "amount", "payment_method", "payee", "notes", "created_by", "created_at", "updated_at"],
+                  "stock_movements" => ["id", "product_id", "direction", "type", "quantity", "balance_after", "unit_cost", "reference", "notes", "created_by", "created_at", "updated_at"],
+              ];
+
+              $presentTables = [];
+              $problems = [];
+              foreach ($expected as $table => $columns) {
+                  if (! $schema->hasTable($table)) {
+                      continue;
+                  }
+                  $presentTables[] = $table;
+                  foreach ($columns as $column) {
+                      if (! $schema->hasColumn($table, $column)) {
+                          $problems[] = $table.".".$column;
+                      }
+                  }
+              }
+
+              if (count($presentTables) === 0) {
+                  echo "No legacy stock foundation tables detected; migration will run normally.\n";
+                  exit(0);
+              }
+
+              if (count($presentTables) !== count($expected) || count($problems) > 0) {
+                  fwrite(STDERR, "ERROR: partial or incompatible legacy stock schema detected.\n");
+                  fwrite(STDERR, "Existing foundation tables: ".implode(", ", $presentTables)."\n");
+                  if ($problems) fwrite(STDERR, "Missing required columns: ".implode(", ", $problems)."\n");
+                  exit(2);
+              }
+
+              $batch = max(1, (int) $db->table("migrations")->max("batch"));
+              $db->table("migrations")->insert(["migration" => $migration, "batch" => $batch]);
+              echo "Baselined legacy stock foundation as {$migration}.\n";
+            '
+
             "$PHP_BIN" artisan migrate --force
             "$PHP_BIN" artisan storage:link || true
             "$PHP_BIN" artisan config:cache
