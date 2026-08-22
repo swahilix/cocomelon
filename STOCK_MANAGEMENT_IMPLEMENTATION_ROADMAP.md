@@ -625,9 +625,26 @@ Reports by:
 
 # Phase 8 — Expense management expansion
 
+Status: **Completed — 2026-08-22.**
+
+Implemented decisions:
+
+- Added persistent `expense_categories` with default business categories and admin create/edit/activate/deactivate controls.
+- Existing free-text `expenses.category` remains as a historical snapshot while new expenses also reference `expense_category_id` for reliable reporting.
+- Existing expense rows are migrated to matching managed categories where possible and retain their original description as the initial title.
+- Added a dedicated `Admin → Expenses` page with date/category/status/search filters and an integrated expense-entry form.
+- Expense records now support title, payee, payment method/reference, private receipt attachment, recurring flag/frequency/end date, notes and creator attribution.
+- Receipt files are stored on the private Laravel disk and are downloadable only through the authenticated admin expense route.
+- Recurring metadata is informational in Phase 8; future expense records are not auto-posted, preventing unintended duplicate financial entries.
+- Financial expense rows are never hard-deleted. Incorrect entries are marked `voided` with void time, administrator and mandatory reason.
+- Voided expenses are excluded from Stock Management monthly expense totals and Profit & Costing calculations.
+- The original embedded Stock Management expense form remains compatible but now resolves its free-text categories into the managed category table and posts the same auditable expense structure.
+- Reports include selected-period totals/count/average/largest expense, category breakdown, rolling 12-month comparison and largest expense list.
+- Monthly reporting is grouped in application code rather than database-specific date functions so the report remains portable across supported database/testing environments.
+
 ## 8.1 Expense categories
 
-Manage categories such as:
+Managed categories include:
 
 - Rent
 - Salaries
@@ -640,9 +657,11 @@ Manage categories such as:
 - Taxes/fees
 - Miscellaneous
 
+Additional categories can be created in the admin panel and historical categories can be made inactive without deleting old records.
+
 ## 8.2 Expense records
 
-Add:
+Expense records support:
 
 - category
 - title
@@ -650,25 +669,31 @@ Add:
 - date
 - payee
 - payment method
-- reference
-- receipt/attachment
-- recurring flag
+- payment/transaction reference
+- private receipt/attachment
+- recurring flag and frequency
+- recurring tracking end date
 - note
 - created by
+- posted/voided audit state
 
 ## 8.3 Expense reports
 
-Show:
+Implemented reports:
 
 - expenses by date range
 - category breakdown
-- monthly comparison
+- rolling monthly comparison
 - largest expenses
+- posted/voided filters
+- search by title, payee and references
 
 ### Phase 8 acceptance criteria
 
 - Expenses can be categorized and audited.
-- Expenses feed net-profit/reporting calculations.
+- Expense receipts remain private to authenticated administrators.
+- Voided expenses preserve history without affecting active financial totals.
+- Posted expenses feed net-profit/reporting calculations.
 
 ---
 
@@ -920,7 +945,7 @@ We will implement in this exact order unless a discovered dependency requires a 
 5. **Phase 5 — Sales, returns and voids** ✅
 6. **Phase 6 — Online order inventory integration** ✅
 7. **Phase 7 — Costing and profit** ✅
-8. **Phase 8 — Expenses expansion**
+8. **Phase 8 — Expenses expansion** ✅
 9. **Phase 9 — Cash register shifts**
 10. **Phase 10 — Reports/dashboard**
 11. **Phase 11 — Roles/permissions**
