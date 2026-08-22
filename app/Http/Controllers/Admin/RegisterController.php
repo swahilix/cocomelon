@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\CashRegisterService;
-use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,10 +28,8 @@ class RegisterController extends Controller
             ->limit(100)
             ->get();
 
-        $currentDetail = $current ? $this->sessionDetail($current->id, $registers) : null;
-
         return Inertia::render('Admin/Registers/Index', [
-            'current' => $currentDetail,
+            'current' => $current ? $this->sessionDetail($current->id, $registers) : null,
             'sessions' => $sessions,
             'summary' => [
                 'open_sessions' => DB::table('cash_register_sessions')->where('status', 'open')->count(),
@@ -60,9 +57,7 @@ class RegisterController extends Controller
             DB::transaction(function () use ($validated, $request): void {
                 $userId = $request->user()?->id;
                 $exists = DB::table('cash_register_sessions')->where('user_id', $userId)->where('status', 'open')->lockForUpdate()->exists();
-                if ($exists) {
-                    throw new RuntimeException('You already have an open register session.');
-                }
+                if ($exists) throw new RuntimeException('You already have an open register session.');
 
                 DB::table('cash_register_sessions')->insert([
                     'reference' => 'REG-'.now()->format('ymd-His').'-'.strtoupper(Str::random(4)),
@@ -161,15 +156,12 @@ class RegisterController extends Controller
             ->orderBy('cash_register_movements.id')
             ->get();
 
-        $sales = DB::table('pos_sales')
-            ->where('cash_register_session_id', $sessionId)
-            ->where('status', '!=', 'voided')
-            ->get();
+        $sales = DB::table('pos_sales')->where('cash_register_session_id', $sessionId)->get();
         $returns = DB::table('pos_sale_returns')->where('cash_register_session_id', $sessionId)->get();
 
-        $cashSales = (float) $sales->where('payment_method', 'cash')->sum('total');
+        $cashSales = (float) $movements->where('type', 'cash_sale')->where('direction', 'in')->sum('amount');
         $nonCashSales = (float) $sales->where('payment_method', '!=', 'cash')->sum('total');
-        $cashRefunds = (float) $returns->where('refund_method', 'cash')->sum('refund_amount');
+        $cashRefunds = (float) $movements->filter(fn ($m) => in_array($m->type, ['cash_refund', 'cash_void_refund'], true) && $m->direction === 'out')->sum('amount');
         $cashIn = (float) $movements->where('direction', 'in')->where('type', 'cash_in')->sum('amount');
         $cashOut = (float) $movements->where('direction', 'out')->where('type', 'cash_out')->sum('amount');
         $expected = $session->status === 'open' ? $registers->expectedCash($sessionId) : (float) $session->expected_cash;
