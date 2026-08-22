@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\AuditService;
+use App\Services\PostingGuard;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,6 +15,7 @@ use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Throwable;
 
 class ExpenseController extends Controller
 {
@@ -110,7 +113,7 @@ class ExpenseController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, PostingGuard $guard, AuditService $audit): RedirectResponse
     {
         $validated = $this->validateExpense($request);
         $category = DB::table('expense_categories')->where('id', $validated['expense_category_id'])->where('is_active', true)->first();
@@ -124,48 +127,72 @@ class ExpenseController extends Controller
             $receiptOriginalName = $receipt->getClientOriginalName();
         }
 
-        DB::table('expenses')->insert([
-            'reference' => $this->reference(),
-            'expense_date' => $validated['expense_date'],
-            'category' => $category->name,
-            'expense_category_id' => $category->id,
-            'title' => $validated['title'],
-            'description' => $validated['title'],
-            'amount' => $validated['amount'],
-            'payment_method' => $validated['payment_method'],
-            'payment_reference' => $validated['payment_reference'] ?? null,
-            'payee' => $validated['payee'] ?? null,
-            'receipt_path' => $receiptPath,
-            'receipt_original_name' => $receiptOriginalName,
-            'is_recurring' => (bool) ($validated['is_recurring'] ?? false),
-            'recurring_interval' => ! empty($validated['is_recurring']) ? ($validated['recurring_interval'] ?? null) : null,
-            'recurring_until' => ! empty($validated['is_recurring']) ? ($validated['recurring_until'] ?? null) : null,
-            'status' => 'posted',
-            'notes' => $validated['notes'] ?? null,
-            'created_by' => $request->user()?->id,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        try {
+            DB::transaction(function () use ($request, $validated, $category, $receiptPath, $receiptOriginalName, $guard, $audit): void {
+                $guard->claim($request, 'expense.create', 'expense');
+                $reference = $this->reference();
+                $expenseId = DB::table('expenses')->insertGetId([
+                    'reference' => $reference,
+                    'expense_date' => $validated['expense_date'],
+                    'category' => $category->name,
+                    'expense_category_id' => $category->id,
+                    'title' => $validated['title'],
+                    'description' => $validated['title'],
+                    'amount' => $validated['amount'],
+                    'payment_method' => $validated['payment_method'],
+                    'payment_reference' => $validated['payment_reference'] ?? null,
+                    'payee' => $validated['payee'] ?? null,
+                    'receipt_path' => $receiptPath,
+                    'receipt_original_name' => $receiptOriginalName,
+                    'is_recurring' => (bool) ($validated['is_recurring'] ?? false),
+                    'recurring_interval' => ! empty($validated['is_recurring']) ? ($validated['recurring_interval'] ?? null) : null,
+                    'recurring_until' => ! empty($validated['is_recurring']) ? ($validated['recurring_until'] ?? null) : null,
+                    'status' => 'posted',
+                    'notes' => $validated['notes'] ?? null,
+                    'created_by' => $request->user()?->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                $after = DB::table('expenses')->where('id', $expenseId)->first();
+                $audit->record($request, 'expense.created', 'expense', $expenseId, $reference, null, $after);
+            });
+        } catch (Throwable $exception) {
+            if ($receiptPath && Storage::exists($receiptPath)) {
+                Storage::delete($receiptPath);
+            }
+            return back()->withErrors(['expense' => $exception->getMessage()])->withInput();
+        }
 
         return back()->with('success', 'Expense recorded successfully.');
     }
 
-    public function void(Request $request, int $expense): RedirectResponse
+    public function void(Request $request, int $expense, PostingGuard $guard, AuditService $audit): RedirectResponse
     {
         $validated = $request->validate([
             'reason' => ['required', 'string', 'min:3', 'max:1000'],
         ]);
 
-        $affected = DB::table('expenses')->where('id', $expense)->where('status', 'posted')->update([
-            'status' => 'voided',
-            'voided_at' => now(),
-            'voided_by' => $request->user()?->id,
-            'void_reason' => $validated['reason'],
-            'updated_at' => now(),
-        ]);
+        try {
+            DB::transaction(function () use ($request, $expense, $validated, $guard, $audit): void {
+                $record = DB::table('expenses')->where('id', $expense)->lockForUpdate()->first();
+                if (! $record || $record->status !== 'posted') {
+                    throw new \RuntimeException('Expense was not found or has already been voided.');
+                }
 
-        if (! $affected) {
-            return back()->withErrors(['void' => 'Expense was not found or has already been voided.']);
+                $guard->claim($request, 'expense.void', 'expense', $expense);
+                DB::table('expenses')->where('id', $expense)->update([
+                    'status' => 'voided',
+                    'voided_at' => now(),
+                    'voided_by' => $request->user()?->id,
+                    'void_reason' => $validated['reason'],
+                    'updated_at' => now(),
+                ]);
+                $after = DB::table('expenses')->where('id', $expense)->first();
+                $audit->record($request, 'expense.voided', 'expense', $expense, $record->reference, $record, $after, ['reason' => $validated['reason']]);
+            });
+        } catch (Throwable $exception) {
+            return back()->withErrors(['void' => $exception->getMessage()]);
         }
 
         return back()->with('success', 'Expense voided. Original financial record was preserved.');
@@ -241,6 +268,7 @@ class ExpenseController extends Controller
             'recurring_interval' => ['nullable', 'required_if:is_recurring,1', 'in:weekly,monthly,quarterly,yearly'],
             'recurring_until' => ['nullable', 'date', 'after_or_equal:expense_date'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            '_operation_id' => ['nullable', 'string', 'max:120'],
         ]);
     }
 
