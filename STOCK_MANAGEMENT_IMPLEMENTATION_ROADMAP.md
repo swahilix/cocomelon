@@ -54,7 +54,7 @@ Implemented decisions:
 - Purchase/POS movements are intentionally not reversible from the generic ledger because their future reversal must happen from the source transaction workflow.
 - Inventory reconciliation compares the current product balance with calculated movement history and flags mismatches without silently modifying stock.
 - Existing tracked products with no movement history are marked `Opening required` so their current physical balance can be adopted as an opening baseline.
-- Dedicated Inventory view includes stock status, low-stock threshold, latest cost, estimated stock value, movement history, reconciliation state and adjustment controls.
+- Dedicated Inventory view includes stock status, low-stock threshold, cost, estimated stock value, movement history, reconciliation state and adjustment controls.
 - Low/out-of-stock products have a purchase shortcut that opens the purchase form with that product selected.
 
 ## 1.1 Stock movement service
@@ -432,6 +432,18 @@ Add ability to place an unfinished POS cart on hold and restore it later.
 
 # Phase 5 — Sales management
 
+Status: **Completed — 2026-08-22.**
+
+Implemented decisions:
+
+- Added one unified Sales view for POS and online transactions while preserving the source-specific transaction tables and detail workflows.
+- POS sale detail pages preserve cashier, customer, payment, items and linked inventory movements.
+- POS returns support full or partial item quantities, refund method, reason and restock/non-restock handling.
+- Restockable returns post stock back through `InventoryService`; damaged/non-restockable returns preserve the refund without increasing sellable stock.
+- Returned quantities cannot exceed the original sold quantities and every return remains permanently linked to the source sale.
+- Completed POS sales can be voided only when no return has already been posted. Voiding requires a reason, preserves the original transaction and restores stock through controlled reversal movements.
+- Online orders are visible from the unified Sales layer but keep their own order workflow and status model.
+
 ## 5.1 Unified sales view
 
 Create a sales management area covering:
@@ -501,13 +513,24 @@ Void should:
 
 # Phase 6 — Online order stock ledger integration
 
-The storefront currently manages stock independently from the new movement ledger. Migrate it carefully.
+Status: **Completed — 2026-08-22.**
+
+Implemented decisions:
+
+- New online checkout deducts/reserves stock exactly once through `InventoryService` using source type `online_order`.
+- Orders store `inventory_posted_at` when checkout stock is committed and `inventory_restored_at` when a pre-fulfillment cancellation restores it.
+- Cancelling a ledger-managed order before shipment restores stock exactly once and records controlled online-order restoration movements.
+- Cancelled orders whose stock was restored cannot simply be reopened; a new order must be created instead.
+- Shipped/completed orders cannot use the pre-fulfillment cancellation path and status changes never deduct inventory a second time.
+- Existing historical orders remain untouched because they have no inventory-posting marker; no retroactive stock mutation is performed automatically.
+- Added the previously missing order status-history model/table/relation so online order creation and administrative status changes are auditable.
+- Admin order details expose the inventory posting/restoration state and linked stock movements without exposing internal cost to storefront customers.
+
+The storefront previously managed stock independently from the new movement ledger. This phase migrated new orders onto the centralized path while preserving historical compatibility.
 
 ## 6.1 Order stock reservation strategy
 
-Choose and implement one explicit strategy:
-
-Recommended:
+Implemented strategy:
 
 - reserve/deduct stock at successful checkout transaction
 - restore stock when an order is cancelled before fulfillment
@@ -515,17 +538,17 @@ Recommended:
 
 ## 6.2 Movement records
 
-Online checkout should create stock movements with source:
+Online checkout creates stock movements with source:
 
 - `online_order`
 
-Cancellation should create reversal/restock movements.
+Cancellation creates linked restock movements.
 
 ## 6.3 Existing order compatibility
 
-Do not retroactively modify historical product stock automatically.
+Historical product stock is not retroactively modified automatically.
 
-Optionally add a controlled reconciliation command for administrators if historical ledger import is needed.
+A controlled reconciliation/import tool may still be added later for administrators if historical ledger import is required.
 
 ### Phase 6 acceptance criteria
 
@@ -537,6 +560,23 @@ Optionally add a controlled reconciliation command for administrators if histori
 
 # Phase 7 — Costing and profit
 
+Status: **Completed — 2026-08-22.**
+
+Implemented decisions:
+
+- Products now store both `last_purchase_cost` and `average_cost`; inventory valuation uses weighted-average cost.
+- Existing products receive a conservative legacy cost baseline from their latest received/purchase cost without rewriting historical sales.
+- Purchase receipts update weighted average cost using the live quantity and existing average cost inside the inventory transaction.
+- Cost-bearing customer restocks, POS voids and online-order cancellations reintroduce stock at the preserved historical unit cost so current inventory value remains accurate.
+- Supplier returns remove inventory value using the returned purchase cost and recalculate the remaining weighted average.
+- New POS sale lines preserve the product weighted-average cost at the time of sale. The legacy embedded POS endpoint uses the same costing rule.
+- New online order lines also preserve unit cost for COGS, but `unit_cost` is hidden from customer-facing serialized order items.
+- Existing historical POS sale cost snapshots remain unchanged. Historical online order lines that predate Phase 7 keep `unit_cost = null` rather than receiving guessed retrospective COGS.
+- Added `Admin → Profit & costing` with date-range and source filters, revenue, COGS, gross profit, margin, expenses and net operating result.
+- Profit reporting includes daily/custom-period, product, category and POS cashier breakdowns.
+- POS returns are treated as dated accounting events: restocked returns reverse COGS, while non-restockable returns reduce revenue but retain their inventory cost as a business loss.
+- Recognized online revenue excludes cancelled, failed and refunded orders and requires either paid status or completed fulfillment.
+
 ## 7.1 Product cost data
 
 Track:
@@ -544,7 +584,7 @@ Track:
 - last purchase cost
 - weighted average cost
 
-Recommended initial costing method: **weighted average cost**.
+Costing method: **weighted average cost**.
 
 Formula after receipt:
 
@@ -554,7 +594,7 @@ Formula after receipt:
 
 When a sale is completed, preserve unit cost on the sale line.
 
-This makes historical profit stable even when costs change later.
+This keeps historical profit stable even when inventory cost changes later.
 
 ## 7.3 Profit metrics
 
@@ -570,8 +610,7 @@ Calculate:
 Reports by:
 
 - day
-- week
-- month
+- week/month through selected date ranges
 - custom range
 - product
 - category
@@ -580,7 +619,7 @@ Reports by:
 ### Phase 7 acceptance criteria
 
 - Historical sale profit does not change when purchase costs change.
-- Dashboard profit reflects COGS and expenses rather than revenue alone.
+- Profit reporting reflects COGS and expenses rather than revenue alone.
 
 ---
 
@@ -878,9 +917,9 @@ We will implement in this exact order unless a discovered dependency requires a 
 2. **Phase 2 — Suppliers** ✅
 3. **Phase 3 — Purchasing workflow** ✅
 4. **Phase 4 — POS redesign** ✅
-5. **Phase 5 — Sales, returns and voids**
-6. **Phase 6 — Online order inventory integration**
-7. **Phase 7 — Costing and profit**
+5. **Phase 5 — Sales, returns and voids** ✅
+6. **Phase 6 — Online order inventory integration** ✅
+7. **Phase 7 — Costing and profit** ✅
 8. **Phase 8 — Expenses expansion**
 9. **Phase 9 — Cash register shifts**
 10. **Phase 10 — Reports/dashboard**
