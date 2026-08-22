@@ -8,5 +8,7 @@ Route::middleware(['auth', 'admin', 'permission:manage_registers'])->prefix('adm
     Route::post('/open', [RegisterController::class, 'open'])->name('open');
     Route::post('/movement', [RegisterController::class, 'movement'])->name('movement');
     Route::post('/close', [RegisterController::class, 'close'])->name('close');
+    Route::post('/payment-methods', [RegisterController::class, 'storePaymentMethod'])->name('payment-methods.store');
+    Route::patch('/payment-methods/{method}', [RegisterController::class, 'updatePaymentMethod'])->name('payment-methods.update');
     Route::get('/{session}', [RegisterController::class, 'show'])->name('show');
 });
