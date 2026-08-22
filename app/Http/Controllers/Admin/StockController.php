@@ -25,14 +25,14 @@ class StockController extends Controller
         $products = Product::query()
             ->with(['category:id,name', 'brand:id,name'])
             ->select([
-                'id', 'category_id', 'brand_id', 'name', 'sku', 'stock_quantity', 'low_stock_threshold',
+                'id', 'category_id', 'brand_id', 'name', 'sku', 'stock_quantity', 'average_cost', 'last_purchase_cost', 'low_stock_threshold',
                 'track_stock', 'price', 'sale_price', 'primary_image',
             ])
             ->orderBy('name')
             ->get()
             ->map(function (Product $product): array {
                 $lastMovement = DB::table('stock_movements')->where('product_id', $product->id)->latest('id')->first();
-                $lastCost = (float) (DB::table('stock_purchase_items')->where('product_id', $product->id)->latest('id')->value('unit_cost') ?? 0);
+                $averageCost = (float) $product->average_cost;
                 $status = ! $product->track_stock
                     ? 'not_tracked'
                     : ($product->stock_quantity <= 0
@@ -51,8 +51,9 @@ class StockController extends Controller
                     'price' => $product->current_price,
                     'image_url' => $product->image_url,
                     'stock_status' => $status,
-                    'last_cost' => $lastCost,
-                    'stock_value' => $product->track_stock ? $lastCost * $product->stock_quantity : 0,
+                    'average_cost' => $averageCost,
+                    'last_cost' => (float) $product->last_purchase_cost,
+                    'stock_value' => $product->track_stock ? $averageCost * $product->stock_quantity : 0,
                     'last_movement' => $lastMovement ? [
                         'type' => $lastMovement->type,
                         'quantity' => $lastMovement->quantity,
@@ -268,7 +269,7 @@ class StockController extends Controller
                 foreach ($validated['items'] as $item) {
                     $product = Product::query()->findOrFail($item['product_id']);
                     $lineTotal = $item['quantity'] * $item['unit_price'];
-                    $lastCost = (float) (DB::table('stock_purchase_items')->where('product_id', $product->id)->latest('id')->value('unit_cost') ?? 0);
+                    $unitCost = (float) $product->average_cost;
 
                     DB::table('pos_sale_items')->insert([
                         'pos_sale_id' => $saleId,
@@ -277,13 +278,13 @@ class StockController extends Controller
                         'sku' => $product->sku,
                         'quantity' => $item['quantity'],
                         'unit_price' => $item['unit_price'],
-                        'unit_cost' => $lastCost,
+                        'unit_cost' => $unitCost,
                         'line_total' => $lineTotal,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]);
 
-                    $inventory->decrease($product, $item['quantity'], 'pos_sale', $reference, $lastCost, $validated['customer_name'] ?? 'Walk-in customer', $request->user()?->id, 'pos_sale', $saleId, 'POS sale');
+                    $inventory->decrease($product, $item['quantity'], 'pos_sale', $reference, $unitCost, $validated['customer_name'] ?? 'Walk-in customer', $request->user()?->id, 'pos_sale', $saleId, 'POS sale');
                 }
             });
         } catch (Throwable $exception) {
