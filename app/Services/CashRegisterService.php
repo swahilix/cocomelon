@@ -42,7 +42,7 @@ class CashRegisterService
         ?int $userId = null,
         ?string $sourceType = null,
         ?int $sourceId = null,
-    ): object {
+    ): int {
         if (! in_array($direction, ['in', 'out'], true)) {
             throw new RuntimeException('Invalid cash movement direction.');
         }
@@ -56,7 +56,7 @@ class CashRegisterService
             throw new RuntimeException('Cash register session is not open.');
         }
 
-        $id = DB::table('cash_register_movements')->insertGetId([
+        return DB::table('cash_register_movements')->insertGetId([
             'cash_register_session_id' => $sessionId,
             'reference' => 'CSH-'.now()->format('ymd-His').'-'.strtoupper(Str::random(5)),
             'type' => $type,
@@ -70,8 +70,6 @@ class CashRegisterService
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-
-        return DB::table('cash_register_movements')->find($id);
     }
 
     public function expectedCash(int $sessionId): float
