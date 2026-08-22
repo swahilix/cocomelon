@@ -55,12 +55,6 @@ const logout = () => router.post('/logout');
             </div>
 
             <div class="scrollbar-hidden flex-1 overflow-y-auto p-4">
-                <div class="mb-5 rounded-[10px] border border-slate-800 bg-slate-900 p-4">
-                    <p class="text-[10px] uppercase tracking-[.18em] text-prinx-400">Store control</p>
-                    <p class="mt-2 text-sm font-semibold text-white">Prinx Electronics</p>
-                    <p class="mt-1 text-xs leading-5 text-slate-400">Manage products, services, categories and sales.</p>
-                </div>
-
                 <div v-for="section in sections" :key="section.label" class="mb-5">
                     <p class="mb-2 px-3 text-[10px] font-medium uppercase tracking-[.18em] text-slate-500">{{ section.label }}</p>
                     <nav class="space-y-1">
