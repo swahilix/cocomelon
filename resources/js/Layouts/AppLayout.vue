@@ -36,11 +36,11 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                 </Link>
 
                 <nav class="hidden items-center gap-1 lg:flex">
-                    <Link href="/" :class="['inline-flex items-center gap-2 rounded-[9px] px-3 py-2 text-sm font-extrabold transition', active('/') ? 'bg-prinx-50 text-prinx-600' : 'text-slate-700 hover:bg-slate-50 hover:text-prinx-600']"><Icon name="home-2" :size="16" />Home</Link>
-                    <Link href="/shop" :class="['inline-flex items-center gap-2 rounded-[9px] px-3 py-2 text-sm font-extrabold transition', active('/shop') || active('/products') ? 'bg-prinx-50 text-prinx-600' : 'text-slate-700 hover:bg-slate-50 hover:text-prinx-600']"><Icon name="shop" :size="16" />Shop</Link>
-                    <Link href="/services" :class="['inline-flex items-center gap-2 rounded-[9px] px-3 py-2 text-sm font-extrabold transition', active('/services') ? 'bg-prinx-50 text-prinx-600' : 'text-slate-700 hover:bg-slate-50 hover:text-prinx-600']"><Icon name="setting-2" :size="16" />Services</Link>
-                    <Link href="/pages/about" class="inline-flex items-center gap-2 rounded-[9px] px-3 py-2 text-sm font-extrabold text-slate-700 transition hover:bg-slate-50 hover:text-prinx-600"><Icon name="info-circle" :size="16" />About</Link>
-                    <Link href="/pages/contact" class="inline-flex items-center gap-2 rounded-[9px] px-3 py-2 text-sm font-extrabold text-slate-700 transition hover:bg-slate-50 hover:text-prinx-600"><Icon name="message-question" :size="16" />Contact</Link>
+                    <Link href="/" :class="['rounded-[9px] px-3 py-2 text-sm font-extrabold transition', active('/') ? 'bg-prinx-50 text-prinx-600' : 'text-slate-700 hover:bg-slate-50 hover:text-prinx-600']">Home</Link>
+                    <Link href="/shop" :class="['rounded-[9px] px-3 py-2 text-sm font-extrabold transition', active('/shop') || active('/products') ? 'bg-prinx-50 text-prinx-600' : 'text-slate-700 hover:bg-slate-50 hover:text-prinx-600']">Shop</Link>
+                    <Link href="/services" :class="['rounded-[9px] px-3 py-2 text-sm font-extrabold transition', active('/services') ? 'bg-prinx-50 text-prinx-600' : 'text-slate-700 hover:bg-slate-50 hover:text-prinx-600']">Services</Link>
+                    <Link href="/pages/about" class="rounded-[9px] px-3 py-2 text-sm font-extrabold text-slate-700 transition hover:bg-slate-50 hover:text-prinx-600">About</Link>
+                    <Link href="/pages/contact" class="rounded-[9px] px-3 py-2 text-sm font-extrabold text-slate-700 transition hover:bg-slate-50 hover:text-prinx-600">Contact</Link>
                 </nav>
 
                 <form class="ml-auto hidden max-w-sm flex-1 xl:flex" @submit.prevent="submitSearch">
@@ -74,10 +74,10 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                         <button class="btn-primary rounded-l-none"><Icon name="search-normal" :size="15" />Go</button>
                     </form>
                     <div class="grid grid-cols-2 gap-2">
-                        <Link href="/" class="inline-flex items-center gap-2 rounded-[9px] bg-slate-50 px-3 py-3 font-extrabold text-slate-700"><Icon name="home-2" :size="17" />Home</Link>
-                        <Link href="/shop" class="inline-flex items-center gap-2 rounded-[9px] bg-slate-50 px-3 py-3 font-extrabold text-slate-700"><Icon name="shop" :size="17" />Shop all</Link>
-                        <Link href="/services" class="inline-flex items-center gap-2 rounded-[9px] bg-slate-50 px-3 py-3 font-extrabold text-slate-700"><Icon name="setting-2" :size="17" />Services</Link>
-                        <Link href="/pages/contact" class="inline-flex items-center gap-2 rounded-[9px] bg-slate-50 px-3 py-3 font-extrabold text-slate-700"><Icon name="message-question" :size="17" />Contact</Link>
+                        <Link href="/" class="rounded-[9px] bg-slate-50 px-3 py-3 font-extrabold text-slate-700">Home</Link>
+                        <Link href="/shop" class="rounded-[9px] bg-slate-50 px-3 py-3 font-extrabold text-slate-700">Shop all</Link>
+                        <Link href="/services" class="rounded-[9px] bg-slate-50 px-3 py-3 font-extrabold text-slate-700">Services</Link>
+                        <Link href="/pages/contact" class="rounded-[9px] bg-slate-50 px-3 py-3 font-extrabold text-slate-700">Contact</Link>
                     </div>
                     <p class="mt-5 flex items-center gap-2 px-1 text-[10px] font-black uppercase tracking-[.18em] text-slate-400"><Icon name="category" :size="14" />Product categories</p>
                     <div class="mt-2 grid grid-cols-2 gap-2">
