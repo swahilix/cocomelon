@@ -325,6 +325,22 @@ Returning received stock should create a stock-out movement.
 
 # Phase 4 — POS redesign
 
+Status: **Completed — 2026-08-22.**
+
+Implemented decisions:
+
+- Added a dedicated `Admin → Point of sale` workflow instead of relying on the stock dashboard tab for counter use.
+- POS product browsing includes product images, category filters, live stock, current active selling price and fast product/SKU search.
+- Pressing Enter on an exact SKU behaves like a barcode/SKU scan and adds the matching product to the cart.
+- Cart controls support add/remove, quantity changes, custom unit price, overall discount and live totals/change calculation.
+- Existing customers can be selected and walk-in customer details can be captured; new customers may be saved directly from POS.
+- Payment methods support cash, mobile money, bank transfer, card and other, with payment reference capture for non-cash payments.
+- Completed sales preserve customer, payment, cashier, product-price and historical unit-cost snapshots and reduce stock through `InventoryService`.
+- Tracked products cannot be sold beyond available stock; the backend stock lock remains the final concurrency safeguard.
+- POS carts can be placed on hold, listed, resumed, updated and discarded without changing inventory.
+- Completed sales redirect to a dedicated browser/thermal-friendly receipt page with print/reprint support.
+- Dedicated POS routes are isolated in `routes/pos.php` and loaded through the Laravel application routing configuration.
+
 ## 4.1 Dedicated POS screen
 
 Create a fast full-screen/mobile-responsive POS interface.
@@ -861,7 +877,7 @@ We will implement in this exact order unless a discovered dependency requires a 
 1. **Phase 1 — Inventory foundation hardening** ✅
 2. **Phase 2 — Suppliers** ✅
 3. **Phase 3 — Purchasing workflow** ✅
-4. **Phase 4 — POS redesign**
+4. **Phase 4 — POS redesign** ✅
 5. **Phase 5 — Sales, returns and voids**
 6. **Phase 6 — Online order inventory integration**
 7. **Phase 7 — Costing and profit**
