@@ -5,3 +5,8 @@ main:has(.homepage-store-footer) + footer { display: block !important; }
 .xl\:grid-cols-\[1\.35fr_\.85fr\] {
     grid-template-columns: minmax(0, 1fr) !important;
 }
+
+/* Remove the Software capabilities grid entirely so the next content section follows immediately. */
+#software-solutions + section {
+    display: none !important;
+}
