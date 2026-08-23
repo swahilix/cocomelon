@@ -54,7 +54,9 @@ class HandleInertiaRequests extends Middleware
             'x' => $value('x_url'),
         ];
         $databaseProfiles = array_values(array_filter($social));
-        $paymentStrip = $value('payment_strip');
+        $paymentStrip = Schema::hasTable('business_settings') && Schema::hasColumn('business_settings', 'payment_strip')
+            ? $value('payment_strip')
+            : null;
         $paymentStripUrl = null;
 
         if ($paymentStrip) {
