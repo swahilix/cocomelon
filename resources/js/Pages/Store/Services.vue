@@ -31,14 +31,6 @@ const processSteps = [
     { number: '3', title: 'We confirm & handle', text: 'Our team confirms the request and gets to work.', icon: 'tools' },
     { number: '4', title: 'Receive or collect', text: 'We deliver back or you collect your device.', icon: 'package' },
 ];
-
-const benefits = [
-    { title: 'Certified Technicians', icon: 'people' },
-    { title: 'Genuine Parts', icon: 'settings' },
-    { title: 'Fast Turnaround', icon: 'clock' },
-    { title: 'Warranty Support', icon: 'shield' },
-    { title: 'Customer Care', icon: 'headset' },
-];
 </script>
 
 <template>
@@ -122,7 +114,7 @@ const benefits = [
 
                 <section class="mt-3">
                     <h2 class="mb-2 text-sm font-semibold text-slate-900">How It Works</h2>
-                    <div class="grid gap-2.5 xl:grid-cols-[1fr_1fr_1fr_1fr_2.4fr]">
+                    <div class="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
                         <article v-for="step in processSteps" :key="step.number" class="relative min-h-[104px] rounded-[8px] border border-slate-200 bg-white p-4">
                             <span class="absolute left-4 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-prinx-500 text-xs font-semibold text-white">{{ step.number }}</span>
                             <div class="flex items-start gap-3 pt-5">
@@ -134,17 +126,6 @@ const benefits = [
                                 <div><h3 class="text-xs font-semibold text-slate-900">{{ step.title }}</h3><p class="mt-1 text-xs leading-5 text-slate-500">{{ step.text }}</p></div>
                             </div>
                         </article>
-
-                        <div class="grid min-h-[104px] grid-cols-5 overflow-hidden rounded-[8px] border border-slate-200 bg-white">
-                            <div v-for="benefit in benefits" :key="benefit.title" class="flex flex-col items-center justify-center border-r border-slate-100 px-2 py-3 text-center last:border-r-0">
-                                <svg v-if="benefit.icon === 'people'" viewBox="0 0 24 24" class="h-7 w-7 fill-none stroke-prinx-500" stroke-width="1.7"><circle cx="9" cy="8" r="3"/><path stroke-linecap="round" d="M3.5 20c.6-4 2.4-6 5.5-6s5 2 5.5 6M16 5.5a3 3 0 0 1 0 5.5M16.5 14c2.5.3 3.8 2 4 5"/></svg>
-                                <svg v-else-if="benefit.icon === 'settings'" viewBox="0 0 24 24" class="h-7 w-7 fill-none stroke-prinx-500" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" d="m19.4 15 .1.1-1 1.8-.2.1-2-.1-1 .6-.9 1.8-.2.1h-2.1l-.2-.1-.9-1.8-1-.6-2 .1-.2-.1-1-1.8.1-.2 1.1-1.7v-1.2L6.8 10l-.1-.2 1-1.8.2-.1 2 .1 1-.6.9-1.8.2-.1h2.1l.2.1.9 1.8 1 .6 2-.1.2.1 1 1.8-.1.2-1.1 1.7v1.2l1.3 2.1Z"/></svg>
-                                <svg v-else-if="benefit.icon === 'clock'" viewBox="0 0 24 24" class="h-7 w-7 fill-none stroke-prinx-500" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 7v5l3 2"/></svg>
-                                <svg v-else-if="benefit.icon === 'shield'" viewBox="0 0 24 24" class="h-7 w-7 fill-none stroke-prinx-500" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3 5 7v5c0 4.3 2.5 7.3 7 9 4.5-1.7 7-4.7 7-9V7l-7-4Z"/><path stroke-linecap="round" d="m9 12 2 2 4-4"/></svg>
-                                <svg v-else viewBox="0 0 24 24" class="h-7 w-7 fill-none stroke-prinx-500" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15v-3a7 7 0 0 1 14 0v3M5 14H4a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2v-6Zm13 0h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2v-6Z"/></svg>
-                                <span class="mt-2 text-xs font-semibold leading-4 text-slate-800">{{ benefit.title }}</span>
-                            </div>
-                        </div>
                     </div>
                 </section>
 
