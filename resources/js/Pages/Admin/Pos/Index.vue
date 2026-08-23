@@ -1,4 +1,5 @@
 <script setup>
+import axios from 'axios';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import PosLayout from '../../../Layouts/PosLayout.vue';
@@ -17,6 +18,7 @@ const props = defineProps({
 
 const page = usePage();
 const scanSearch = ref('');
+const scanError = ref('');
 const catalogSearch = ref('');
 const category = ref('');
 const brand = ref('');
@@ -52,6 +54,7 @@ const form = useForm({
         product_id: Number(item.product_id),
         quantity: Number(item.quantity),
         unit_price: Number(item.unit_price),
+        unit_barcodes: Array.isArray(item.unit_barcodes) ? [...item.unit_barcodes] : [],
     })),
 });
 
@@ -72,14 +75,36 @@ function product(id) {
     return props.products.find((item) => Number(item.id) === Number(id));
 }
 
-function addProduct(item) {
-    if (!item.available) return;
-    const existing = form.items.find((line) => Number(line.product_id) === Number(item.id));
-    if (existing) {
-        if (!item.track_stock || existing.quantity < item.stock_quantity) existing.quantity++;
+function barcodeAlreadyInCart(barcode) {
+    return form.items.some((line) => (line.unit_barcodes || []).some((code) => String(code).toUpperCase() === String(barcode).toUpperCase()));
+}
+
+function addProduct(item, unitBarcode = null) {
+    if (!item?.available) return;
+    scanError.value = '';
+
+    if (unitBarcode && barcodeAlreadyInCart(unitBarcode)) {
+        scanError.value = `Unit ${unitBarcode} is already in this sale.`;
         return;
     }
-    form.items.push({ product_id: item.id, quantity: 1, unit_price: Number(item.price) });
+
+    const existing = form.items.find((line) => Number(line.product_id) === Number(item.id));
+    if (existing) {
+        if (item.track_stock && existing.quantity >= item.stock_quantity) {
+            scanError.value = `No more available stock for ${item.name}.`;
+            return;
+        }
+        existing.quantity++;
+        if (unitBarcode) existing.unit_barcodes.push(unitBarcode);
+        return;
+    }
+
+    form.items.push({
+        product_id: item.id,
+        quantity: 1,
+        unit_price: Number(item.price),
+        unit_barcodes: unitBarcode ? [unitBarcode] : [],
+    });
 }
 
 function adjustQty(line, delta) {
@@ -87,6 +112,10 @@ function adjustQty(line, delta) {
     const next = Number(line.quantity) + delta;
     if (next <= 0) return removeLine(line.product_id);
     if (item?.track_stock && next > item.stock_quantity) return;
+
+    if (delta < 0 && Array.isArray(line.unit_barcodes) && line.unit_barcodes.length > next) {
+        line.unit_barcodes.splice(next);
+    }
     line.quantity = next;
 }
 
@@ -94,14 +123,35 @@ function removeLine(id) {
     form.items = form.items.filter((line) => Number(line.product_id) !== Number(id));
 }
 
-function scanEnter() {
-    const q = scanSearch.value.trim().toLowerCase();
-    if (!q) return;
+async function scanEnter() {
+    const raw = scanSearch.value.trim();
+    if (!raw) return;
+    scanError.value = '';
+
+    if (raw.toUpperCase().startsWith('PX-')) {
+        try {
+            const { data } = await axios.get(`/admin/pos/unit/${encodeURIComponent(raw.toUpperCase())}`);
+            const item = props.products.find((product) => Number(product.id) === Number(data.product.id));
+            if (!item) {
+                scanError.value = 'The scanned unit belongs to a product that is not currently sellable.';
+                return;
+            }
+            addProduct(item, data.unit.barcode);
+            if (!scanError.value) scanSearch.value = '';
+        } catch (error) {
+            scanError.value = error?.response?.data?.message || 'This unit barcode is unavailable or invalid.';
+        }
+        return;
+    }
+
+    const q = raw.toLowerCase();
     const exact = props.products.find((item) => String(item.sku || '').toLowerCase() === q)
         || props.products.find((item) => String(item.name || '').toLowerCase() === q);
     if (exact) {
         addProduct(exact);
         scanSearch.value = '';
+    } else {
+        scanError.value = 'No item or unit barcode matched that scan.';
     }
 }
 
@@ -153,6 +203,7 @@ function clearSale() {
     form.discount = 0;
     form._operation_id = newOperationId();
     scanSearch.value = '';
+    scanError.value = '';
 }
 </script>
 
@@ -199,7 +250,10 @@ function clearSale() {
                             <button type="button" class="pos-customer-add flex h-9 w-9 shrink-0 items-center justify-center border border-l-0 border-slate-300 bg-white text-prinx-600 transition hover:bg-prinx-50" title="New customer" aria-label="New customer" @click="showNewCustomer = !showNewCustomer"><Icon name="add-circle" :size="18" /></button>
                         </div>
 
-                        <input v-model="scanSearch" class="h-9 min-w-0 w-full rounded-[8px] border border-slate-300 bg-white px-3 text-xs outline-none placeholder:text-slate-400 focus:border-prinx-500" placeholder="Item name / SKU / barcode" autofocus @keyup.enter="scanEnter">
+                        <div>
+                            <input v-model="scanSearch" class="h-9 min-w-0 w-full rounded-[8px] border border-slate-300 bg-white px-3 text-xs outline-none placeholder:text-slate-400 focus:border-prinx-500" placeholder="Unit barcode / SKU / item name" autofocus @keyup.enter="scanEnter">
+                            <p v-if="scanError" class="mt-1 text-[10px] font-medium text-red-600">{{ scanError }}</p>
+                        </div>
                     </div>
 
                     <div v-if="showNewCustomer" class="mt-2 grid gap-2 rounded-[8px] bg-slate-50 p-2 sm:grid-cols-3">
@@ -213,25 +267,18 @@ function clearSale() {
                 <div class="min-h-0 flex-1 overflow-auto">
                     <table class="w-full min-w-[720px] border-collapse text-xs">
                         <thead class="sticky top-0 z-10 bg-slate-950 text-white">
-                            <tr>
-                                <th class="px-3 py-2 text-left font-semibold">Item</th>
-                                <th class="w-20 px-2 py-2 text-center font-semibold">Stock</th>
-                                <th class="w-32 px-2 py-2 text-center font-semibold">Quantity</th>
-                                <th class="w-32 px-2 py-2 text-right font-semibold">Price</th>
-                                <th class="w-32 px-2 py-2 text-right font-semibold">Subtotal</th>
-                                <th class="w-10 px-2 py-2"></th>
-                            </tr>
+                            <tr><th class="px-3 py-2 text-left font-semibold">Item</th><th class="w-20 px-2 py-2 text-center font-semibold">Stock</th><th class="w-32 px-2 py-2 text-center font-semibold">Quantity</th><th class="w-32 px-2 py-2 text-right font-semibold">Price</th><th class="w-32 px-2 py-2 text-right font-semibold">Subtotal</th><th class="w-10 px-2 py-2"></th></tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             <tr v-for="line in form.items" :key="line.product_id" class="hover:bg-slate-50">
-                                <td class="px-3 py-2.5"><p class="font-semibold text-slate-900">{{ product(line.product_id)?.name }}</p><p class="mt-0.5 text-[10px] text-slate-400">{{ product(line.product_id)?.sku }}</p></td>
+                                <td class="px-3 py-2.5"><p class="font-semibold text-slate-900">{{ product(line.product_id)?.name }}</p><p class="mt-0.5 text-[10px] text-slate-400">{{ product(line.product_id)?.sku }}<span v-if="line.unit_barcodes?.length" class="ml-1 font-semibold text-emerald-600">· {{ line.unit_barcodes.length }} unit barcode{{ line.unit_barcodes.length === 1 ? '' : 's' }} scanned</span></p></td>
                                 <td class="px-2 py-2.5 text-center text-slate-500">{{ product(line.product_id)?.track_stock ? product(line.product_id)?.stock_quantity : '∞' }}</td>
                                 <td class="px-2 py-2.5"><div class="mx-auto flex w-fit items-center overflow-hidden rounded-[7px] border border-slate-200"><button type="button" class="h-8 w-8 text-base text-red-500 hover:bg-red-50" @click="adjustQty(line, -1)">−</button><span class="min-w-9 px-1 text-center font-semibold">{{ line.quantity }}</span><button type="button" class="h-8 w-8 text-base text-emerald-600 hover:bg-emerald-50" @click="adjustQty(line, 1)">+</button></div></td>
                                 <td class="px-2 py-2.5 text-right"><input v-model.number="line.unit_price" type="number" min="0" step="0.01" :disabled="!canOverridePrice" class="h-8 w-28 rounded-[7px] border border-slate-200 px-2 text-right text-xs outline-none focus:border-prinx-500 disabled:bg-transparent disabled:text-slate-700"></td>
                                 <td class="px-2 py-2.5 text-right font-semibold text-slate-900">{{ money(line.quantity * line.unit_price) }}</td>
                                 <td class="px-2 py-2.5 text-center"><button type="button" class="flex h-8 w-8 items-center justify-center rounded-[7px] text-red-500 hover:bg-red-50" @click="removeLine(line.product_id)"><Icon name="trash" :size="15" /></button></td>
                             </tr>
-                            <tr v-if="!form.items.length"><td colspan="6" class="py-16 text-center"><Icon name="shopping-cart" :size="28" class="mx-auto text-slate-300" /><p class="mt-2 text-sm font-semibold text-slate-500">Invoice is empty</p><p class="mt-1 text-xs text-slate-400">Choose an item from the product panel.</p></td></tr>
+                            <tr v-if="!form.items.length"><td colspan="6" class="py-16 text-center"><Icon name="shopping-cart" :size="28" class="mx-auto text-slate-300" /><p class="mt-2 text-sm font-semibold text-slate-500">Invoice is empty</p><p class="mt-1 text-xs text-slate-400">Scan a unit barcode or choose an item from the product panel.</p></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -245,15 +292,11 @@ function clearSale() {
                     </div>
 
                     <div class="grid gap-2 p-2.5 md:grid-cols-[minmax(170px,220px)_150px_1fr_auto]">
-                        <select v-model="form.payment_method_id" class="input">
-                            <option v-for="method in paymentMethods" :key="method.id" :value="method.id">{{ method.name }}</option>
-                        </select>
+                        <select v-model="form.payment_method_id" class="input"><option v-for="method in paymentMethods" :key="method.id" :value="method.id">{{ method.name }}</option></select>
                         <input v-model.number="form.amount_paid" type="number" min="0" step="0.01" class="input" placeholder="Amount paid">
                         <input v-if="!isCashPayment" v-model="form.payment_reference" class="input" placeholder="Transaction / payment reference">
                         <div v-else class="flex h-9 items-center justify-between rounded-[8px] border border-slate-200 bg-white px-3 text-xs"><span class="text-slate-400">Change</span><b class="ml-4">{{ money(change) }}</b></div>
-                        <div v-if="selectedPaymentMethod && !isCashPayment && (selectedPaymentMethod.account_number || selectedPaymentMethod.account_name)" class="rounded-[7px] bg-prinx-50 px-2.5 py-2 text-[10px] text-prinx-800 md:col-span-4">
-                            <b>{{ selectedPaymentMethod.name }}</b><span v-if="selectedPaymentMethod.account_number"> · {{ selectedPaymentMethod.account_number }}</span><span v-if="selectedPaymentMethod.account_name"> · {{ selectedPaymentMethod.account_name }}</span>
-                        </div>
+                        <div v-if="selectedPaymentMethod && !isCashPayment && (selectedPaymentMethod.account_number || selectedPaymentMethod.account_name)" class="rounded-[7px] bg-prinx-50 px-2.5 py-2 text-[10px] text-prinx-800 md:col-span-4"><b>{{ selectedPaymentMethod.name }}</b><span v-if="selectedPaymentMethod.account_number"> · {{ selectedPaymentMethod.account_number }}</span><span v-if="selectedPaymentMethod.account_name"> · {{ selectedPaymentMethod.account_name }}</span></div>
                         <input v-model="form.notes" class="input md:col-span-3" placeholder="Sale note (optional)">
                         <div class="grid grid-cols-3 gap-2 md:col-span-4">
                             <button type="button" class="flex h-10 items-center justify-center gap-1.5 rounded-[8px] bg-rose-700 px-3 text-xs font-semibold text-white transition hover:bg-rose-800 disabled:opacity-50" :disabled="!form.items.length || !currentRegister || form.processing" @click="holdSale"><Icon name="pause-circle" :size="16" />Hold</button>
@@ -266,20 +309,14 @@ function clearSale() {
 
             <aside class="order-1 flex min-h-[470px] min-w-0 flex-col overflow-hidden rounded-[9px] border border-slate-200 bg-white shadow-sm lg:order-2 lg:min-h-0">
                 <div class="shrink-0 border-b border-slate-200 p-2.5">
-                    <div class="grid grid-cols-2 gap-2">
-                        <select v-model="category" class="input"><option value="">All categories</option><option v-for="item in categories" :key="item" :value="item">{{ item }}</option></select>
-                        <select v-model="brand" class="input"><option value="">All brands</option><option v-for="item in brands" :key="item" :value="item">{{ item }}</option></select>
-                    </div>
+                    <div class="grid grid-cols-2 gap-2"><select v-model="category" class="input"><option value="">All categories</option><option v-for="item in categories" :key="item" :value="item">{{ item }}</option></select><select v-model="brand" class="input"><option value="">All brands</option><option v-for="item in brands" :key="item" :value="item">{{ item }}</option></select></div>
                     <div class="relative mt-2"><Icon name="search-normal" :size="16" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" /><input v-model="catalogSearch" class="input pl-8" placeholder="Item name / SKU"></div>
                 </div>
 
                 <div class="min-h-0 flex-1 overflow-y-auto p-2.5">
                     <div class="grid grid-cols-2 gap-2 2xl:grid-cols-3">
                         <button v-for="item in filteredProducts" :key="item.id" type="button" :disabled="!item.available" class="group min-w-0 overflow-hidden rounded-[8px] border border-slate-200 bg-white text-left transition hover:border-prinx-300 hover:shadow-sm active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-45" @click="addProduct(item)">
-                            <div class="flex gap-2 p-2">
-                                <img :src="item.image_url" :alt="item.name" class="h-[62px] w-[62px] shrink-0 rounded-[7px] bg-slate-100 object-cover">
-                                <div class="min-w-0 flex-1"><p class="line-clamp-2 text-[11px] font-semibold leading-4 text-slate-900">{{ item.name }}</p><p class="mt-0.5 truncate text-[9px] text-slate-400">{{ item.sku }}</p><p class="mt-1 text-xs font-semibold text-prinx-600">{{ money(item.price) }}</p></div>
-                            </div>
+                            <div class="flex gap-2 p-2"><img :src="item.image_url" :alt="item.name" class="h-[62px] w-[62px] shrink-0 rounded-[7px] bg-slate-100 object-cover"><div class="min-w-0 flex-1"><p class="line-clamp-2 text-[11px] font-semibold leading-4 text-slate-900">{{ item.name }}</p><p class="mt-0.5 truncate text-[9px] text-slate-400">{{ item.sku }}</p><p class="mt-1 text-xs font-semibold text-prinx-600">{{ money(item.price) }}</p></div></div>
                             <div class="flex items-center justify-between border-t border-slate-100 bg-slate-50/70 px-2 py-1.5"><span class="truncate text-[9px] text-slate-400">{{ item.brand || item.category }}</span><span :class="['shrink-0 text-[9px] font-semibold', item.available ? 'text-slate-500' : 'text-red-600']">{{ item.track_stock ? `${item.stock_quantity} left` : 'In stock' }}</span></div>
                         </button>
                     </div>
