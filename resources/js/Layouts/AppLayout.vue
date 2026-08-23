@@ -10,6 +10,19 @@ const search = ref('');
 const user = computed(() => page.props.auth?.user);
 const cartCount = computed(() => page.props.cartCount || 0);
 const productCategories = computed(() => page.props.navigationCategories || []);
+const store = computed(() => page.props.store || {});
+const locationText = computed(() => [store.value.address, store.value.city, store.value.region, store.value.country].filter(Boolean).join(', '));
+const whatsappHref = computed(() => {
+    const digits = String(store.value.whatsapp || '').replace(/\D/g, '');
+    return digits ? `https://wa.me/${digits}` : null;
+});
+const socialLinks = computed(() => Object.entries(store.value.social || {})
+    .filter(([, url]) => Boolean(url))
+    .map(([key, url]) => ({
+        key,
+        url,
+        label: key === 'x' ? 'X' : key.charAt(0).toUpperCase() + key.slice(1),
+    })));
 const submitSearch = () => router.get('/shop', { search: search.value }, { preserveState: false });
 const logout = () => router.post('/logout');
 const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(url));
@@ -23,8 +36,8 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
             <div class="container-shell flex min-h-9 items-center justify-center gap-5 py-2 text-center text-[11px] font-bold sm:justify-between sm:text-xs">
                 <span class="inline-flex items-center gap-2"><Icon name="shield-tick" :size="14" class="text-prinx-400" /> Trusted electronics, professional services and responsive support.</span>
                 <div class="hidden items-center gap-5 text-slate-300 sm:flex">
-                    <a :href="`tel:${page.props.store.phone}`" class="inline-flex items-center gap-1.5 hover:text-white"><Icon name="call" :size="14" />{{ page.props.store.phone }}</a>
-                    <a :href="`mailto:${page.props.store.email}`" class="inline-flex items-center gap-1.5 hover:text-white"><Icon name="sms" :size="14" />{{ page.props.store.email }}</a>
+                    <a v-if="store.phone" :href="`tel:${store.phone}`" class="inline-flex items-center gap-1.5 hover:text-white"><Icon name="call" :size="14" />{{ store.phone }}</a>
+                    <a v-if="store.email" :href="`mailto:${store.email}`" class="inline-flex items-center gap-1.5 hover:text-white"><Icon name="sms" :size="14" />{{ store.email }}</a>
                 </div>
             </div>
         </div>
@@ -32,7 +45,7 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
         <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-xl">
             <div class="container-shell flex h-[76px] items-center gap-5">
                 <Link href="/" class="shrink-0">
-                    <img src="/assets/prinx-logo.png" alt="Prinx Electronics" class="h-10 w-auto max-w-[210px] object-contain sm:h-11">
+                    <img src="/assets/prinx-logo.png" :alt="store.name" class="h-10 w-auto max-w-[210px] object-contain sm:h-11">
                 </Link>
 
                 <nav class="hidden items-center gap-1 lg:flex">
@@ -96,12 +109,32 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
 
         <footer class="mt-20 border-t border-slate-800 bg-slate-950 text-slate-300">
             <div class="container-shell grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-5">
-                <div class="lg:col-span-2"><img src="/assets/prinx-logo.png" alt="Prinx Electronics" class="h-11 w-auto brightness-0 invert"><p class="mt-4 max-w-xl text-sm leading-7 text-slate-400">Electronics products, accessories, installation, maintenance and repair services for homes, businesses and institutions.</p><div class="mt-5 flex flex-wrap gap-2 text-xs font-bold"><span class="inline-flex items-center gap-1.5 rounded-[10px] border border-slate-700 px-3 py-1.5"><Icon name="shield-tick" :size="14" />Secure ordering</span><span class="inline-flex items-center gap-1.5 rounded-[10px] border border-slate-700 px-3 py-1.5"><Icon name="headphone" :size="14" />Expert support</span><span class="inline-flex items-center gap-1.5 rounded-[10px] border border-slate-700 px-3 py-1.5"><Icon name="location" :size="14" />Tanzania</span></div></div>
+                <div class="lg:col-span-2">
+                    <img src="/assets/prinx-logo.png" :alt="store.name" class="h-11 w-auto brightness-0 invert">
+                    <p class="mt-4 max-w-xl text-sm leading-7 text-slate-400">{{ store.description }}</p>
+                    <div class="mt-4 grid gap-2 text-xs text-slate-400 sm:grid-cols-2">
+                        <a v-if="store.phone" :href="`tel:${store.phone}`" class="inline-flex items-center gap-2 hover:text-white"><Icon name="call" :size="14" class="text-prinx-400" />{{ store.phone }}</a>
+                        <a v-if="store.email" :href="`mailto:${store.email}`" class="inline-flex items-center gap-2 hover:text-white"><Icon name="sms" :size="14" class="text-prinx-400" />{{ store.email }}</a>
+                        <a v-if="whatsappHref" :href="whatsappHref" target="_blank" rel="noopener" class="inline-flex items-center gap-2 hover:text-white"><Icon name="call" :size="14" class="text-prinx-400" />WhatsApp {{ store.whatsapp }}</a>
+                        <span v-if="store.working_hours" class="inline-flex items-center gap-2"><Icon name="clock" :size="14" class="text-prinx-400" />{{ store.working_hours }}</span>
+                    </div>
+                    <div class="mt-5 flex flex-wrap gap-2 text-xs font-bold">
+                        <span class="inline-flex items-center gap-1.5 rounded-[10px] border border-slate-700 px-3 py-1.5"><Icon name="shield-tick" :size="14" />Secure ordering</span>
+                        <span class="inline-flex items-center gap-1.5 rounded-[10px] border border-slate-700 px-3 py-1.5"><Icon name="headphone" :size="14" />Expert support</span>
+                        <span v-if="store.country" class="inline-flex items-center gap-1.5 rounded-[10px] border border-slate-700 px-3 py-1.5"><Icon name="location" :size="14" />{{ store.country }}</span>
+                    </div>
+                </div>
                 <div><h3 class="font-black text-white">Shop</h3><div class="mt-4 space-y-2 text-sm"><Link href="/shop" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>All products</Link><Link v-for="category in productCategories.slice(0, 4)" :key="category.id" :href="`/shop?category=${encodeURIComponent(category.slug)}`" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>{{ category.name }}</Link></div></div>
                 <div><h3 class="flex items-center gap-2 font-black text-white"><Icon name="headphone" :size="17" />Customer care</h3><div class="mt-4 space-y-2 text-sm"><Link href="/services" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>Technical services</Link><Link href="/pages/shipping" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>Shipping & delivery</Link><Link href="/pages/returns" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>Returns & refunds</Link><Link href="/pages/contact" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>Contact us</Link></div></div>
-                <div><h3 class="flex items-center gap-2 font-black text-white"><Icon name="building" :size="17" />Company</h3><div class="mt-4 space-y-2 text-sm"><Link href="/pages/about" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>About Prinx</Link><Link href="/pages/privacy" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>Privacy policy</Link><Link href="/pages/terms" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>Terms & conditions</Link><a href="/sitemap.xml" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>Sitemap</a></div></div>
+                <div>
+                    <h3 class="flex items-center gap-2 font-black text-white"><Icon name="building" :size="17" />Company</h3>
+                    <div class="mt-4 space-y-2 text-sm"><Link href="/pages/about" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>About {{ store.name }}</Link><Link href="/pages/privacy" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>Privacy policy</Link><Link href="/pages/terms" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>Terms & conditions</Link><a href="/sitemap.xml" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>Sitemap</a></div>
+                    <div v-if="socialLinks.length" class="mt-4 flex flex-wrap gap-2">
+                        <a v-for="social in socialLinks" :key="social.key" :href="social.url" target="_blank" rel="noopener" class="inline-flex items-center gap-1 rounded-[7px] border border-slate-700 px-2 py-1 text-[10px] font-semibold text-slate-400 hover:border-slate-500 hover:text-white"><Icon name="global" :size="12" />{{ social.label }}</a>
+                    </div>
+                </div>
             </div>
-            <div class="border-t border-slate-800 py-5"><div class="container-shell flex flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:justify-between"><span>© {{ page.props.store.year }} Prinx Electronics. All rights reserved.</span><span class="inline-flex items-center gap-1.5"><Icon name="location" :size="13" />{{ page.props.store.address }} · {{ page.props.store.phone }}</span></div></div>
+            <div class="border-t border-slate-800 py-5"><div class="container-shell flex flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:justify-between"><span>© {{ store.year }} {{ store.name }}. All rights reserved.</span><span v-if="locationText || store.phone" class="inline-flex items-center gap-1.5"><Icon name="location" :size="13" />{{ locationText }}<template v-if="locationText && store.phone"> · </template>{{ store.phone }}</span></div></div>
         </footer>
     </div>
 </template>
