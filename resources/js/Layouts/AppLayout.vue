@@ -16,6 +16,10 @@ const whatsappHref = computed(() => {
     const digits = String(store.value.whatsapp || '').replace(/\D/g, '');
     return digits ? `https://wa.me/${digits}` : null;
 });
+const workingHourLines = computed(() => String(store.value.working_hours || '')
+    .split(/\r?\n|\s*[,;]\s*/)
+    .map((line) => line.trim())
+    .filter(Boolean));
 const socialLinks = computed(() => Object.entries(store.value.social || {})
     .filter(([, url]) => Boolean(url))
     .map(([key, url]) => ({
@@ -112,12 +116,34 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                 <div class="lg:col-span-2">
                     <img src="/assets/prinx-logo.png" :alt="store.name" class="h-11 w-auto brightness-0 invert">
                     <p class="mt-4 max-w-xl text-sm leading-7 text-slate-400">{{ store.description }}</p>
-                    <div class="mt-4 grid gap-2 text-xs text-slate-400 sm:grid-cols-2">
-                        <a v-if="store.phone" :href="`tel:${store.phone}`" class="inline-flex items-center gap-2 hover:text-white"><Icon name="call" :size="14" class="text-prinx-400" />{{ store.phone }}</a>
-                        <a v-if="store.email" :href="`mailto:${store.email}`" class="inline-flex items-center gap-2 hover:text-white"><Icon name="sms" :size="14" class="text-prinx-400" />{{ store.email }}</a>
-                        <a v-if="whatsappHref" :href="whatsappHref" target="_blank" rel="noopener" class="inline-flex items-center gap-2 hover:text-white"><Icon name="call" :size="14" class="text-prinx-400" />WhatsApp {{ store.whatsapp }}</a>
-                        <span v-if="store.working_hours" class="inline-flex items-center gap-2"><Icon name="clock" :size="14" class="text-prinx-400" />{{ store.working_hours }}</span>
+
+                    <div class="mt-5 grid gap-3 sm:grid-cols-2">
+                        <a v-if="store.phone" :href="`tel:${store.phone}`" class="group flex min-w-0 items-start gap-3 rounded-[8px] border border-slate-800/80 bg-slate-900/40 p-3 transition hover:border-slate-700 hover:bg-slate-900">
+                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] bg-prinx-500/10 text-prinx-400"><Icon name="call" :size="16" /></span>
+                            <span class="min-w-0"><span class="block text-[9px] font-semibold uppercase tracking-[.12em] text-slate-500">Phone</span><span class="mt-0.5 block truncate text-[12px] font-medium text-slate-300 group-hover:text-white">{{ store.phone }}</span></span>
+                        </a>
+
+                        <a v-if="store.email" :href="`mailto:${store.email}`" class="group flex min-w-0 items-start gap-3 rounded-[8px] border border-slate-800/80 bg-slate-900/40 p-3 transition hover:border-slate-700 hover:bg-slate-900">
+                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] bg-prinx-500/10 text-prinx-400"><Icon name="sms" :size="16" /></span>
+                            <span class="min-w-0"><span class="block text-[9px] font-semibold uppercase tracking-[.12em] text-slate-500">Email</span><span class="mt-0.5 block truncate text-[12px] font-medium text-slate-300 group-hover:text-white">{{ store.email }}</span></span>
+                        </a>
+
+                        <a v-if="whatsappHref" :href="whatsappHref" target="_blank" rel="noopener" class="group flex min-w-0 items-start gap-3 rounded-[8px] border border-slate-800/80 bg-slate-900/40 p-3 transition hover:border-slate-700 hover:bg-slate-900">
+                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] bg-prinx-500/10 text-prinx-400"><Icon name="message" :size="16" /></span>
+                            <span class="min-w-0"><span class="block text-[9px] font-semibold uppercase tracking-[.12em] text-slate-500">WhatsApp</span><span class="mt-0.5 block truncate text-[12px] font-medium text-slate-300 group-hover:text-white">{{ store.whatsapp }}</span></span>
+                        </a>
+
+                        <div v-if="workingHourLines.length" class="flex min-w-0 items-start gap-3 rounded-[8px] border border-slate-800/80 bg-slate-900/40 p-3">
+                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] bg-prinx-500/10 text-prinx-400"><Icon name="clock" :size="16" /></span>
+                            <div class="min-w-0 flex-1">
+                                <span class="block text-[9px] font-semibold uppercase tracking-[.12em] text-slate-500">Working hours</span>
+                                <div class="mt-0.5 space-y-0.5 text-[11px] font-medium leading-4 text-slate-300">
+                                    <div v-for="line in workingHourLines" :key="line" class="flex min-w-0 items-start gap-1.5"><span class="mt-[6px] h-1 w-1 shrink-0 rounded-full bg-prinx-400"></span><span>{{ line }}</span></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+
                     <div class="mt-5 flex flex-wrap gap-2 text-xs font-bold">
                         <span class="inline-flex items-center gap-1.5 rounded-[10px] border border-slate-700 px-3 py-1.5"><Icon name="shield-tick" :size="14" />Secure ordering</span>
                         <span class="inline-flex items-center gap-1.5 rounded-[10px] border border-slate-700 px-3 py-1.5"><Icon name="headphone" :size="14" />Expert support</span>
