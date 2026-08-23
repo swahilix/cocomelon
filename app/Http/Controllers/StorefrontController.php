@@ -134,7 +134,7 @@ class StorefrontController extends Controller
                         'id' => $item->id,
                         'name' => $item->name,
                         'slug' => $item->slug,
-                        'image_url' => $isProduct ? $item->image_url : $item->image_url,
+                        'image_url' => $item->image_url,
                         'category' => $item->category ? ['name' => $item->category->name] : null,
                         'brand' => $isProduct && $item->brand ? ['name' => $item->brand->name] : null,
                         'current_price' => $isProduct ? $item->current_price : null,
@@ -152,70 +152,18 @@ class StorefrontController extends Controller
     {
         return HeroSlide::query()
             ->active()
-            ->with(['product.brand', 'product.category', 'service.category'])
+            ->where('item_type', 'image')
+            ->whereNotNull('image_path')
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get()
-            ->map(function (HeroSlide $slide): ?array {
-                $item = $slide->item_type === 'product' ? $slide->product : $slide->service;
-
-                if (! $item || $item->status !== 'active') {
-                    return null;
-                }
-
-                if ($slide->item_type === 'product') {
-                    return [
-                        'id' => $slide->id,
-                        'item_type' => 'product',
-                        'eyebrow' => $slide->eyebrow,
-                        'badge' => $slide->badge,
-                        'headline' => $slide->headline,
-                        'description' => $slide->description,
-                        'primary_label' => $slide->primary_label,
-                        'secondary_label' => $slide->secondary_label,
-                        'item' => [
-                            'id' => $item->id,
-                            'name' => $item->name,
-                            'slug' => $item->slug,
-                            'short_description' => $item->short_description,
-                            'plain_description' => $item->plain_description,
-                            'image_url' => $item->image_url,
-                            'current_price' => $item->current_price,
-                            'price' => $item->price,
-                            'stock_quantity' => $item->stock_quantity,
-                            'track_stock' => $item->track_stock,
-                            'in_stock' => $item->in_stock,
-                            'warranty' => $item->warranty,
-                            'category' => $item->category ? ['name' => $item->category->name] : null,
-                            'brand' => $item->brand ? ['name' => $item->brand->name] : null,
-                        ],
-                    ];
-                }
-
-                return [
-                    'id' => $slide->id,
-                    'item_type' => 'service',
-                    'eyebrow' => $slide->eyebrow,
-                    'badge' => $slide->badge,
-                    'headline' => $slide->headline,
-                    'description' => $slide->description,
-                    'primary_label' => $slide->primary_label,
-                    'secondary_label' => $slide->secondary_label,
-                    'item' => [
-                        'id' => $item->id,
-                        'name' => $item->name,
-                        'slug' => $item->slug,
-                        'short_description' => $item->short_description,
-                        'description' => $item->description,
-                        'image_url' => $item->image_url,
-                        'price_from' => $item->price_from,
-                        'price_label' => $item->price_label,
-                        'duration' => $item->duration,
-                        'category' => $item->category ? ['name' => $item->category->name] : null,
-                    ],
-                ];
-            })
-            ->filter()
+            ->map(fn (HeroSlide $slide): array => [
+                'id' => $slide->id,
+                'headline' => $slide->headline,
+                'image_url' => $slide->image_url,
+                'image_alt' => $slide->image_alt,
+                'link_url' => $slide->link_url,
+            ])
             ->values()
             ->all();
     }
