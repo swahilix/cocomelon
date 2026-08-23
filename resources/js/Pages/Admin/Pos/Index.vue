@@ -26,6 +26,10 @@ const category = ref('');
 const brand = ref('');
 const showHeld = ref(false);
 const showNewCustomer = ref(false);
+const customers = ref([...props.customers]);
+const customerSaving = ref(false);
+const customerError = ref('');
+const customerDraft = ref({ name: '', phone: '', email: '', tin: '' });
 const permissions = computed(() => page.props.auth.permissions || []);
 const canDiscount = computed(() => permissions.value.includes('discount_pos'));
 const canOverridePrice = computed(() => permissions.value.includes('override_pos_price'));
@@ -47,7 +51,6 @@ const form = useForm({
     customer_phone: props.resumeHold?.customer_phone || '',
     customer_email: '',
     customer_tin: '',
-    save_customer: false,
     discount: canDiscount.value ? Number(props.resumeHold?.discount || 0) : 0,
     amount_paid: '',
     payment_method_id: initialPaymentMethodId,
@@ -83,7 +86,7 @@ function barcodeAlreadyInCart(barcode) {
 }
 
 function addProduct(item, unitBarcode = null) {
-    if (!item?.available) return;
+    if (showNewCustomer.value || !item?.available) return;
     scanError.value = '';
 
     if (unitBarcode && barcodeAlreadyInCart(unitBarcode)) {
@@ -127,6 +130,7 @@ function removeLine(id) {
 }
 
 async function scanEnter() {
+    if (showNewCustomer.value) return;
     const raw = scanSearch.value.trim();
     if (!raw) return;
     scanError.value = '';
@@ -159,7 +163,7 @@ async function scanEnter() {
 }
 
 function selectCustomer() {
-    const customer = props.customers.find((item) => Number(item.id) === Number(form.customer_id));
+    const customer = customers.value.find((item) => Number(item.id) === Number(form.customer_id));
     if (customer) {
         form.customer_name = customer.name;
         form.customer_phone = customer.phone || '';
@@ -174,7 +178,59 @@ function selectCustomer() {
     }
 }
 
+function openNewCustomer() {
+    customerDraft.value = { name: '', phone: '', email: '', tin: '' };
+    customerError.value = '';
+    showNewCustomer.value = true;
+}
+
+function cancelNewCustomer() {
+    customerDraft.value = { name: '', phone: '', email: '', tin: '' };
+    customerError.value = '';
+    showNewCustomer.value = false;
+}
+
+async function saveCustomer() {
+    if (customerSaving.value) return;
+
+    const name = customerDraft.value.name.trim();
+    if (!name) {
+        customerError.value = 'Customer name is required.';
+        return;
+    }
+
+    customerSaving.value = true;
+    customerError.value = '';
+
+    try {
+        const { data } = await axios.post('/admin/pos/customers', {
+            name,
+            phone: customerDraft.value.phone || null,
+            email: customerDraft.value.email || null,
+            tin: customerDraft.value.tin || null,
+        });
+        const customer = data.customer;
+        customers.value.push(customer);
+        customers.value.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+        form.customer_id = customer.id;
+        form.customer_name = customer.name;
+        form.customer_phone = customer.phone || '';
+        form.customer_email = customer.email || '';
+        form.customer_tin = customer.tin || '';
+        customerDraft.value = { name: '', phone: '', email: '', tin: '' };
+        showNewCustomer.value = false;
+    } catch (error) {
+        const errors = error?.response?.data?.errors || {};
+        customerError.value = Object.values(errors)[0]?.[0]
+            || error?.response?.data?.message
+            || 'Unable to save this customer.';
+    } finally {
+        customerSaving.value = false;
+    }
+}
+
 function completeSale() {
+    if (showNewCustomer.value) return;
     form.post('/admin/pos', {
         preserveScroll: true,
         onError: () => { form._operation_id = newOperationId(); },
@@ -182,7 +238,7 @@ function completeSale() {
 }
 
 function createDocument(type) {
-    if (!form.items.length || documentProcessing.value) return;
+    if (showNewCustomer.value || !form.items.length || documentProcessing.value) return;
     documentError.value = '';
     documentProcessing.value = true;
 
@@ -192,7 +248,6 @@ function createDocument(type) {
         customer_phone: form.customer_phone || null,
         customer_email: form.customer_email || null,
         customer_tin: form.customer_tin || null,
-        save_customer: Boolean(form.save_customer),
         discount: Number(form.discount || 0),
         notes: form.notes || null,
         items: form.items.map((item) => ({
@@ -208,7 +263,7 @@ function createDocument(type) {
 }
 
 function payExactCash() {
-    if (!form.items.length || !props.currentRegister || !cashMethod.value || form.processing) return;
+    if (showNewCustomer.value || !form.items.length || !props.currentRegister || !cashMethod.value || form.processing) return;
     form.payment_method_id = cashMethod.value.id;
     form.amount_paid = total.value;
     form.payment_reference = '';
@@ -216,7 +271,7 @@ function payExactCash() {
 }
 
 function holdSale() {
-    if (!form.items.length || !props.currentRegister || form.processing) return;
+    if (showNewCustomer.value || !form.items.length || !props.currentRegister || form.processing) return;
     form.post('/admin/pos/hold', { preserveScroll: true });
 }
 
@@ -237,6 +292,9 @@ function clearSale() {
     scanSearch.value = '';
     scanError.value = '';
     documentError.value = '';
+    customerError.value = '';
+    customerDraft.value = { name: '', phone: '', email: '', tin: '' };
+    showNewCustomer.value = false;
 }
 </script>
 
@@ -280,26 +338,30 @@ function clearSale() {
                 <div class="shrink-0 border-b border-slate-200 p-2.5">
                     <div class="grid gap-2 md:grid-cols-2">
                         <div class="pos-customer-group flex min-w-0">
-                            <select v-model="form.customer_id" class="pos-customer-select min-w-0" data-placeholder="Walk-in customer" @change="selectCustomer">
+                            <select v-model="form.customer_id" class="pos-customer-select min-w-0" data-placeholder="Walk-in customer" :disabled="showNewCustomer" @change="selectCustomer">
                                 <option value="">Walk-in customer</option>
                                 <option v-for="customer in customers" :key="customer.id" :value="customer.id">{{ customer.name }}{{ customer.phone ? ` · ${customer.phone}` : '' }}</option>
                             </select>
-                            <button type="button" class="pos-customer-add flex h-9 w-9 shrink-0 items-center justify-center border border-l-0 border-slate-300 bg-white text-prinx-600 transition hover:bg-prinx-50" title="New customer" aria-label="New customer" @click="showNewCustomer = !showNewCustomer"><Icon name="add-circle" :size="18" /></button>
+                            <button type="button" class="pos-customer-add flex h-9 w-9 shrink-0 items-center justify-center border border-l-0 border-slate-300 bg-white text-prinx-600 transition hover:bg-prinx-50 disabled:cursor-not-allowed disabled:opacity-50" title="New customer" aria-label="New customer" :disabled="showNewCustomer" @click="openNewCustomer"><Icon name="add-circle" :size="18" /></button>
                         </div>
 
                         <div>
-                            <input v-model="scanSearch" class="h-9 min-w-0 w-full rounded-[8px] border border-slate-300 bg-white px-3 text-xs outline-none placeholder:text-slate-400 focus:border-prinx-500" placeholder="Unit barcode / SKU / item name" autofocus @keyup.enter="scanEnter">
+                            <input v-model="scanSearch" class="h-9 min-w-0 w-full rounded-[8px] border border-slate-300 bg-white px-3 text-xs outline-none placeholder:text-slate-400 focus:border-prinx-500 disabled:cursor-not-allowed disabled:bg-slate-100" placeholder="Unit barcode / SKU / item name" :disabled="showNewCustomer" autofocus @keyup.enter="scanEnter">
                             <p v-if="scanError" class="mt-1 text-[10px] font-medium text-red-600">{{ scanError }}</p>
                         </div>
                     </div>
 
-                    <div v-if="showNewCustomer" class="mt-2 grid gap-2 rounded-[8px] bg-slate-50 p-2 sm:grid-cols-2 xl:grid-cols-4">
-                        <input v-model="form.customer_name" class="input" placeholder="Customer name">
-                        <input v-model="form.customer_phone" class="input" placeholder="Phone">
-                        <input v-model="form.customer_email" class="input" placeholder="Email">
-                        <input v-model="form.customer_tin" class="input" placeholder="TIN (optional)">
-                        <label class="flex items-center gap-2 text-[11px] text-slate-600 sm:col-span-2 xl:col-span-4"><input v-model="form.save_customer" type="checkbox"> Save this customer</label>
-                    </div>
+                    <form v-if="showNewCustomer" class="mt-2 grid gap-2 rounded-[8px] border border-slate-200 bg-slate-50 p-2 sm:grid-cols-2 xl:grid-cols-5" @submit.prevent="saveCustomer">
+                        <input v-model="customerDraft.name" class="input" placeholder="Customer name *" autofocus>
+                        <input v-model="customerDraft.phone" class="input" placeholder="Phone">
+                        <input v-model="customerDraft.email" class="input" placeholder="Email">
+                        <input v-model="customerDraft.tin" class="input" placeholder="TIN (optional)">
+                        <div class="flex gap-2 sm:col-span-2 xl:col-span-1">
+                            <button type="button" class="flex h-9 flex-1 items-center justify-center gap-1 rounded-[7px] border border-slate-300 bg-white px-2 text-[11px] font-semibold text-slate-600 hover:bg-slate-100" :disabled="customerSaving" @click="cancelNewCustomer"><Icon name="close-circle" :size="14" />Cancel</button>
+                            <button type="submit" class="flex h-9 flex-1 items-center justify-center gap-1 rounded-[7px] bg-prinx-500 px-2 text-[11px] font-semibold text-white hover:bg-prinx-600 disabled:opacity-50" :disabled="customerSaving"><Icon :name="customerSaving ? 'refresh-2' : 'tick-circle'" :size="14" />{{ customerSaving ? 'Saving...' : 'Save customer' }}</button>
+                        </div>
+                        <p v-if="customerError" class="text-[10px] font-medium text-red-600 sm:col-span-2 xl:col-span-5">{{ customerError }}</p>
+                    </form>
                 </div>
 
                 <div class="min-h-0 flex-1 overflow-auto">
@@ -338,14 +400,14 @@ function clearSale() {
                         <input v-model="form.notes" class="input md:col-span-3" placeholder="Sale / document note (optional)">
 
                         <div class="grid grid-cols-2 gap-2 md:col-span-4">
-                            <button type="button" class="flex h-9 items-center justify-center gap-1.5 rounded-[8px] border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 disabled:opacity-50" :disabled="!form.items.length || documentProcessing" @click="createDocument('quotation')"><Icon name="document-text" :size="15" />Generate quotation</button>
-                            <button type="button" class="flex h-9 items-center justify-center gap-1.5 rounded-[8px] border border-prinx-200 bg-prinx-50 px-3 text-xs font-semibold text-prinx-700 transition hover:bg-prinx-100 disabled:opacity-50" :disabled="!form.items.length || documentProcessing" @click="createDocument('invoice')"><Icon name="receipt-item" :size="15" />Generate invoice</button>
+                            <button type="button" class="flex h-9 items-center justify-center gap-1.5 rounded-[8px] border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 disabled:opacity-50" :disabled="showNewCustomer || !form.items.length || documentProcessing" @click="createDocument('quotation')"><Icon name="document-text" :size="15" />Generate quotation</button>
+                            <button type="button" class="flex h-9 items-center justify-center gap-1.5 rounded-[8px] border border-prinx-200 bg-prinx-50 px-3 text-xs font-semibold text-prinx-700 transition hover:bg-prinx-100 disabled:opacity-50" :disabled="showNewCustomer || !form.items.length || documentProcessing" @click="createDocument('invoice')"><Icon name="receipt-item" :size="15" />Generate invoice</button>
                         </div>
 
                         <div class="grid grid-cols-3 gap-2 md:col-span-4">
-                            <button type="button" class="flex h-10 items-center justify-center gap-1.5 rounded-[8px] bg-rose-700 px-3 text-xs font-semibold text-white transition hover:bg-rose-800 disabled:opacity-50" :disabled="!form.items.length || !currentRegister || form.processing" @click="holdSale"><Icon name="pause-circle" :size="16" />Hold</button>
-                            <button type="button" class="flex h-10 items-center justify-center gap-1.5 rounded-[8px] bg-emerald-600 px-3 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50" :disabled="!form.items.length || !currentRegister || !cashMethod || form.processing" @click="payExactCash"><Icon name="wallet" :size="16" />Exact cash</button>
-                            <button type="submit" class="flex h-10 items-center justify-center gap-1.5 rounded-[8px] bg-prinx-500 px-3 text-xs font-semibold text-white transition hover:bg-prinx-600 disabled:cursor-not-allowed disabled:opacity-50" :disabled="!form.items.length || !currentRegister || !form.payment_method_id || form.processing"><Icon :name="form.processing ? 'refresh-2' : 'tick-circle'" :size="16" />{{ form.processing ? 'Processing...' : 'Complete sale' }}</button>
+                            <button type="button" class="flex h-10 items-center justify-center gap-1.5 rounded-[8px] bg-rose-700 px-3 text-xs font-semibold text-white transition hover:bg-rose-800 disabled:opacity-50" :disabled="showNewCustomer || !form.items.length || !currentRegister || form.processing" @click="holdSale"><Icon name="pause-circle" :size="16" />Hold</button>
+                            <button type="button" class="flex h-10 items-center justify-center gap-1.5 rounded-[8px] bg-emerald-600 px-3 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50" :disabled="showNewCustomer || !form.items.length || !currentRegister || !cashMethod || form.processing" @click="payExactCash"><Icon name="wallet" :size="16" />Exact cash</button>
+                            <button type="submit" class="flex h-10 items-center justify-center gap-1.5 rounded-[8px] bg-prinx-500 px-3 text-xs font-semibold text-white transition hover:bg-prinx-600 disabled:cursor-not-allowed disabled:opacity-50" :disabled="showNewCustomer || !form.items.length || !currentRegister || !form.payment_method_id || form.processing"><Icon :name="form.processing ? 'refresh-2' : 'tick-circle'" :size="16" />{{ form.processing ? 'Processing...' : 'Complete sale' }}</button>
                         </div>
                     </div>
                 </form>
@@ -359,7 +421,7 @@ function clearSale() {
 
                 <div class="min-h-0 flex-1 overflow-y-auto p-2.5">
                     <div class="grid grid-cols-2 gap-2 2xl:grid-cols-3">
-                        <button v-for="item in filteredProducts" :key="item.id" type="button" :disabled="!item.available" class="group min-w-0 overflow-hidden rounded-[8px] border border-slate-200 bg-white text-left transition hover:border-prinx-300 hover:shadow-sm active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-45" @click="addProduct(item)">
+                        <button v-for="item in filteredProducts" :key="item.id" type="button" :disabled="showNewCustomer || !item.available" class="group min-w-0 overflow-hidden rounded-[8px] border border-slate-200 bg-white text-left transition hover:border-prinx-300 hover:shadow-sm active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-45" @click="addProduct(item)">
                             <div class="flex gap-2 p-2"><img :src="item.image_url" :alt="item.name" class="h-[62px] w-[62px] shrink-0 rounded-[7px] bg-slate-100 object-cover"><div class="min-w-0 flex-1"><p class="line-clamp-2 text-[11px] font-semibold leading-4 text-slate-900">{{ item.name }}</p><p class="mt-0.5 truncate text-[9px] text-slate-400">{{ item.sku }}</p><p class="mt-1 text-xs font-semibold text-prinx-600">{{ money(item.price) }}</p></div></div>
                             <div class="flex items-center justify-between border-t border-slate-100 bg-slate-50/70 px-2 py-1.5"><span class="truncate text-[9px] text-slate-400">{{ item.brand || item.category }}</span><span :class="['shrink-0 text-[9px] font-semibold', item.available ? 'text-slate-500' : 'text-red-600']">{{ item.track_stock ? `${item.stock_quantity} left` : 'In stock' }}</span></div>
                         </button>
