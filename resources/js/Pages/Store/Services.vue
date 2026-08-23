@@ -129,7 +129,7 @@ const processSteps = [
                     </div>
                 </section>
 
-                <section class="mt-4 grid gap-5 lg:grid-cols-[.88fr_1.12fr]">
+                <section class="mt-4 space-y-5">
                     <div>
                         <h2 class="text-sm font-semibold text-slate-900">Service Pricing <span class="font-normal text-slate-500">(Starting From)</span></h2>
                         <div class="mt-2 grid gap-2.5 sm:grid-cols-3">
@@ -144,7 +144,7 @@ const processSteps = [
                         <Link href="/services" class="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-prinx-600 hover:text-prinx-700">View all services & pricing <span>→</span></Link>
                     </div>
 
-                    <div class="lg:border-l lg:border-slate-200 lg:pl-5">
+                    <div>
                         <h2 class="text-sm font-semibold text-slate-900">What You Can Expect</h2>
                         <div class="mt-2 grid gap-2.5 sm:grid-cols-3">
                             <article class="min-h-[126px] rounded-[8px] border border-slate-200 bg-white p-4">
