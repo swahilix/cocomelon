@@ -1,0 +1,2 @@
+.homepage-store-footer { display: none !important; }
+main:has(.homepage-store-footer) + footer { display: block !important; }
