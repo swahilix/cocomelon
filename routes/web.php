@@ -36,6 +36,7 @@ Route::post('/services/{service}/inquiry', [ServiceInquiryController::class, 'st
 Route::get('/pages/{page}', [PageController::class, 'show'])->whereIn('page', ['about', 'contact', 'shipping', 'returns', 'privacy', 'terms'])->name('pages.show');
 
 Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+Route::delete('/cart', [CartController::class, 'clear'])->name('cart.clear');
 Route::post('/cart/{product}', [CartController::class, 'store'])->name('cart.store');
 Route::patch('/cart/{product}', [CartController::class, 'update'])->name('cart.update');
 Route::delete('/cart/{product}', [CartController::class, 'destroy'])->name('cart.destroy');
