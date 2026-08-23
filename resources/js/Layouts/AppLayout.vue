@@ -117,28 +117,40 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                     <img src="/assets/prinx-logo.png" :alt="store.name" class="h-11 w-auto brightness-0 invert">
                     <p class="mt-4 max-w-xl text-sm leading-7 text-slate-400">{{ store.description }}</p>
 
-                    <div class="mt-5 grid gap-3 sm:grid-cols-2">
-                        <a v-if="store.phone" :href="`tel:${store.phone}`" class="group flex min-w-0 items-start gap-3 rounded-[8px] border border-slate-800/80 bg-slate-900/40 p-3 transition hover:border-slate-700 hover:bg-slate-900">
-                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] bg-prinx-500/10 text-prinx-400"><Icon name="call" :size="16" /></span>
-                            <span class="min-w-0"><span class="block text-[9px] font-semibold uppercase tracking-[.12em] text-slate-500">Phone</span><span class="mt-0.5 block truncate text-[12px] font-medium text-slate-300 group-hover:text-white">{{ store.phone }}</span></span>
+                    <div class="mt-6 space-y-4">
+                        <a v-if="store.phone" :href="`tel:${store.phone}`" class="group flex items-start gap-3">
+                            <Icon name="call" :size="17" class="mt-0.5 shrink-0 text-prinx-400" />
+                            <span class="min-w-0">
+                                <span class="block text-[9px] font-semibold uppercase tracking-[.14em] text-slate-500">Phone</span>
+                                <span class="mt-0.5 block text-sm font-medium text-slate-300 transition group-hover:text-white">{{ store.phone }}</span>
+                            </span>
                         </a>
 
-                        <a v-if="store.email" :href="`mailto:${store.email}`" class="group flex min-w-0 items-start gap-3 rounded-[8px] border border-slate-800/80 bg-slate-900/40 p-3 transition hover:border-slate-700 hover:bg-slate-900">
-                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] bg-prinx-500/10 text-prinx-400"><Icon name="sms" :size="16" /></span>
-                            <span class="min-w-0"><span class="block text-[9px] font-semibold uppercase tracking-[.12em] text-slate-500">Email</span><span class="mt-0.5 block truncate text-[12px] font-medium text-slate-300 group-hover:text-white">{{ store.email }}</span></span>
+                        <a v-if="store.email" :href="`mailto:${store.email}`" class="group flex items-start gap-3">
+                            <Icon name="sms" :size="17" class="mt-0.5 shrink-0 text-prinx-400" />
+                            <span class="min-w-0">
+                                <span class="block text-[9px] font-semibold uppercase tracking-[.14em] text-slate-500">Email</span>
+                                <span class="mt-0.5 block break-all text-sm font-medium text-slate-300 transition group-hover:text-white">{{ store.email }}</span>
+                            </span>
                         </a>
 
-                        <a v-if="whatsappHref" :href="whatsappHref" target="_blank" rel="noopener" class="group flex min-w-0 items-start gap-3 rounded-[8px] border border-slate-800/80 bg-slate-900/40 p-3 transition hover:border-slate-700 hover:bg-slate-900">
-                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] bg-prinx-500/10 text-prinx-400"><Icon name="message" :size="16" /></span>
-                            <span class="min-w-0"><span class="block text-[9px] font-semibold uppercase tracking-[.12em] text-slate-500">WhatsApp</span><span class="mt-0.5 block truncate text-[12px] font-medium text-slate-300 group-hover:text-white">{{ store.whatsapp }}</span></span>
+                        <a v-if="whatsappHref" :href="whatsappHref" target="_blank" rel="noopener" class="group flex items-start gap-3">
+                            <Icon name="message" :size="17" class="mt-0.5 shrink-0 text-prinx-400" />
+                            <span class="min-w-0">
+                                <span class="block text-[9px] font-semibold uppercase tracking-[.14em] text-slate-500">WhatsApp</span>
+                                <span class="mt-0.5 block text-sm font-medium text-slate-300 transition group-hover:text-white">{{ store.whatsapp }}</span>
+                            </span>
                         </a>
 
-                        <div v-if="workingHourLines.length" class="flex min-w-0 items-start gap-3 rounded-[8px] border border-slate-800/80 bg-slate-900/40 p-3">
-                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] bg-prinx-500/10 text-prinx-400"><Icon name="clock" :size="16" /></span>
+                        <div v-if="workingHourLines.length" class="flex items-start gap-3">
+                            <Icon name="clock" :size="17" class="mt-0.5 shrink-0 text-prinx-400" />
                             <div class="min-w-0 flex-1">
-                                <span class="block text-[9px] font-semibold uppercase tracking-[.12em] text-slate-500">Working hours</span>
-                                <div class="mt-0.5 space-y-0.5 text-[11px] font-medium leading-4 text-slate-300">
-                                    <div v-for="line in workingHourLines" :key="line" class="flex min-w-0 items-start gap-1.5"><span class="mt-[6px] h-1 w-1 shrink-0 rounded-full bg-prinx-400"></span><span>{{ line }}</span></div>
+                                <span class="block text-[9px] font-semibold uppercase tracking-[.14em] text-slate-500">Working hours</span>
+                                <div class="mt-1 space-y-1 text-sm font-medium leading-5 text-slate-300">
+                                    <div v-for="line in workingHourLines" :key="line" class="flex items-start gap-2">
+                                        <span class="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-prinx-400"></span>
+                                        <span>{{ line }}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
