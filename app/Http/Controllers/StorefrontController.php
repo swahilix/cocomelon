@@ -221,14 +221,19 @@ class StorefrontController extends Controller
         };
 
         return Inertia::render('Store/Catalog', [
-            'products' => $products->paginate(16)->withQueryString(),
+            'products' => $products->paginate(12)->withQueryString(),
             'categories' => Category::productType()
                 ->active()
                 ->withCount(['products' => fn ($query) => $query->active()])
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(),
-            'brands' => Brand::where('is_active', true)->orderBy('name')->get(['id', 'name', 'slug']),
+            'brands' => Brand::query()
+                ->select(['id', 'name', 'slug'])
+                ->where('is_active', true)
+                ->withCount(['products' => fn ($query) => $query->active()])
+                ->orderBy('name')
+                ->get(),
             'selectedCategory' => $selectedCategory,
             'filters' => [
                 ...$request->only('search', 'brand', 'in_stock', 'min_price', 'max_price', 'sort'),
