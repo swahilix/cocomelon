@@ -230,14 +230,8 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                     </div>
                 </div>
 
-                <div class="mt-6 flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-end">
-                    <span class="text-[9px] text-slate-500">We accept</span>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <span class="rounded-[4px] border border-slate-200 bg-white px-2.5 py-1 text-[9px] font-bold text-blue-700">VISA</span>
-                        <span class="rounded-[4px] border border-slate-200 bg-white px-2.5 py-1 text-[9px] font-bold text-red-600">Mastercard</span>
-                        <span class="rounded-[4px] border border-slate-200 bg-white px-2.5 py-1 text-[9px] font-bold text-blue-600">Tigo Pesa</span>
-                        <span class="rounded-[4px] border border-slate-200 bg-white px-2.5 py-1 text-[9px] font-bold text-emerald-600">M-Pesa</span>
-                    </div>
+                <div v-if="store.payment_strip_url" class="mt-6 flex justify-end border-t border-slate-100 pt-5">
+                    <img :src="store.payment_strip_url" alt="Accepted payment methods" class="h-auto max-h-[52px] w-auto max-w-full object-contain">
                 </div>
             </div>
         </footer>
