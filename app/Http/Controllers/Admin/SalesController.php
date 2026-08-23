@@ -63,7 +63,7 @@ class SalesController extends Controller
                     'source' => 'online',
                     'customer' => $order->customer_name,
                     'phone' => $order->phone,
-                    'amount' => (float) $order->total,
+                    'amount' => (float) $order->grand_total,
                     'payment_status' => $order->payment_status,
                     'status' => $order->status,
                     'staff' => null,
@@ -79,7 +79,7 @@ class SalesController extends Controller
                 'pos_sales' => DB::table('pos_sales')->where('status', '!=', 'voided')->count(),
                 'pos_revenue' => (float) DB::table('pos_sales')->where('status', '!=', 'voided')->sum('total'),
                 'online_sales' => Order::count(),
-                'online_revenue' => (float) Order::sum('total'),
+                'online_revenue' => (float) Order::sum('grand_total'),
                 'refunds' => (float) DB::table('pos_sale_returns')->sum('refund_amount'),
             ],
         ]);
