@@ -35,6 +35,7 @@ const toggleFullscreen = async () => {
                 <nav class="ml-4 hidden items-center gap-1 lg:flex">
                     <Link href="/admin/sales" class="rounded-[7px] px-3 py-2 text-xs font-medium text-slate-300 transition hover:bg-slate-900 hover:text-white"><Icon name="receipt-item" :size="15" class="mr-1.5 inline" />Sales</Link>
                     <Link href="/admin/pos" class="rounded-[7px] bg-white/10 px-3 py-2 text-xs font-semibold text-white"><Icon name="shopping-cart" :size="15" class="mr-1.5 inline" />New sale</Link>
+                    <Link href="/admin/pos/documents" class="rounded-[7px] px-3 py-2 text-xs font-medium text-slate-300 transition hover:bg-slate-900 hover:text-white"><Icon name="document-text" :size="15" class="mr-1.5 inline" />Documents</Link>
                     <Link v-if="canViewInventory" href="/admin/stock/inventory" class="rounded-[7px] px-3 py-2 text-xs font-medium text-slate-300 transition hover:bg-slate-900 hover:text-white"><Icon name="box" :size="15" class="mr-1.5 inline" />Items</Link>
                 </nav>
 
