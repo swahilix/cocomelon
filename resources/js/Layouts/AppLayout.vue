@@ -5,8 +5,8 @@ import Flash from '../Components/Flash.vue';
 
 const page = usePage();
 const open = ref(false);
+const categoryOpen = ref(false);
 const search = ref('');
-const searchCategory = ref('');
 const user = computed(() => page.props.auth?.user);
 const cartCount = computed(() => page.props.cartCount || 0);
 const productCategories = computed(() => page.props.navigationCategories || []);
@@ -30,160 +30,144 @@ const socialLinks = computed(() => Object.entries(store.value.social || {})
         return { key, url, label, short };
     }));
 const submitSearch = () => {
-    const params = {};
-    if (search.value.trim()) params.search = search.value.trim();
-    if (searchCategory.value) params.category = searchCategory.value;
-    router.get('/shop', params, { preserveState: false });
+    const query = search.value.trim();
+    router.get('/shop', query ? { search: query } : {}, { preserveState: false });
 };
 const logout = () => router.post('/logout');
 const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(url));
 </script>
 
 <template>
-    <div class="min-h-screen bg-slate-50">
+    <div class="min-h-screen bg-[#fbfbfb] text-slate-900">
         <Flash />
 
-        <header class="border-t border-prinx-100 bg-white text-slate-900">
-            <div class="border-b border-slate-200 bg-[#f7f7f7]">
-                <div class="container-shell flex h-[34px] items-center justify-between gap-4 text-[11px] text-slate-600 sm:text-[12px]">
-                    <p class="min-w-0 truncate">
-                        <strong class="font-semibold text-slate-950">Welcome to {{ store.name || 'Prinx Electronics' }}!</strong>
-                        <span class="hidden sm:inline"> Great electronics, accessories and professional services every day.</span>
-                    </p>
-                    <div class="hidden shrink-0 items-center text-[11px] lg:flex">
-                        <span class="border-r border-slate-200 px-4 font-medium">{{ store.currency || 'TZS' }}</span>
-                        <span class="inline-flex items-center gap-1.5 pl-4 font-medium"><span class="text-[10px] font-semibold">GB</span> English
-                            <svg viewBox="0 0 20 20" class="h-3 w-3 fill-current" aria-hidden="true"><path d="M5.2 7.4a1 1 0 0 1 1.4 0L10 10.8l3.4-3.4a1 1 0 1 1 1.4 1.4l-4.1 4.1a1 1 0 0 1-1.4 0L5.2 8.8a1 1 0 0 1 0-1.4Z"/></svg>
+        <header class="relative z-50 border-b border-slate-200 bg-white">
+            <div class="hidden border-b border-slate-100 lg:block">
+                <div class="container-shell grid h-[92px] grid-cols-[180px_180px_minmax(300px,1fr)_240px_auto] items-center gap-5">
+                    <Link href="/" class="flex min-w-0 items-center">
+                        <img src="/assets/prinx-logo.png" :alt="store.name" class="h-[46px] w-auto max-w-[170px] object-contain">
+                    </Link>
+
+                    <div class="relative">
+                        <button type="button" class="flex h-[50px] w-full items-center gap-3 rounded-[10px] bg-[#f7b900] px-4 text-left text-[13px] font-semibold text-slate-950 shadow-sm transition hover:bg-[#eeb200]" @click="categoryOpen = !categoryOpen">
+                            <svg viewBox="0 0 24 24" class="h-[18px] w-[18px] fill-none stroke-current" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
+                            <span class="min-w-0 flex-1 truncate">All Categories</span>
+                            <svg viewBox="0 0 20 20" class="h-3.5 w-3.5 fill-current transition" :class="categoryOpen ? 'rotate-180' : ''" aria-hidden="true"><path d="M5.2 7.4a1 1 0 0 1 1.4 0L10 10.8l3.4-3.4a1 1 0 1 1 1.4 1.4l-4.1 4.1a1 1 0 0 1-1.4 0L5.2 8.8a1 1 0 0 1 0-1.4Z"/></svg>
+                        </button>
+                        <div v-if="categoryOpen" class="absolute left-0 top-[58px] z-50 w-[280px] overflow-hidden rounded-[9px] border border-slate-200 bg-white py-1.5 shadow-[0_18px_50px_rgba(15,23,42,.14)]">
+                            <Link href="/shop" class="block px-4 py-2.5 text-[12px] font-semibold text-slate-700 transition hover:bg-amber-50 hover:text-amber-700" @click="categoryOpen = false">Shop all products</Link>
+                            <Link v-for="category in productCategories" :key="category.id" :href="`/shop?category=${encodeURIComponent(category.slug)}`" class="block border-t border-slate-100 px-4 py-2.5 text-[12px] text-slate-600 transition hover:bg-amber-50 hover:text-amber-700" @click="categoryOpen = false">{{ category.name }}</Link>
+                        </div>
+                    </div>
+
+                    <form class="flex h-[50px] min-w-0 items-center rounded-[10px] border border-slate-200 bg-white px-4 shadow-[0_3px_15px_rgba(15,23,42,.03)] transition focus-within:border-amber-300" @submit.prevent="submitSearch">
+                        <input v-model="search" class="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-slate-800 outline-none placeholder:text-slate-400" placeholder="Search for products...">
+                        <button type="submit" class="ml-3 flex h-8 w-8 shrink-0 items-center justify-center text-slate-500 transition hover:text-amber-600" aria-label="Search">
+                            <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path stroke-linecap="round" d="m16 16 4 4"/></svg>
+                        </button>
+                    </form>
+
+                    <a v-if="store.phone" :href="`tel:${store.phone}`" class="flex min-w-0 items-center gap-3 rounded-[9px] px-2 py-2 transition hover:bg-slate-50">
+                        <span class="flex h-9 w-9 shrink-0 items-center justify-center text-slate-950">
+                            <svg viewBox="0 0 24 24" class="h-6 w-6 fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15v-3a7 7 0 0 1 14 0v3M5 14H4a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2v-6Zm13 0h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2v-6Z"/><path stroke-linecap="round" d="M18 20c-1 1-2.3 1.5-4 1.5"/></svg>
                         </span>
+                        <span class="min-w-0 leading-tight"><span class="block text-[11px] font-semibold text-slate-600">Support</span><strong class="mt-1 block truncate text-[12px] font-medium text-slate-800">{{ store.phone }}</strong></span>
+                    </a>
+                    <div v-else class="flex items-center gap-3 px-2">
+                        <span class="flex h-9 w-9 items-center justify-center text-slate-950"><svg viewBox="0 0 24 24" class="h-6 w-6 fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15v-3a7 7 0 0 1 14 0v3M5 14H4a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2v-6Zm13 0h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2v-6Z"/></svg></span>
+                        <span class="leading-tight"><span class="block text-[11px] font-semibold text-slate-600">Support</span><strong class="mt-1 block text-[12px] font-medium text-slate-800">Contact us</strong></span>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-1.5">
+                        <Link v-if="user?.is_admin" href="/admin" class="flex h-10 w-10 items-center justify-center rounded-full text-slate-900 transition hover:bg-amber-50 hover:text-amber-700" title="Admin panel" aria-label="Admin panel">
+                            <svg viewBox="0 0 24 24" class="h-[22px] w-[22px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path stroke-linecap="round" d="M5 20c.7-4.2 3-6.3 7-6.3s6.3 2.1 7 6.3"/></svg>
+                        </Link>
+                        <Link v-else-if="!user" href="/login" class="flex h-10 w-10 items-center justify-center rounded-full text-slate-900 transition hover:bg-amber-50 hover:text-amber-700" title="Account" aria-label="Account">
+                            <svg viewBox="0 0 24 24" class="h-[22px] w-[22px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path stroke-linecap="round" d="M5 20c.7-4.2 3-6.3 7-6.3s6.3 2.1 7 6.3"/></svg>
+                        </Link>
+                        <button v-else type="button" class="flex h-10 w-10 items-center justify-center rounded-full text-slate-900 transition hover:bg-amber-50 hover:text-amber-700" title="Sign out" aria-label="Sign out" @click="logout">
+                            <svg viewBox="0 0 24 24" class="h-[21px] w-[21px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9"/></svg>
+                        </button>
+
+                        <span class="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-900" title="Wishlist">
+                            <svg viewBox="0 0 24 24" class="h-[22px] w-[22px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 9.2c0 5.4-8.5 10-8.5 10s-8.5-4.6-8.5-10A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8Z"/></svg>
+                            <span class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#f7b900] px-1 text-[8px] font-bold text-slate-950">0</span>
+                        </span>
+
+                        <Link href="/cart" class="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-900 transition hover:bg-amber-50 hover:text-amber-700" title="Cart" aria-label="Shopping cart">
+                            <svg viewBox="0 0 24 24" class="h-[23px] w-[23px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5h2l2 10h10l2-7H7M9 19.2a1.2 1.2 0 1 0 0 .1Zm7 0a1.2 1.2 0 1 0 0 .1Z"/></svg>
+                            <span class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#f7b900] px-1 text-[8px] font-bold text-slate-950">{{ cartCount }}</span>
+                        </Link>
                     </div>
                 </div>
             </div>
 
-            <div class="hidden lg:block">
-                <div class="container-shell grid min-h-[92px] grid-cols-[230px_minmax(420px,1fr)_auto] items-center gap-7 py-4">
-                    <Link href="/" class="flex items-center">
-                        <img src="/assets/prinx-logo.png" :alt="store.name" class="h-[52px] w-auto max-w-[220px] object-contain">
-                    </Link>
-
-                    <form class="flex h-[46px] min-w-0 overflow-hidden border border-slate-300 bg-white" @submit.prevent="submitSearch">
-                        <select v-model="searchCategory" class="w-[180px] shrink-0 border-0 border-r border-slate-200 bg-[#f8f8f8] px-4 text-[13px] font-medium text-slate-700 outline-none">
-                            <option value="">All Categories</option>
-                            <option v-for="category in productCategories" :key="category.id" :value="category.slug">{{ category.name }}</option>
-                        </select>
-                        <input v-model="search" class="min-w-0 flex-1 border-0 px-4 text-[13px] outline-none placeholder:text-slate-400" placeholder="Search products...">
-                        <button type="submit" class="flex w-[62px] shrink-0 items-center justify-center bg-prinx-500 text-white transition hover:bg-prinx-600" aria-label="Search">
-                            <svg viewBox="0 0 24 24" class="h-[19px] w-[19px] fill-none stroke-current" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path stroke-linecap="round" d="m16 16 4 4"/></svg>
-                        </button>
-                    </form>
-
-                    <div class="flex shrink-0 items-center gap-2.5">
-                        <Link href="/services" class="flex h-10 w-10 items-center justify-center text-slate-800 transition hover:text-prinx-500" title="Services" aria-label="Services">
-                            <svg viewBox="0 0 24 24" class="h-6 w-6 fill-none stroke-current" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7v5h-5M4 17v-5h5"/><path stroke-linecap="round" d="M6.4 8.2A7 7 0 0 1 18.6 6L20 8m-16 8 1.4 2A7 7 0 0 0 17.6 15.8"/></svg>
+            <div class="hidden border-b border-slate-100 lg:block">
+                <div class="container-shell flex h-[66px] items-center justify-between gap-6">
+                    <nav class="flex h-full items-stretch gap-1 text-[12px] font-medium text-slate-700">
+                        <Link href="/" :class="['relative flex items-center gap-2 px-2.5 transition hover:text-amber-600', active('/') ? 'text-amber-600' : '']">
+                            <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m4 10 8-7 8 7v10h-6v-6h-4v6H4V10Z"/></svg>Home
+                            <span v-if="active('/')" class="absolute inset-x-2 bottom-0 h-[2px] bg-[#f7b900]"></span>
                         </Link>
-                        <Link href="/pages/contact" class="flex h-10 w-10 items-center justify-center text-slate-800 transition hover:text-prinx-500" title="Customer support" aria-label="Customer support">
-                            <svg viewBox="0 0 24 24" class="h-6 w-6 fill-none stroke-current" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 9.2c0 5.4-8.5 10-8.5 10s-8.5-4.6-8.5-10A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8Z"/></svg>
+                        <Link href="/shop" :class="['flex items-center gap-2 px-3 transition hover:text-amber-600', active('/shop') || active('/products') ? 'text-amber-600' : '']">
+                            <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14l-1 12H6L5 8Zm3 0a4 4 0 0 1 8 0"/></svg>Shop
                         </Link>
-                        <Link href="/cart" class="group ml-1 flex items-center gap-2.5" aria-label="Shopping cart">
-                            <span class="relative flex h-[46px] w-[46px] items-center justify-center rounded-full bg-prinx-500 text-white transition group-hover:bg-prinx-600">
-                                <svg viewBox="0 0 24 24" class="h-[20px] w-[20px] fill-none stroke-current" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M7 9V7a5 5 0 0 1 10 0v2M5.5 9h13l-1 11h-11l-1-11Z"/></svg>
-                                <span class="absolute -right-1 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-800 px-1 text-[9px] font-semibold text-white">{{ cartCount }}</span>
-                            </span>
-                            <span class="whitespace-nowrap text-[13px] font-semibold text-slate-950">MY CART <span class="font-medium text-prinx-600">- {{ cartCount }} item{{ cartCount === 1 ? '' : 's' }}</span></span>
+                        <Link href="/services" :class="['flex items-center gap-2 px-3 transition hover:text-amber-600', active('/services') ? 'text-amber-600' : '']">
+                            <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3 5 7v5c0 4.3 2.5 7.3 7 9 4.5-1.7 7-4.7 7-9V7l-7-4Z"/><path stroke-linecap="round" d="m9 12 2 2 4-4"/></svg>Services
                         </Link>
-                    </div>
-                </div>
+                        <Link href="/shop" class="flex items-center gap-2 px-3 transition hover:text-amber-600">
+                            <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m4 12 8-8 8 8-8 8-8-8Z"/><path stroke-linecap="round" d="M9 12h6"/></svg>Offers
+                        </Link>
+                        <Link href="/pages/about" class="flex items-center gap-2 px-3 transition hover:text-amber-600">
+                            <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 11v5M12 8h.01"/></svg>About Us
+                        </Link>
+                        <Link href="/pages/contact" class="flex items-center gap-2 px-3 transition hover:text-amber-600">
+                            <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16v12H4V6Zm1 1 7 6 7-6"/></svg>Contact Us
+                        </Link>
+                    </nav>
 
-                <div class="border-b border-slate-200">
-                    <div class="container-shell flex h-[48px] items-stretch">
-                        <div class="group relative flex w-[280px] shrink-0 items-center">
-                            <button type="button" class="flex h-full w-full items-center gap-3 pr-6 text-left text-[13px] font-bold text-slate-950">
-                                <svg viewBox="0 0 24 24" class="h-[19px] w-[19px] fill-none stroke-current" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
-                                <span>ALL CATEGORIES</span>
-                                <svg viewBox="0 0 20 20" class="ml-auto h-3.5 w-3.5 fill-current" aria-hidden="true"><path d="M5.2 7.4a1 1 0 0 1 1.4 0L10 10.8l3.4-3.4a1 1 0 1 1 1.4 1.4l-4.1 4.1a1 1 0 0 1-1.4 0L5.2 8.8a1 1 0 0 1 0-1.4Z"/></svg>
-                            </button>
-                            <div class="invisible absolute left-0 top-full z-50 w-[280px] translate-y-1 border border-slate-200 bg-white py-1.5 opacity-0 shadow-xl transition group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
-                                <Link href="/shop" class="block px-4 py-2 text-[12px] font-semibold text-slate-700 hover:bg-slate-50 hover:text-prinx-600">Shop all products</Link>
-                                <Link v-for="category in productCategories" :key="category.id" :href="`/shop?category=${encodeURIComponent(category.slug)}`" class="block border-t border-slate-100 px-4 py-2 text-[12px] font-medium text-slate-600 hover:bg-slate-50 hover:text-prinx-600">{{ category.name }}</Link>
-                            </div>
-                        </div>
-
-                        <nav class="flex min-w-0 flex-1 items-stretch">
-                            <Link href="/" :class="['flex items-center px-[18px] text-[13px] font-bold transition hover:text-prinx-600', active('/') ? 'text-prinx-600' : 'text-slate-950']">HOME</Link>
-                            <Link href="/shop" :class="['flex items-center px-[18px] text-[13px] font-bold transition hover:text-prinx-600', active('/shop') || active('/products') ? 'text-prinx-600' : 'text-slate-950']">SHOP</Link>
-                            <Link href="/services" :class="['flex items-center px-[18px] text-[13px] font-bold transition hover:text-prinx-600', active('/services') ? 'text-prinx-600' : 'text-slate-950']">SERVICES</Link>
-                            <Link href="/pages/about" class="flex items-center px-[18px] text-[13px] font-bold text-slate-950 transition hover:text-prinx-600">ABOUT</Link>
-                            <Link href="/pages/contact" class="flex items-center px-[18px] text-[13px] font-bold text-slate-950 transition hover:text-prinx-600">CONTACT</Link>
-                            <Link href="/shop" class="flex items-center px-[18px] text-[13px] font-bold text-slate-950 transition hover:text-prinx-600">SPECIALS!</Link>
-                        </nav>
-
-                        <div class="ml-auto flex shrink-0 items-center pl-5">
-                            <Link v-if="user?.is_admin" href="/admin" class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-slate-600 transition hover:text-prinx-600">
-                                <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 20v-8h16v8M7 12V6h10v6M9 9h6M8 16h3m2 0h3"/></svg>
-                                Admin panel
-                            </Link>
-                            <button v-else-if="user" type="button" class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-slate-600 transition hover:text-prinx-600" @click="logout">Sign out</button>
-                            <Link v-else href="/login" class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-slate-600 transition hover:text-prinx-600">
-                                <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" stroke-width="1.8" aria-hidden="true"><rect x="6" y="10" width="12" height="10" rx="2"/><path stroke-linecap="round" d="M9 10V7a3 3 0 0 1 6 0v3"/></svg>
-                                Login or Register
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="border-b border-slate-200 bg-[#fafafa]">
-                    <div class="container-shell flex h-[36px] items-center gap-6 overflow-hidden whitespace-nowrap text-[12px] text-slate-600">
-                        <strong class="shrink-0 font-bold text-slate-950">Top Categories:</strong>
-                        <Link v-for="category in productCategories.slice(0, 10)" :key="category.id" :href="`/shop?category=${encodeURIComponent(category.slug)}`" class="shrink-0 transition hover:text-prinx-600">{{ category.name }}</Link>
-                        <Link v-if="!productCategories.length" href="/shop" class="transition hover:text-prinx-600">Electronics</Link>
-                        <Link v-if="!productCategories.length" href="/shop" class="transition hover:text-prinx-600">Accessories</Link>
-                        <Link v-if="!productCategories.length" href="/shop" class="transition hover:text-prinx-600">Smartphones</Link>
-                        <Link v-if="!productCategories.length" href="/shop" class="transition hover:text-prinx-600">Laptops</Link>
+                    <div class="inline-flex h-[40px] shrink-0 items-center gap-2.5 rounded-[9px] border border-slate-200 bg-white px-4 text-[11px] font-semibold text-slate-700 shadow-sm">
+                        <svg viewBox="0 0 24 24" class="h-[19px] w-[19px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h11v9H3V7Zm11 3h4l3 3v3h-7v-6ZM6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm11 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/></svg>
+                        Fast Delivery in <strong class="text-amber-500">20 – 40 mins</strong>
                     </div>
                 </div>
             </div>
 
             <div class="lg:hidden">
                 <div class="container-shell flex h-[64px] items-center gap-3">
-                    <Link href="/" class="min-w-0 flex-1">
-                        <img src="/assets/prinx-logo.png" :alt="store.name" class="h-9 w-auto max-w-[170px] object-contain">
+                    <Link href="/" class="min-w-0 flex-1"><img src="/assets/prinx-logo.png" :alt="store.name" class="h-9 w-auto max-w-[165px] object-contain"></Link>
+                    <Link href="/cart" class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900" aria-label="Shopping cart">
+                        <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5h2l2 10h10l2-7H7M9 19.2a1.2 1.2 0 1 0 0 .1Zm7 0a1.2 1.2 0 1 0 0 .1Z"/></svg>
+                        <span v-if="cartCount" class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#f7b900] px-1 text-[9px] font-bold text-slate-950">{{ cartCount }}</span>
                     </Link>
-                    <Link href="/cart" class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-prinx-500 text-white" aria-label="Shopping cart">
-                        <svg viewBox="0 0 24 24" class="h-[19px] w-[19px] fill-none stroke-current" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M7 9V7a5 5 0 0 1 10 0v2M5.5 9h13l-1 11h-11l-1-11Z"/></svg>
-                        <span v-if="cartCount" class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-900 px-1 text-[9px] font-bold text-white">{{ cartCount }}</span>
-                    </Link>
-                    <button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center border border-slate-200 bg-white text-slate-800" aria-label="Menu" @click="open = !open">
+                    <button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] border border-slate-200 bg-white text-slate-800" aria-label="Menu" @click="open = !open">
                         <svg v-if="!open" viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
                         <svg v-else viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18"/></svg>
                     </button>
                 </div>
 
                 <div class="container-shell pb-3">
-                    <form class="flex h-11 overflow-hidden border border-slate-300 bg-white" @submit.prevent="submitSearch">
-                        <input v-model="search" class="min-w-0 flex-1 border-0 px-3 text-[13px] outline-none" placeholder="Search products...">
-                        <button type="submit" class="flex w-12 items-center justify-center bg-prinx-500 text-white" aria-label="Search">
-                            <svg viewBox="0 0 24 24" class="h-[18px] w-[18px] fill-none stroke-current" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path stroke-linecap="round" d="m16 16 4 4"/></svg>
-                        </button>
+                    <form class="flex h-11 overflow-hidden rounded-[8px] border border-slate-200 bg-white" @submit.prevent="submitSearch">
+                        <input v-model="search" class="min-w-0 flex-1 border-0 px-3 text-[13px] outline-none" placeholder="Search for products...">
+                        <button type="submit" class="flex w-12 items-center justify-center bg-[#f7b900] text-slate-950" aria-label="Search"><svg viewBox="0 0 24 24" class="h-[18px] w-[18px] fill-none stroke-current" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path stroke-linecap="round" d="m16 16 4 4"/></svg></button>
                     </form>
                 </div>
 
-                <div v-if="open" class="border-t border-slate-200 bg-white">
+                <div v-if="open" class="border-t border-slate-100 bg-white">
                     <div class="container-shell max-h-[calc(100vh-120px)] overflow-y-auto py-3">
-                        <div class="grid grid-cols-2 gap-2 text-[13px] font-semibold">
-                            <Link href="/" class="border border-slate-200 px-3 py-3">Home</Link>
-                            <Link href="/shop" class="border border-slate-200 px-3 py-3">Shop all</Link>
-                            <Link href="/services" class="border border-slate-200 px-3 py-3">Services</Link>
-                            <Link href="/pages/about" class="border border-slate-200 px-3 py-3">About</Link>
-                            <Link href="/pages/contact" class="border border-slate-200 px-3 py-3">Contact</Link>
-                            <Link v-if="!user" href="/login" class="border border-slate-200 px-3 py-3">Login / Register</Link>
-                            <Link v-if="user?.is_admin" href="/admin" class="border border-slate-200 px-3 py-3">Admin panel</Link>
-                            <button v-else-if="user" type="button" class="border border-slate-200 px-3 py-3 text-left" @click="logout">Sign out</button>
+                        <div class="grid grid-cols-2 gap-2 text-[13px] font-medium">
+                            <Link href="/" class="rounded-[8px] border border-slate-200 px-3 py-3">Home</Link>
+                            <Link href="/shop" class="rounded-[8px] border border-slate-200 px-3 py-3">Shop</Link>
+                            <Link href="/services" class="rounded-[8px] border border-slate-200 px-3 py-3">Services</Link>
+                            <Link href="/pages/about" class="rounded-[8px] border border-slate-200 px-3 py-3">About</Link>
+                            <Link href="/pages/contact" class="rounded-[8px] border border-slate-200 px-3 py-3">Contact</Link>
+                            <Link v-if="!user" href="/login" class="rounded-[8px] border border-slate-200 px-3 py-3">Account</Link>
+                            <Link v-if="user?.is_admin" href="/admin" class="rounded-[8px] border border-slate-200 px-3 py-3">Admin panel</Link>
+                            <button v-else-if="user" type="button" class="rounded-[8px] border border-slate-200 px-3 py-3 text-left" @click="logout">Sign out</button>
                         </div>
-                        <p class="mt-4 text-[11px] font-bold uppercase tracking-[.14em] text-slate-400">Categories</p>
-                        <div class="mt-2 divide-y divide-slate-100 border border-slate-200">
-                            <Link v-for="category in productCategories" :key="category.id" :href="`/shop?category=${encodeURIComponent(category.slug)}`" class="flex items-center justify-between px-3 py-3 text-[13px] font-medium text-slate-700">
-                                <span>{{ category.name }}</span>
-                                <svg viewBox="0 0 20 20" class="h-3.5 w-3.5 fill-current" aria-hidden="true"><path d="M7.3 4.6a1 1 0 0 1 1.4 0l4.7 4.7a1 1 0 0 1 0 1.4l-4.7 4.7A1 1 0 1 1 7.3 14l4-4-4-4a1 1 0 0 1 0-1.4Z"/></svg>
-                            </Link>
+                        <p class="mt-4 text-[10px] font-bold uppercase tracking-[.14em] text-slate-400">All Categories</p>
+                        <div class="mt-2 divide-y divide-slate-100 overflow-hidden rounded-[8px] border border-slate-200">
+                            <Link v-for="category in productCategories" :key="category.id" :href="`/shop?category=${encodeURIComponent(category.slug)}`" class="flex items-center justify-between px-3 py-3 text-[13px] text-slate-700"><span>{{ category.name }}</span><span>›</span></Link>
                         </div>
                     </div>
                 </div>
@@ -202,14 +186,7 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                         <div v-if="socialLinks.length" class="mt-7 flex flex-wrap items-center">
                             <template v-for="(social, index) in socialLinks" :key="social.key">
                                 <span v-if="index" class="mx-3 h-5 w-px bg-slate-800"></span>
-                                <a
-                                    :href="social.url"
-                                    target="_blank"
-                                    rel="noopener"
-                                    :aria-label="social.label"
-                                    :title="social.label"
-                                    class="inline-flex min-w-6 items-center justify-center text-[12px] font-semibold tracking-[.08em] text-slate-400 transition hover:text-prinx-400"
-                                >{{ social.short }}</a>
+                                <a :href="social.url" target="_blank" rel="noopener" :aria-label="social.label" :title="social.label" class="inline-flex min-w-6 items-center justify-center text-[12px] font-semibold tracking-[.08em] text-slate-400 transition hover:text-prinx-400">{{ social.short }}</a>
                             </template>
                         </div>
                     </div>
@@ -246,9 +223,7 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                     </div>
                 </div>
 
-                <div class="mt-12 border-t border-slate-800 pt-6 text-center text-xs leading-5 text-slate-500">
-                    Copyright © {{ store.year }} {{ store.name }}. All rights reserved.
-                </div>
+                <div class="mt-12 border-t border-slate-800 pt-6 text-center text-xs leading-5 text-slate-500">Copyright © {{ store.year }} {{ store.name }}. All rights reserved.</div>
             </div>
         </footer>
     </div>
