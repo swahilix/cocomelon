@@ -22,7 +22,7 @@ class CartController extends Controller
                 ->with(['brand', 'category'])
                 ->active()
                 ->when($cartProductIds->isNotEmpty(), fn ($query) => $query->whereNotIn('id', $cartProductIds))
-                ->where(fn ($query) => $query->where('featured', true)->orWhere('stock_quantity', '>', 0)->orWhere('track_stock', false))
+                ->where(fn ($query) => $query->where('track_stock', false)->orWhere('stock_quantity', '>', 0))
                 ->orderByDesc('featured')
                 ->orderBy('sort_order')
                 ->latest()
