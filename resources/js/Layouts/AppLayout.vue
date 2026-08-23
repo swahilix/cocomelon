@@ -176,54 +176,69 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
 
         <main><slot /></main>
 
-        <footer class="mt-20 border-t border-slate-800 bg-slate-950 text-slate-300">
-            <div class="container-shell py-14 sm:py-16">
-                <div class="grid gap-12 md:grid-cols-2 lg:grid-cols-[1.45fr_.8fr_.9fr_.9fr] lg:gap-10 xl:gap-16">
-                    <div class="max-w-md">
-                        <img src="/assets/prinx-logo.png" :alt="store.name" class="h-11 w-auto brightness-0 invert sm:h-12">
-                        <p class="mt-5 max-w-sm text-sm leading-7 text-slate-400">{{ store.description }}</p>
-
-                        <div v-if="socialLinks.length" class="mt-7 flex flex-wrap items-center">
-                            <template v-for="(social, index) in socialLinks" :key="social.key">
-                                <span v-if="index" class="mx-3 h-5 w-px bg-slate-800"></span>
-                                <a :href="social.url" target="_blank" rel="noopener" :aria-label="social.label" :title="social.label" class="inline-flex min-w-6 items-center justify-center text-[12px] font-semibold tracking-[.08em] text-slate-400 transition hover:text-prinx-400">{{ social.short }}</a>
-                            </template>
+        <footer class="border-t border-slate-200 bg-white">
+            <div class="container-shell py-8">
+                <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-[1.35fr_.8fr_1fr_.9fr_1fr]">
+                    <div class="max-w-[270px]">
+                        <img src="/assets/prinx-logo.png" :alt="store.name" class="h-10 w-auto max-w-[160px] object-contain">
+                        <p class="mt-3 text-[10px] leading-5 text-slate-600">{{ store.description || 'Your one-stop destination for original tech products, accessories and support.' }}</p>
+                        <div v-if="socialLinks.length" class="mt-4 flex items-center gap-2">
+                            <a v-for="social in socialLinks" :key="social.key" :href="social.url" target="_blank" rel="noopener" :aria-label="social.label" class="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-semibold text-slate-700 transition hover:border-prinx-200 hover:text-prinx-600">{{ social.short }}</a>
                         </div>
+                        <p class="mt-5 text-[9px] text-slate-400">© {{ store.year }} {{ store.name }}. All rights reserved.</p>
                     </div>
 
                     <div>
-                        <h3 class="text-base font-semibold text-white">Company</h3>
-                        <nav class="mt-6 space-y-4 text-sm text-slate-400">
-                            <Link href="/pages/about" class="block transition hover:translate-x-0.5 hover:text-white">About Us</Link>
-                            <Link href="/shop" class="block transition hover:translate-x-0.5 hover:text-white">Shop</Link>
-                            <Link href="/services" class="block transition hover:translate-x-0.5 hover:text-white">Services</Link>
-                            <Link href="/pages/contact" class="block transition hover:translate-x-0.5 hover:text-white">Contact Us</Link>
+                        <h3 class="text-[12px] font-semibold text-slate-900">Shop</h3>
+                        <nav class="mt-3 space-y-2 text-[10px] text-slate-600">
+                            <Link href="/shop" class="block hover:text-prinx-600">All Products</Link>
+                            <Link href="/shop?sort=newest" class="block hover:text-prinx-600">New Arrivals</Link>
+                            <Link href="/shop" class="block hover:text-prinx-600">Best Sellers</Link>
+                            <Link href="/shop" class="block hover:text-prinx-600">Deals Of The Day</Link>
+                            <Link href="/cart" class="block hover:text-prinx-600">My Cart</Link>
                         </nav>
                     </div>
 
                     <div>
-                        <h3 class="text-base font-semibold text-white">Support</h3>
-                        <nav class="mt-6 space-y-4 text-sm text-slate-400">
-                            <Link href="/pages/contact" class="block transition hover:translate-x-0.5 hover:text-white">Customer Support</Link>
-                            <Link href="/services" class="block transition hover:translate-x-0.5 hover:text-white">Technical Services</Link>
-                            <Link href="/pages/shipping" class="block transition hover:translate-x-0.5 hover:text-white">Shipping & Delivery</Link>
-                            <Link href="/pages/returns" class="block transition hover:translate-x-0.5 hover:text-white">Returns & Refunds</Link>
-                            <a v-if="whatsappHref" :href="whatsappHref" target="_blank" rel="noopener" class="block transition hover:translate-x-0.5 hover:text-white">WhatsApp Support</a>
+                        <h3 class="text-[12px] font-semibold text-slate-900">Customer Service</h3>
+                        <nav class="mt-3 space-y-2 text-[10px] text-slate-600">
+                            <Link href="/pages/contact" class="block hover:text-prinx-600">Help Center</Link>
+                            <Link href="/pages/returns" class="block hover:text-prinx-600">Returns & Refunds</Link>
+                            <Link href="/pages/shipping" class="block hover:text-prinx-600">Shipping & Delivery</Link>
+                            <Link href="/services" class="block hover:text-prinx-600">Technical Services</Link>
+                            <Link href="/pages/contact" class="block hover:text-prinx-600">Contact Us</Link>
                         </nav>
                     </div>
 
                     <div>
-                        <h3 class="text-base font-semibold text-white">Legal Policies</h3>
-                        <nav class="mt-6 space-y-4 text-sm text-slate-400">
-                            <Link href="/pages/terms" class="block transition hover:translate-x-0.5 hover:text-white">Terms & Conditions</Link>
-                            <Link href="/pages/privacy" class="block transition hover:translate-x-0.5 hover:text-white">Privacy Policy</Link>
-                            <Link href="/pages/returns" class="block transition hover:translate-x-0.5 hover:text-white">Refund Policy</Link>
-                            <a href="/sitemap.xml" class="block transition hover:translate-x-0.5 hover:text-white">Sitemap</a>
+                        <h3 class="text-[12px] font-semibold text-slate-900">About Prinx</h3>
+                        <nav class="mt-3 space-y-2 text-[10px] text-slate-600">
+                            <Link href="/pages/about" class="block hover:text-prinx-600">About Us</Link>
+                            <Link href="/services" class="block hover:text-prinx-600">Our Services</Link>
+                            <Link href="/pages/terms" class="block hover:text-prinx-600">Terms & Conditions</Link>
+                            <Link href="/pages/privacy" class="block hover:text-prinx-600">Privacy Policy</Link>
                         </nav>
+                    </div>
+
+                    <div>
+                        <h3 class="text-[12px] font-semibold text-slate-900">Contact Us</h3>
+                        <div class="mt-3 space-y-3 text-[10px] text-slate-600">
+                            <a v-if="store.phone" :href="`tel:${store.phone}`" class="flex items-center gap-2 hover:text-prinx-600"><span>☎</span><span>{{ store.phone }}</span></a>
+                            <a v-if="store.email" :href="`mailto:${store.email}`" class="flex items-center gap-2 hover:text-prinx-600"><span>✉</span><span>{{ store.email }}</span></a>
+                            <p v-if="store.address" class="flex items-start gap-2"><span>⌖</span><span>{{ store.address }}</span></p>
+                        </div>
                     </div>
                 </div>
 
-                <div class="mt-12 border-t border-slate-800 pt-6 text-center text-xs leading-5 text-slate-500">Copyright © {{ store.year }} {{ store.name }}. All rights reserved.</div>
+                <div class="mt-6 flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-end">
+                    <span class="text-[9px] text-slate-500">We accept</span>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="rounded-[4px] border border-slate-200 bg-white px-2.5 py-1 text-[9px] font-bold text-blue-700">VISA</span>
+                        <span class="rounded-[4px] border border-slate-200 bg-white px-2.5 py-1 text-[9px] font-bold text-red-600">Mastercard</span>
+                        <span class="rounded-[4px] border border-slate-200 bg-white px-2.5 py-1 text-[9px] font-bold text-blue-600">Tigo Pesa</span>
+                        <span class="rounded-[4px] border border-slate-200 bg-white px-2.5 py-1 text-[9px] font-bold text-emerald-600">M-Pesa</span>
+                    </div>
+                </div>
             </div>
         </footer>
     </div>
