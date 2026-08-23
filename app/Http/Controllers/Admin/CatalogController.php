@@ -92,6 +92,8 @@ class CatalogController extends Controller
     public function brand(Request $request): RedirectResponse
     {
         $data = $this->brandData($request);
+        $data['is_active'] = true;
+        $data = $this->handleBrandLogo($request, $data);
         Brand::create($data);
 
         return back()->with('success', 'Brand created successfully.');
@@ -99,7 +101,9 @@ class CatalogController extends Controller
 
     public function updateBrand(Request $request, Brand $brand): RedirectResponse
     {
-        $brand->update($this->brandData($request, $brand));
+        $data = $this->brandData($request, $brand);
+        $data = $this->handleBrandLogo($request, $data, $brand);
+        $brand->update($data);
 
         return back()->with('success', 'Brand updated successfully.');
     }
@@ -169,8 +173,36 @@ class CatalogController extends Controller
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:120', Rule::unique('brands', 'name')->ignore($brand)],
-            'slug' => ['nullable', 'string', 'max:180', Rule::unique('brands', 'slug')->ignore($brand)],
-            'is_active' => ['boolean'],
+            'logo' => [$brand ? 'nullable' : 'required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
         ]);
+    }
+
+    private function handleBrandLogo(Request $request, array $data, ?Brand $brand = null): array
+    {
+        if (! $request->hasFile('logo')) {
+            unset($data['logo']);
+            return $data;
+        }
+
+        $oldLogo = $brand?->logo;
+
+        try {
+            $data['logo'] = $this->images->store(
+                $request->file('logo'),
+                'brands',
+                $data['name'].' brand logo',
+                [
+                    'title' => $data['name'].' logo | Prinx Electronics',
+                    'description' => $data['name'].' brand logo used in the Prinx Electronics catalogue.',
+                    'keywords' => [$data['name'], 'brand logo', 'Prinx Electronics'],
+                ]
+            );
+        } catch (Throwable $exception) {
+            throw ValidationException::withMessages(['logo' => $exception->getMessage()]);
+        }
+
+        $this->images->deleteLocal($oldLogo);
+
+        return $data;
     }
 }
