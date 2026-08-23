@@ -112,6 +112,10 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                         <Link href="/shop" :class="['flex items-center gap-2 px-3 transition hover:text-amber-600', active('/shop') || active('/products') ? 'text-amber-600' : '']">
                             <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14l-1 12H6L5 8Zm3 0a4 4 0 0 1 8 0"/></svg>Shop
                         </Link>
+                        <Link href="/software" :class="['relative flex items-center gap-2 px-3 transition hover:text-amber-600', active('/software') ? 'text-amber-600' : '']">
+                            <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>Software
+                            <span v-if="active('/software')" class="absolute inset-x-2 bottom-0 h-[2px] bg-[#f7b900]"></span>
+                        </Link>
                         <Link href="/services" :class="['flex items-center gap-2 px-3 transition hover:text-amber-600', active('/services') ? 'text-amber-600' : '']">
                             <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3 5 7v5c0 4.3 2.5 7.3 7 9 4.5-1.7 7-4.7 7-9V7l-7-4Z"/><path stroke-linecap="round" d="m9 12 2 2 4-4"/></svg>Services
                         </Link>
@@ -158,6 +162,7 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                         <div class="grid grid-cols-2 gap-2 text-[13px] font-medium">
                             <Link href="/" class="rounded-[8px] border border-slate-200 px-3 py-3">Home</Link>
                             <Link href="/shop" class="rounded-[8px] border border-slate-200 px-3 py-3">Shop</Link>
+                            <Link href="/software" class="rounded-[8px] border border-slate-200 px-3 py-3">Software</Link>
                             <Link href="/services" class="rounded-[8px] border border-slate-200 px-3 py-3">Services</Link>
                             <Link href="/pages/about" class="rounded-[8px] border border-slate-200 px-3 py-3">About</Link>
                             <Link href="/pages/contact" class="rounded-[8px] border border-slate-200 px-3 py-3">Contact</Link>
