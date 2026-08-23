@@ -8,6 +8,8 @@ use App\Services\AuditService;
 use App\Services\CashRegisterService;
 use App\Services\InventoryService;
 use App\Services\PostingGuard;
+use App\Services\ProductUnitService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -69,12 +71,38 @@ class PosController extends Controller
         ]);
     }
 
-    public function store(Request $request, InventoryService $inventory, CashRegisterService $registers, PostingGuard $guard, AuditService $audit): RedirectResponse
+    public function lookupUnit(string $barcode, ProductUnitService $units): JsonResponse
+    {
+        $unit = $units->findAvailableBarcode($barcode);
+        if (! $unit) {
+            return response()->json(['message' => 'This unit barcode is unavailable, already sold, or invalid.'], 404);
+        }
+
+        $product = Product::query()->findOrFail($unit->product_id);
+
+        return response()->json([
+            'unit' => [
+                'id' => $unit->unit_id,
+                'barcode' => $unit->barcode,
+                'unit_number' => (int) $unit->unit_number,
+            ],
+            'product' => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'stock_quantity' => (int) $product->stock_quantity,
+                'track_stock' => (bool) $product->track_stock,
+                'price' => $product->current_price,
+            ],
+        ]);
+    }
+
+    public function store(Request $request, InventoryService $inventory, ProductUnitService $units, CashRegisterService $registers, PostingGuard $guard, AuditService $audit): RedirectResponse
     {
         $validated = $this->validatedSale($request);
 
         try {
-            $saleId = DB::transaction(function () use ($validated, $request, $inventory, $registers, $guard, $audit): int {
+            $saleId = DB::transaction(function () use ($validated, $request, $inventory, $units, $registers, $guard, $audit): int {
                 $register = $registers->requireOpenSession($request->user()?->id);
                 $paymentMethod = $registers->methodForSession($register->id, (int) $validated['payment_method_id']);
                 $guard->claim($request, 'pos.sale', 'pos_sale');
@@ -125,6 +153,7 @@ class PosController extends Controller
                 ]);
 
                 $priceOverrides = [];
+                $unitAudit = [];
                 foreach ($validated['items'] as $item) {
                     $product = Product::query()->findOrFail($item['product_id']);
                     $submittedPrice = (float) $item['unit_price'];
@@ -144,7 +173,7 @@ class PosController extends Controller
                     $lineTotal = (float) $item['quantity'] * $submittedPrice;
                     $unitCost = (float) $product->average_cost;
 
-                    DB::table('pos_sale_items')->insert([
+                    $saleItemId = DB::table('pos_sale_items')->insertGetId([
                         'pos_sale_id' => $saleId,
                         'product_id' => $product->id,
                         'product_name' => $product->name,
@@ -156,6 +185,19 @@ class PosController extends Controller
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]);
+
+                    $soldUnits = $units->consumeForSale(
+                        $product,
+                        (int) $item['quantity'],
+                        $item['unit_barcodes'] ?? [],
+                        $saleId,
+                        $saleItemId,
+                    );
+                    $unitAudit[] = [
+                        'product_id' => $product->id,
+                        'sale_item_id' => $saleItemId,
+                        'barcodes' => $soldUnits->pluck('barcode')->values()->all(),
+                    ];
 
                     $inventory->decrease(
                         $product,
@@ -194,6 +236,7 @@ class PosController extends Controller
                 $audit->record($request, 'pos.sale_completed', 'pos_sale', $saleId, $reference, null, $after, [
                     'discount_override' => $discount > 0,
                     'price_overrides' => $priceOverrides,
+                    'unit_barcodes' => $unitAudit,
                     'register_session_id' => $register->id,
                     'payment_method' => $paymentMethod->name,
                 ]);
@@ -222,6 +265,8 @@ class PosController extends Controller
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
+            'items.*.unit_barcodes' => ['nullable', 'array'],
+            'items.*.unit_barcodes.*' => ['string', 'max:80', 'distinct'],
         ]);
 
         $register = $registers->requireOpenSession($request->user()?->id);
@@ -295,6 +340,8 @@ class PosController extends Controller
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
+            'items.*.unit_barcodes' => ['nullable', 'array'],
+            'items.*.unit_barcodes.*' => ['string', 'max:80', 'distinct'],
             '_operation_id' => ['nullable', 'string', 'max:120'],
         ]);
     }
