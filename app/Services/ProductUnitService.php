@@ -164,8 +164,6 @@ class ProductUnitService
         if ($units->isNotEmpty()) {
             DB::table('product_units')->whereIn('id', $units->pluck('id'))->update([
                 'status' => 'available',
-                'pos_sale_id' => null,
-                'pos_sale_item_id' => null,
                 'sold_at' => null,
                 'returned_at' => now(),
                 'removed_at' => null,
@@ -183,8 +181,6 @@ class ProductUnitService
             ->where('status', 'sold')
             ->update([
                 'status' => 'available',
-                'pos_sale_id' => null,
-                'pos_sale_item_id' => null,
                 'sold_at' => null,
                 'returned_at' => now(),
                 'removed_at' => null,
