@@ -18,6 +18,7 @@ const sections = computed(() => [
         items: [
             ['Dashboard', '/admin', 'home-2', ['manage_storefront']],
             ['Products', '/admin/products', 'box', ['manage_storefront']],
+            ['Software', '/admin/software', 'monitor', ['manage_storefront']],
             ['Stock management', '/admin/stock', 'shop', ['view_inventory', 'manage_purchases']],
             ['Inventory', '/admin/stock/inventory', 'box', ['view_inventory']],
             ['Barcode printing', '/admin/barcodes', 'box', ['view_inventory', 'manage_storefront']],
