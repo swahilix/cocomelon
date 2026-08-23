@@ -252,7 +252,7 @@ function addRelated(item) {
                 </div>
             </section>
 
-            <section class="mt-5 grid gap-3 lg:grid-cols-[1fr_.94fr_1fr]">
+            <section class="mt-5 grid gap-3 lg:grid-cols-[2fr_1fr]">
                 <article class="overflow-hidden rounded-[7px] border border-slate-200 bg-white">
                     <div class="flex border-b border-slate-200 px-2">
                         <button type="button" class="relative px-3 py-3 text-[9px] font-semibold" :class="activeTab === 'description' ? 'text-prinx-600' : 'text-slate-500'" @click="activeTab = 'description'">Description<span v-if="activeTab === 'description'" class="absolute inset-x-2 bottom-0 h-[2px] bg-prinx-500"></span></button>
@@ -262,17 +262,10 @@ function addRelated(item) {
                     <div class="min-h-[190px] px-4 py-4 text-[10px] leading-5 text-slate-600">
                         <ProductDescription v-if="activeTab === 'description'" :content="product.description" />
                         <div v-else-if="activeTab === 'specs'" class="divide-y divide-slate-100">
-                            <div v-for="row in specificationRows" :key="row[0]" class="grid grid-cols-[110px_1fr] gap-3 py-2"><strong class="font-semibold text-slate-700">{{ row[0] }}</strong><span>{{ row[1] }}</span></div>
+                            <div v-for="row in specificationRows" :key="row[0]" class="grid grid-cols-[140px_1fr] gap-4 py-2"><strong class="font-semibold text-slate-700">{{ row[0] }}</strong><span>{{ row[1] }}</span></div>
+                            <p v-if="!specificationRows.length" class="py-8 text-center text-slate-400">No additional specifications available.</p>
                         </div>
                         <div v-else class="flex min-h-[150px] items-center justify-center text-center text-slate-400">No customer reviews have been submitted yet.</div>
-                    </div>
-                </article>
-
-                <article class="overflow-hidden rounded-[7px] border border-slate-200 bg-white">
-                    <header class="border-b border-slate-200 px-4 py-3 text-[10px] font-semibold text-slate-800">Specifications</header>
-                    <div class="px-4 py-2">
-                        <div v-for="row in specificationRows.slice(0, 8)" :key="row[0]" class="grid grid-cols-[110px_1fr] gap-3 border-b border-slate-100 py-[7px] text-[9px] last:border-0"><strong class="font-semibold text-slate-700">{{ row[0] }}</strong><span class="text-slate-500">{{ row[1] }}</span></div>
-                        <p v-if="!specificationRows.length" class="py-8 text-center text-[10px] text-slate-400">No additional specifications available.</p>
                     </div>
                 </article>
 
