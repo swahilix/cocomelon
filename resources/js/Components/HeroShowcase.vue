@@ -1,24 +1,14 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import Icon from './Icon.vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
 const props = defineProps({
     slides: { type: Array, default: () => [] },
 });
 
-const AUTO_PLAY_MS = 7000;
+const AUTO_PLAY_MS = 6500;
 const activeIndex = ref(0);
-const progressKey = ref(0);
-const paused = ref(false);
-const touchStartX = ref(null);
 let timer = null;
-
-const money = new Intl.NumberFormat('en-TZ', {
-    style: 'currency',
-    currency: 'TZS',
-    maximumFractionDigits: 0,
-});
 
 function plainText(value) {
     return String(value || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -27,75 +17,45 @@ function plainText(value) {
 function normalizedSlide(slide) {
     const item = slide.item || {};
     const isProduct = slide.item_type === 'product';
-    const category = item.category?.name || (isProduct ? 'Electronics' : 'Technical support');
-    const brand = item.brand?.name || 'Prinx Electronics';
-    const stock = item.in_stock
-        ? (item.track_stock ? `${item.stock_quantity} available` : 'Available now')
-        : 'Currently unavailable';
-
-    const price = isProduct
-        ? money.format(Number(item.current_price || item.price || 0))
-        : (item.price_label || (item.price_from ? `From ${money.format(Number(item.price_from))}` : 'Request a quote'));
 
     return {
         key: `${slide.item_type}-${slide.id}`,
-        type: slide.item_type,
-        eyebrow: slide.eyebrow || (isProduct ? 'Featured product' : 'Professional service'),
-        badge: slide.badge || (isProduct ? `${brand} · ${category}` : category),
-        title: slide.headline || item.name,
-        description: plainText(slide.description || item.short_description || item.plain_description || item.description),
-        image: item.image_url || (isProduct ? '/assets/accessory.svg' : '/assets/repair.svg'),
+        eyebrow: slide.eyebrow || 'Welcome to Prinx',
+        title: slide.headline || item.name || 'Your One-Stop Tech Destination',
+        description: plainText(slide.description || item.short_description || item.plain_description || item.description) || 'Original gadgets, accessories and more. Fast delivery. Best prices. Trusted support.',
+        image: item.image_url || (isProduct ? '/assets/phone.svg' : '/assets/repair.svg'),
         imageAlt: item.name || 'Prinx Electronics showcase',
         primaryHref: isProduct ? `/products/${encodeURIComponent(item.slug || '')}` : `/services/${encodeURIComponent(item.slug || '')}`,
-        primaryLabel: slide.primary_label || (isProduct ? 'View product' : 'View service'),
+        primaryLabel: slide.primary_label || (isProduct ? 'Shop Now' : 'View Service'),
         secondaryHref: isProduct ? '/shop' : '/services',
-        secondaryLabel: slide.secondary_label || (isProduct ? 'Browse products' : 'Explore services'),
-        price,
-        detailLabel: isProduct ? 'Availability' : 'Turnaround',
-        detailValue: isProduct ? stock : (item.duration || 'Based on assessment'),
-        extraLabel: isProduct ? 'Warranty' : 'Category',
-        extraValue: isProduct ? (item.warranty || 'Ask for details') : category,
+        secondaryLabel: slide.secondary_label || (isProduct ? 'View Offers' : 'Explore Services'),
     };
 }
 
 const fallbackSlides = [
     {
-        key: 'fallback-products',
-        type: 'product',
-        eyebrow: 'Prinx Electronics',
-        badge: 'Technology for work, life and business',
-        title: 'Better electronics. Smarter choices.',
-        description: 'Explore carefully selected devices and accessories with clear specifications, dependable stock information and support from one trusted store.',
+        key: 'prinx-home',
+        eyebrow: 'Welcome to Prinx',
+        title: 'Your One-Stop Tech Destination',
+        description: 'Original gadgets, accessories and more. Fast delivery. Best prices. Trusted by thousands.',
         image: '/assets/phone.svg',
-        imageAlt: 'Electronics and mobile devices',
+        imageAlt: 'Prinx electronics and accessories',
         primaryHref: '/shop',
-        primaryLabel: 'Explore products',
-        secondaryHref: '/services',
-        secondaryLabel: 'Book a service',
-        price: 'Selected technology',
-        detailLabel: 'Information',
-        detailValue: 'Clear specifications',
-        extraLabel: 'Support',
-        extraValue: 'Before and after sale',
+        primaryLabel: 'Shop Now',
+        secondaryHref: '/shop',
+        secondaryLabel: 'View Offers',
     },
     {
-        key: 'fallback-services',
-        type: 'service',
-        eyebrow: 'Prinx technical services',
-        badge: 'Repair · Setup · Business support',
-        title: 'Professional care for the technology you rely on.',
-        description: 'Get diagnostics, repair, upgrades, installation and practical technical help for home, office and institutional technology.',
-        image: '/assets/repair.svg',
-        imageAlt: 'Professional electronics service',
-        primaryHref: '/services',
-        primaryLabel: 'Explore services',
-        secondaryHref: '/shop',
-        secondaryLabel: 'Shop electronics',
-        price: 'Professional support',
-        detailLabel: 'Service',
-        detailValue: 'Skilled technicians',
-        extraLabel: 'Solutions',
-        extraValue: 'Home and business',
+        key: 'prinx-support',
+        eyebrow: 'Technology made easier',
+        title: 'Products and Support in One Place',
+        description: 'Shop dependable electronics and get professional technical support for home, work and business.',
+        image: '/assets/laptop.svg',
+        imageAlt: 'Prinx electronics and technical support',
+        primaryHref: '/shop',
+        primaryLabel: 'Shop Now',
+        secondaryHref: '/services',
+        secondaryLabel: 'Our Services',
     },
 ];
 
@@ -103,94 +63,106 @@ const carouselSlides = computed(() => {
     const configured = props.slides.filter((slide) => slide?.item && slide?.item_type).map(normalizedSlide);
     return configured.length ? configured : fallbackSlides;
 });
-
 const activeSlide = computed(() => carouselSlides.value[activeIndex.value] || carouselSlides.value[0]);
 
-function clearTimer() {
-    if (timer) {
-        window.clearInterval(timer);
-        timer = null;
-    }
-}
-
-function scheduleTimer() {
-    clearTimer();
-    if (typeof window === 'undefined' || paused.value || carouselSlides.value.length < 2) return;
-    timer = window.setInterval(() => {
-        activeIndex.value = (activeIndex.value + 1) % carouselSlides.value.length;
-        progressKey.value += 1;
-    }, AUTO_PLAY_MS);
-}
+const titleParts = computed(() => {
+    const title = activeSlide.value?.title || '';
+    const match = title.match(/^(.*?)(Tech|Technology|Electronics)(.*)$/i);
+    if (!match) return { before: title, accent: '', after: '' };
+    return { before: match[1], accent: match[2], after: match[3] };
+});
 
 function goTo(index) {
     const total = carouselSlides.value.length;
     if (!total) return;
     activeIndex.value = (index + total) % total;
-    progressKey.value += 1;
-    scheduleTimer();
+    restart();
 }
-
 const next = () => goTo(activeIndex.value + 1);
 const previous = () => goTo(activeIndex.value - 1);
 
-function pauseCarousel() { paused.value = true; clearTimer(); }
-function resumeCarousel() { paused.value = false; progressKey.value += 1; scheduleTimer(); }
-function handleTouchStart(event) { touchStartX.value = event.touches?.[0]?.clientX ?? null; pauseCarousel(); }
-function handleTouchEnd(event) {
-    const endX = event.changedTouches?.[0]?.clientX;
-    if (touchStartX.value !== null && typeof endX === 'number') {
-        const difference = touchStartX.value - endX;
-        if (Math.abs(difference) > 45) difference > 0 ? next() : previous();
-    }
-    touchStartX.value = null;
-    resumeCarousel();
+function restart() {
+    if (timer) window.clearInterval(timer);
+    if (typeof window === 'undefined' || carouselSlides.value.length < 2) return;
+    timer = window.setInterval(() => {
+        activeIndex.value = (activeIndex.value + 1) % carouselSlides.value.length;
+    }, AUTO_PLAY_MS);
 }
 
-watch(() => carouselSlides.value.length, (length) => {
-    if (activeIndex.value >= length) activeIndex.value = 0;
-    progressKey.value += 1;
-    scheduleTimer();
-});
-
 onMounted(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        paused.value = true;
-        return;
-    }
-    scheduleTimer();
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) restart();
 });
-
-onBeforeUnmount(clearTimer);
+onBeforeUnmount(() => timer && window.clearInterval(timer));
 </script>
 
 <template>
-    <section v-if="activeSlide" class="bg-slate-50 py-4 sm:py-6" role="region" aria-roledescription="carousel" aria-label="Selected products and services">
+    <section v-if="activeSlide" class="bg-[#fbfbfb] pt-7 sm:pt-8" aria-label="Prinx featured products and services">
         <div class="container-shell">
-            <div class="hero-showcase relative mx-auto max-w-[1160px] overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,.10)]" tabindex="0" @mouseenter="pauseCarousel" @mouseleave="resumeCarousel" @focusin="pauseCarousel" @focusout="resumeCarousel" @keydown.left.prevent="previous" @keydown.right.prevent="next" @touchstart.passive="handleTouchStart" @touchend.passive="handleTouchEnd">
-                <div class="grid lg:min-h-[390px] lg:grid-cols-[1.08fr_.92fr]">
-                    <Transition name="hero-content" mode="out-in">
-                        <div :key="`${activeSlide.key}-content`" class="relative order-2 flex min-w-0 flex-col justify-center overflow-hidden bg-[#07111f] px-5 py-6 text-white sm:px-7 sm:py-8 lg:order-1 lg:px-10 lg:py-9">
-                            <div class="pointer-events-none absolute inset-0" aria-hidden="true"><div class="absolute -left-20 -top-24 h-64 w-64 rounded-full bg-prinx-500/15 blur-3xl"></div><div class="absolute inset-0 opacity-[.14]" style="background-image:linear-gradient(rgba(255,255,255,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.08) 1px,transparent 1px);background-size:34px 34px;mask-image:linear-gradient(to right,black,transparent 88%)"></div></div>
-                            <div class="relative max-w-[590px]">
-                                <div class="flex min-w-0 items-center gap-2.5"><span class="inline-flex shrink-0 items-center gap-2 rounded-[8px] border border-prinx-400/30 bg-prinx-500/10 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[.15em] text-prinx-300 sm:text-[10px]"><span class="h-1.5 w-1.5 rounded-full bg-prinx-400"></span>{{ activeSlide.eyebrow }}</span><span class="truncate text-[9px] font-extrabold uppercase tracking-[.12em] text-slate-400 sm:text-[10px]">{{ activeSlide.badge }}</span></div>
-                                <h1 class="hero-title-clamp mt-4 max-w-[580px] text-[1.9rem] font-black leading-[1.03] tracking-[-.04em] sm:text-[2.35rem] lg:text-[2.7rem]" :title="activeSlide.title">{{ activeSlide.title }}</h1>
-                                <p class="hero-description-clamp mt-3 max-w-[560px] text-[13px] leading-6 text-slate-300 sm:text-sm sm:leading-6">{{ activeSlide.description }}</p>
-                                <div class="mt-5 flex flex-wrap gap-2.5"><Link :href="activeSlide.primaryHref" class="btn-primary px-5 py-2.5">{{ activeSlide.primaryLabel }} <Icon name="arrow-right-3" :size="16" /></Link><Link :href="activeSlide.secondaryHref" class="inline-flex items-center justify-center rounded-[10px] border border-white/15 bg-white/[.05] px-5 py-2.5 text-sm font-extrabold text-white transition hover:border-white/30 hover:bg-white/10">{{ activeSlide.secondaryLabel }}</Link></div>
-                                <div class="mt-5 grid grid-cols-2 overflow-hidden rounded-[10px] border border-white/10 bg-white/[.035] sm:grid-cols-3"><div class="min-w-0 px-3.5 py-3"><span class="block text-[8px] font-black uppercase tracking-[.14em] text-slate-500">{{ activeSlide.type === 'product' ? 'Price' : 'Pricing' }}</span><strong class="mt-1 block truncate text-xs font-black text-white sm:text-sm">{{ activeSlide.price }}</strong></div><div class="min-w-0 border-l border-white/10 px-3.5 py-3"><span class="block text-[8px] font-black uppercase tracking-[.14em] text-slate-500">{{ activeSlide.detailLabel }}</span><strong class="mt-1 block truncate text-xs font-black text-white sm:text-sm">{{ activeSlide.detailValue }}</strong></div><div class="hidden min-w-0 border-l border-white/10 px-3.5 py-3 sm:block"><span class="block text-[8px] font-black uppercase tracking-[.14em] text-slate-500">{{ activeSlide.extraLabel }}</span><strong class="mt-1 block truncate text-xs font-black text-white sm:text-sm">{{ activeSlide.extraValue }}</strong></div></div>
-                                <div class="mt-4 flex items-center justify-between gap-4"><div class="flex min-w-0 items-center gap-2" role="tablist" aria-label="Choose carousel slide"><button v-for="(slide, index) in carouselSlides" :key="slide.key" type="button" class="group flex h-7 items-center" :aria-label="`Show slide ${index + 1}: ${slide.title}`" :aria-selected="index === activeIndex" role="tab" @click="goTo(index)"><span :class="['block h-1 rounded-full transition-all duration-300', index === activeIndex ? 'w-8 bg-prinx-400' : 'w-3 bg-slate-600 group-hover:bg-slate-400']"></span></button></div><div class="flex shrink-0 items-center gap-2"><span class="mr-1 hidden text-[9px] font-black tracking-[.12em] text-slate-500 sm:inline">{{ String(activeIndex + 1).padStart(2, '0') }} / {{ String(carouselSlides.length).padStart(2, '0') }}</span><button type="button" class="hero-arrow" aria-label="Previous slide" @click="previous"><Icon name="arrow-left-2" :size="17" /></button><button type="button" class="hero-arrow" aria-label="Next slide" @click="next"><Icon name="arrow-right-3" :size="17" /></button></div></div>
+            <div class="relative">
+                <div class="relative overflow-hidden rounded-[16px] border border-slate-200 bg-white shadow-[0_14px_44px_rgba(15,23,42,.08)]">
+                    <div class="grid min-h-[370px] lg:min-h-[420px] lg:grid-cols-[1.02fr_.98fr]">
+                        <Transition name="hero-fade" mode="out-in">
+                            <div :key="`${activeSlide.key}-copy`" class="order-2 flex items-center px-6 py-8 sm:px-9 lg:order-1 lg:px-14 lg:py-10 xl:px-16">
+                                <div class="max-w-[540px]">
+                                    <div class="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[.04em] text-[#e2a700]">
+                                        <span class="h-[2px] w-6 bg-[#f7b900]"></span>
+                                        {{ activeSlide.eyebrow }}
+                                    </div>
+
+                                    <h1 class="mt-6 text-[2.4rem] font-semibold leading-[1.06] tracking-[-.035em] text-[#17191f] sm:text-[3rem] lg:text-[3.45rem]">
+                                        <template v-if="titleParts.accent">
+                                            {{ titleParts.before }}<span class="text-[#f0ad00]">{{ titleParts.accent }}</span>{{ titleParts.after }}
+                                        </template>
+                                        <template v-else>{{ activeSlide.title }}</template>
+                                    </h1>
+
+                                    <p class="mt-5 max-w-[500px] text-[14px] leading-7 text-slate-500 sm:text-[15px]">{{ activeSlide.description }}</p>
+
+                                    <div class="mt-7 flex flex-wrap gap-3">
+                                        <Link :href="activeSlide.primaryHref" class="inline-flex h-[49px] items-center gap-3 rounded-[9px] bg-[#f7b900] px-6 text-[13px] font-semibold text-slate-950 shadow-sm transition hover:bg-[#eaae00]">
+                                            {{ activeSlide.primaryLabel }}
+                                            <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-5-5 5 5-5 5"/></svg>
+                                        </Link>
+                                        <Link :href="activeSlide.secondaryHref" class="inline-flex h-[49px] items-center gap-3 rounded-[9px] border border-slate-200 bg-white px-6 text-[13px] font-medium text-slate-800 transition hover:border-amber-300 hover:text-amber-700">
+                                            <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m4 12 8-8 8 8-8 8-8-8Z"/><path stroke-linecap="round" d="M9 12h6"/></svg>
+                                            {{ activeSlide.secondaryLabel }}
+                                        </Link>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </Transition>
-                    <Transition name="hero-media" mode="out-in">
-                        <div :key="`${activeSlide.key}-media`" class="relative order-1 min-h-[215px] overflow-hidden bg-[linear-gradient(145deg,#fff_0%,#fff8f1_55%,#ffead7_100%)] sm:min-h-[260px] lg:order-2 lg:min-h-0"><div class="pointer-events-none absolute inset-0" aria-hidden="true"><div class="absolute -right-14 -top-20 h-64 w-64 rounded-full border-[34px] border-prinx-100/60"></div><div class="absolute bottom-0 left-0 h-36 w-36 bg-[radial-gradient(circle,rgba(249,115,22,.18)_1px,transparent_1.5px)] [background-size:15px_15px] [mask-image:linear-gradient(45deg,black,transparent_80%)]"></div><div class="absolute left-1/2 top-[48%] h-[65%] w-[65%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-prinx-400/15 blur-3xl"></div><div class="absolute bottom-[13%] left-1/2 h-6 w-[52%] -translate-x-1/2 rounded-full bg-slate-950/15 blur-xl"></div><div class="absolute inset-y-0 left-0 hidden w-px bg-slate-200 lg:block"></div></div><div class="absolute left-4 top-4 z-20 rounded-[8px] border border-prinx-200 bg-white/90 px-2.5 py-1.5 text-[8px] font-black uppercase tracking-[.14em] text-prinx-700 shadow-sm backdrop-blur sm:left-5 sm:top-5 sm:text-[9px]">{{ activeSlide.type === 'product' ? 'Product spotlight' : 'Service spotlight' }}</div><img :src="activeSlide.image" :alt="activeSlide.imageAlt" :title="activeSlide.title" class="showcase-product absolute left-1/2 top-1/2 z-10 h-[72%] w-[82%] -translate-x-1/2 -translate-y-[50%] object-contain drop-shadow-[0_22px_24px_rgba(15,23,42,.22)] sm:h-[76%] sm:w-[80%] lg:h-[78%] lg:w-[84%]" fetchpriority="high" decoding="async"><div class="absolute bottom-4 right-4 z-20 rounded-[8px] border border-white/80 bg-white/90 px-3 py-2 text-right shadow-[0_10px_25px_rgba(15,23,42,.10)] backdrop-blur sm:bottom-5 sm:right-5"><span class="block text-[8px] font-black uppercase tracking-[.13em] text-slate-400">{{ activeSlide.type === 'product' ? 'Current price' : 'Starting from' }}</span><strong class="mt-0.5 block max-w-[185px] truncate text-sm font-black text-slate-950 sm:text-base">{{ activeSlide.price }}</strong></div></div>
-                    </Transition>
+                        </Transition>
+
+                        <Transition name="hero-media" mode="out-in">
+                            <div :key="`${activeSlide.key}-media`" class="relative order-1 min-h-[300px] overflow-hidden bg-[linear-gradient(135deg,#fff_0%,#fffef7_58%,#fff9dc_100%)] lg:order-2 lg:min-h-0">
+                                <div class="pointer-events-none absolute inset-0" aria-hidden="true">
+                                    <div class="absolute left-[10%] top-[5%] h-[88%] w-[88%] rounded-full border-[3px] border-[#ffe687] opacity-70"></div>
+                                    <div class="absolute left-[17%] top-[13%] h-[74%] w-[74%] rounded-full border border-[#fff2bd]"></div>
+                                    <div class="absolute bottom-0 left-[10%] h-[26%] w-[78%] rounded-t-[28px] bg-white shadow-[0_-8px_22px_rgba(15,23,42,.03)]"></div>
+                                    <div class="absolute -right-8 top-3 h-[150px] w-[36px] rotate-[27deg] rounded-full bg-[linear-gradient(180deg,#79a93b,#295e22)] opacity-90"></div>
+                                    <div class="absolute -right-2 top-[95px] h-[135px] w-[32px] rotate-[52deg] rounded-full bg-[linear-gradient(180deg,#6ca53d,#285c25)] opacity-85"></div>
+                                    <div class="absolute -right-12 top-[165px] h-[145px] w-[34px] rotate-[73deg] rounded-full bg-[linear-gradient(180deg,#84b748,#2f6b28)] opacity-80"></div>
+                                </div>
+                                <img :src="activeSlide.image" :alt="activeSlide.imageAlt" class="hero-product absolute left-1/2 top-1/2 z-10 h-[72%] w-[78%] -translate-x-1/2 -translate-y-[48%] object-contain drop-shadow-[0_24px_22px_rgba(15,23,42,.19)]" fetchpriority="high" decoding="async">
+                            </div>
+                        </Transition>
+                    </div>
+
+                    <div v-if="carouselSlides.length > 1" class="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2" role="tablist" aria-label="Hero slides">
+                        <button v-for="(slide, index) in carouselSlides" :key="slide.key" type="button" :aria-label="`Show slide ${index + 1}`" :class="['h-1.5 rounded-full transition-all', index === activeIndex ? 'w-7 bg-[#f7b900]' : 'w-4 bg-slate-400']" @click="goTo(index)"></button>
+                    </div>
                 </div>
-                <div class="absolute inset-x-0 bottom-0 z-30 h-[3px] bg-slate-200/70" aria-hidden="true"><div v-if="!paused && carouselSlides.length > 1" :key="progressKey" class="hero-progress h-full origin-left bg-prinx-500" :style="{ animationDuration: `${AUTO_PLAY_MS}ms` }"></div></div>
+
+                <button v-if="carouselSlides.length > 1" type="button" class="absolute left-0 top-1/2 z-20 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-[0_7px_22px_rgba(15,23,42,.10)] transition hover:text-amber-600" aria-label="Previous slide" @click="previous">
+                    <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m14 6-6 6 6 6"/></svg>
+                </button>
+                <button v-if="carouselSlides.length > 1" type="button" class="absolute right-0 top-1/2 z-20 flex h-11 w-11 translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-[0_7px_22px_rgba(15,23,42,.10)] transition hover:text-amber-600" aria-label="Next slide" @click="next">
+                    <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m10 6 6 6-6 6"/></svg>
+                </button>
             </div>
         </div>
     </section>
 </template>
 
 <style scoped>
-.hero-title-clamp{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:3}.hero-description-clamp{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:3}.hero-arrow{display:inline-flex;height:2rem;width:2rem;align-items:center;justify-content:center;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:white;font-size:.875rem;font-weight:900;transition:border-color .2s ease,background-color .2s ease,color .2s ease}.hero-arrow:hover{border-color:rgba(249,115,22,.65);background:#f97316}.hero-progress{animation-name:hero-progress;animation-timing-function:linear;animation-fill-mode:forwards}.showcase-product{animation:product-float 5.8s ease-in-out infinite}@keyframes hero-progress{from{transform:scaleX(0)}to{transform:scaleX(1)}}@keyframes product-float{0%,100%{transform:translate(-50%,-50%) translateY(0)}50%{transform:translate(-50%,-50%) translateY(-7px)}}.hero-content-enter-active,.hero-content-leave-active,.hero-media-enter-active,.hero-media-leave-active{transition:opacity .36s ease,transform .36s ease}.hero-content-enter-from{opacity:0;transform:translateY(9px)}.hero-content-leave-to{opacity:0;transform:translateY(-6px)}.hero-media-enter-from{opacity:0;transform:translateX(12px) scale(.995)}.hero-media-leave-to{opacity:0;transform:translateX(-8px) scale(.995)}@media(max-width:639px){.hero-title-clamp{-webkit-line-clamp:3}.hero-description-clamp{-webkit-line-clamp:2}}@media(prefers-reduced-motion:reduce){.hero-progress,.showcase-product{animation:none}.hero-content-enter-active,.hero-content-leave-active,.hero-media-enter-active,.hero-media-leave-active{transition:none}}
+.hero-fade-enter-active,.hero-fade-leave-active,.hero-media-enter-active,.hero-media-leave-active{transition:opacity .3s ease,transform .3s ease}.hero-fade-enter-from{opacity:0;transform:translateY(7px)}.hero-fade-leave-to{opacity:0;transform:translateY(-5px)}.hero-media-enter-from{opacity:0;transform:translateX(10px)}.hero-media-leave-to{opacity:0;transform:translateX(-8px)}.hero-product{animation:hero-float 5.6s ease-in-out infinite}@keyframes hero-float{0%,100%{transform:translate(-50%,-48%) translateY(0)}50%{transform:translate(-50%,-48%) translateY(-7px)}}@media(prefers-reduced-motion:reduce){.hero-product{animation:none}.hero-fade-enter-active,.hero-fade-leave-active,.hero-media-enter-active,.hero-media-leave-active{transition:none}}
 </style>
