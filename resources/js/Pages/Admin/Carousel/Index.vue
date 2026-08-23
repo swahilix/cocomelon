@@ -4,25 +4,215 @@ import { computed, ref } from 'vue';
 import AdminLayout from '../../../Layouts/AdminLayout.vue';
 import Icon from '../../../Components/Icon.vue';
 
-const props = defineProps({ slides: { type: Array, default: () => [] }, products: { type: Array, default: () => [] }, services: { type: Array, default: () => [] }, view: { type: String, default: 'active' }, counts: { type: Object, default: () => ({}) } });
-const editingId = ref(null); const trash = computed(() => props.view === 'trash');
-const form = useForm({ item_type: 'product', item_id: '', eyebrow: '', badge: '', headline: '', description: '', primary_label: '', secondary_label: '', sort_order: 0, is_active: true });
-const items = computed(() => form.item_type === 'product' ? props.products : props.services);
-const selectedItem = computed(() => items.value.find((item) => Number(item.id) === Number(form.item_id)) || null);
-const defaultEyebrow = computed(() => form.item_type === 'product' ? 'Featured product' : 'Professional service');
-const defaultBadge = computed(() => { const item = selectedItem.value; if (!item) return form.item_type === 'product' ? 'Selected technology' : 'Technical support'; if (form.item_type === 'product') return [item.brand?.name, item.category?.name].filter(Boolean).join(' · ') || 'Prinx Electronics'; return item.category?.name || 'Prinx technical services'; });
-const previewTitle = computed(() => form.headline || selectedItem.value?.name || 'Select an item to preview');
-const previewDescription = computed(() => plainText(form.description || selectedItem.value?.short_description || selectedItem.value?.plain_description || selectedItem.value?.description || 'Add a short promotional instruction for this slide.'));
-const previewImage = computed(() => selectedItem.value?.image_url || (form.item_type === 'product' ? '/assets/accessory.svg' : '/assets/repair.svg'));
-function switchItemType(type){if(form.item_type===type)return;form.item_type=type;form.item_id='';form.clearErrors('item_id')}
-function resetForm(){editingId.value=null;form.reset();form.item_type='product';form.item_id='';form.sort_order=props.slides.length;form.is_active=true;form.clearErrors()}
-function editSlide(slide){editingId.value=slide.id;form.item_type=slide.item_type;form.item_id=slide.item_type==='product'?slide.product_id:slide.service_id;form.eyebrow=slide.eyebrow||'';form.badge=slide.badge||'';form.headline=slide.headline||'';form.description=slide.description||'';form.primary_label=slide.primary_label||'';form.secondary_label=slide.secondary_label||'';form.sort_order=slide.sort_order??0;form.is_active=Boolean(slide.is_active);form.clearErrors();window.scrollTo({top:0,behavior:'smooth'})}
-function save(){const options={preserveScroll:true,forceFormData:false,onSuccess:resetForm};form.post(editingId.value?`/admin/carousel/${editingId.value}`:'/admin/carousel',options)}
-function removeSlide(slide){const name=slide.product?.name||slide.service?.name||'this slide';if(confirm(`Remove “${name}” from the carousel? It will be moved to Trash.`))router.delete(`/admin/carousel/${slide.id}`,{preserveScroll:true})}
-function restoreSlide(slide){router.post(`/admin/carousel/${slide.id}/restore`,{},{preserveScroll:true})}function switchView(view){router.get('/admin/carousel',{view:view||undefined},{preserveState:true,replace:true})}function slideItem(slide){return slide.item_type==='product'?slide.product:slide.service}function slideImage(slide){return slideItem(slide)?.image_url||(slide.item_type==='product'?'/assets/accessory.svg':'/assets/repair.svg')}function plainText(value){return String(value||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim()}function money(value){return new Intl.NumberFormat('en-TZ',{style:'currency',currency:'TZS',maximumFractionDigits:0}).format(Number(value||0))}
+const props = defineProps({
+    slides: { type: Array, default: () => [] },
+    view: { type: String, default: 'active' },
+    counts: { type: Object, default: () => ({}) },
+});
+
+const editingId = ref(null);
+const currentImageUrl = ref('');
+const localPreviewUrl = ref('');
+const trash = computed(() => props.view === 'trash');
+const previewImage = computed(() => localPreviewUrl.value || currentImageUrl.value || '');
+
+const form = useForm({
+    image: null,
+    headline: '',
+    image_alt: '',
+    link_url: '',
+    sort_order: 0,
+    is_active: true,
+});
+
+function revokePreview() {
+    if (localPreviewUrl.value) {
+        URL.revokeObjectURL(localPreviewUrl.value);
+        localPreviewUrl.value = '';
+    }
+}
+
+function resetForm() {
+    revokePreview();
+    editingId.value = null;
+    currentImageUrl.value = '';
+    form.reset();
+    form.image = null;
+    form.sort_order = props.slides.length;
+    form.is_active = true;
+    form.clearErrors();
+}
+
+function onImageSelected(event) {
+    revokePreview();
+    const file = event.target.files?.[0] || null;
+    form.image = file;
+    if (file) localPreviewUrl.value = URL.createObjectURL(file);
+}
+
+function editSlide(slide) {
+    revokePreview();
+    editingId.value = slide.id;
+    currentImageUrl.value = slide.image_url || '';
+    form.image = null;
+    form.headline = slide.headline || '';
+    form.image_alt = slide.image_alt || '';
+    form.link_url = slide.link_url || '';
+    form.sort_order = slide.sort_order ?? 0;
+    form.is_active = Boolean(slide.is_active);
+    form.clearErrors();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function save() {
+    form.post(editingId.value ? `/admin/carousel/${editingId.value}` : '/admin/carousel', {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: resetForm,
+    });
+}
+
+function removeSlide(slide) {
+    const label = slide.headline || slide.image_alt || 'this banner';
+    if (confirm(`Remove “${label}” from the homepage carousel? It will be moved to Trash.`)) {
+        router.delete(`/admin/carousel/${slide.id}`, { preserveScroll: true });
+    }
+}
+
+function restoreSlide(slide) {
+    router.post(`/admin/carousel/${slide.id}/restore`, {}, { preserveScroll: true });
+}
+
+function switchView(view) {
+    router.get('/admin/carousel', { view: view || undefined }, { preserveState: true, replace: true });
+}
 </script>
 
-<template><AdminLayout><Head title="Homepage Carousel"/><div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p class="section-kicker">Homepage presentation</p><h1 class="section-title">Product & service carousel</h1><p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Choose exactly which products or services appear, then write the message customers will see.</p></div><button class="btn-light self-start" type="button" @click="switchView(trash?'':'trash')">{{ trash ? 'Back to carousel' : `Trash (${counts.trash || 0})` }}</button></div>
-<div v-if="!trash" class="mt-7 grid gap-6 xl:grid-cols-[410px_1fr]"><section class="card h-fit overflow-hidden xl:sticky xl:top-24"><div class="border-b border-slate-200 bg-slate-50 px-5 py-4"><p class="text-[10px] font-black uppercase tracking-[.16em] text-prinx-600">{{ editingId ? 'Editing slide' : 'New slide' }}</p><h2 class="mt-1 text-lg font-black text-slate-950">{{ editingId ? 'Update carousel content' : 'Add carousel content' }}</h2></div><form class="space-y-4 p-5" @submit.prevent="save"><div><label class="label">Item type</label><div class="grid grid-cols-2 gap-2"><button type="button" :class="['rounded-[9px] border px-3 py-2.5 text-sm font-black',form.item_type==='product'?'border-prinx-500 bg-prinx-50 text-prinx-700':'border-slate-200 text-slate-500']" @click="switchItemType('product')">Product</button><button type="button" :class="['rounded-[9px] border px-3 py-2.5 text-sm font-black',form.item_type==='service'?'border-prinx-500 bg-prinx-50 text-prinx-700':'border-slate-200 text-slate-500']" @click="switchItemType('service')">Service</button></div></div><div><label class="label">Select {{ form.item_type }} *</label><select v-model="form.item_id" class="input"><option value="">Choose an item</option><option v-for="item in items" :key="item.id" :value="item.id">{{ item.name }}</option></select><p class="error">{{ form.errors.item_id }}</p><p class="image-spec">Transparent PNG or WebP images look best in the carousel stage.</p></div><div class="grid gap-3 sm:grid-cols-2"><div><label class="label">Small label</label><input v-model="form.eyebrow" class="input" :placeholder="defaultEyebrow"></div><div><label class="label">Badge</label><input v-model="form.badge" class="input" :placeholder="defaultBadge"></div></div><div><label class="label">Carousel headline</label><input v-model="form.headline" class="input" :placeholder="selectedItem?.name||'Uses the item name when empty'"></div><div><label class="label">Promotional instruction / message</label><textarea v-model="form.description" class="input" rows="5" maxlength="600" placeholder="Explain why this product or service matters and what the customer should do next."></textarea><div class="mt-1 flex justify-between text-[11px] font-semibold text-slate-400"><span>Leave empty to use the item short description.</span><span>{{ form.description.length }}/600</span></div></div><div class="grid gap-3 sm:grid-cols-2"><div><label class="label">Main button</label><input v-model="form.primary_label" class="input" :placeholder="form.item_type==='product'?'View product':'View service'"></div><div><label class="label">Second button</label><input v-model="form.secondary_label" class="input" :placeholder="form.item_type==='product'?'Browse products':'Explore services'"></div></div><div class="grid grid-cols-2 gap-3"><div><label class="label">Display order</label><input v-model="form.sort_order" type="number" min="0" max="9999" class="input"><p class="error">{{ form.errors.sort_order }}</p></div><label class="mt-7 flex items-center gap-2 text-sm font-bold text-slate-700"><input v-model="form.is_active" type="checkbox" class="h-4 w-4 accent-prinx-500"> Published</label></div><div class="overflow-hidden rounded-[10px] border border-slate-200 bg-slate-950 p-4 text-white"><div class="relative flex h-48 items-center justify-center overflow-hidden rounded-[8px] bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,.98),rgba(255,237,213,.9)_34%,rgba(249,115,22,.34)_66%,rgba(15,23,42,.2)_100%)]"><div class="absolute h-32 w-32 rounded-full border border-white/70"></div><div class="absolute h-24 w-24 rounded-full border border-prinx-300/60"></div><div class="absolute bottom-5 h-5 w-32 rounded-full bg-slate-950/25 blur-md"></div><img :src="previewImage" :alt="previewTitle" class="relative z-10 h-[78%] w-[78%] object-contain drop-shadow-[0_24px_26px_rgba(15,23,42,.35)]"></div><p class="mt-4 text-[9px] font-black uppercase tracking-[.18em] text-prinx-400">{{ form.eyebrow || defaultEyebrow }}</p><h3 class="mt-2 line-clamp-2 text-lg font-black">{{ previewTitle }}</h3><p class="mt-2 line-clamp-3 text-xs leading-5 text-slate-400">{{ previewDescription }}</p></div><button class="btn-primary w-full py-3" :disabled="form.processing">{{ form.processing ? 'Saving...' : editingId ? 'Save slide' : 'Add to carousel' }}</button><button v-if="editingId" type="button" class="w-full text-sm font-bold text-slate-500 hover:text-prinx-600" @click="resetForm">Cancel editing</button></form></section>
-<section><div class="mb-4 flex items-center justify-between gap-4"><div><h2 class="text-lg font-black text-slate-950">Selected carousel items</h2><p class="mt-1 text-xs text-slate-500">Lower display-order numbers appear first.</p></div><span class="status bg-prinx-50 text-prinx-700">{{ slides.length }} slides</span></div><div class="space-y-4"><article v-for="(slide,index) in slides" :key="slide.id" class="card overflow-hidden"><div class="grid md:grid-cols-[210px_1fr]"><div class="relative flex min-h-48 items-center justify-center overflow-hidden border-b border-slate-200 bg-[radial-gradient(circle_at_50%_38%,#fff_0%,#ffedd5_36%,#fed7aa_58%,#f8fafc_100%)] p-5 md:border-b-0 md:border-r"><img :src="slideImage(slide)" :alt="slideItem(slide)?.name" class="relative z-10 h-36 w-full object-contain drop-shadow-[0_22px_24px_rgba(15,23,42,.3)]"><span class="absolute left-3 top-3 rounded-[8px] bg-slate-950 px-2.5 py-1 text-[9px] font-black uppercase tracking-[.14em] text-white">{{ String(index+1).padStart(2,'0') }}</span></div><div class="p-5"><div class="flex flex-wrap items-start justify-between gap-3"><div class="min-w-0"><p class="text-[10px] font-black uppercase tracking-[.16em] text-prinx-600">{{ slide.eyebrow || (slide.item_type==='product'?'Featured product':'Professional service') }}</p><h3 class="mt-1 text-xl font-black text-slate-950">{{ slide.headline || slideItem(slide)?.name || 'Unavailable item' }}</h3><p class="mt-1 text-xs font-bold text-slate-400">{{ slide.item_type }} · Order {{ slide.sort_order }}</p></div><span :class="['status',slide.is_active?'bg-emerald-100 text-emerald-700':'bg-slate-100 text-slate-500']">{{ slide.is_active?'Published':'Hidden' }}</span></div><p class="mt-4 max-w-3xl text-sm leading-6 text-slate-600">{{ plainText(slide.description || slideItem(slide)?.short_description || slideItem(slide)?.plain_description || slideItem(slide)?.description) }}</p><div class="mt-5 flex justify-end gap-2 border-t border-slate-100 pt-4"><button class="btn-light px-3 py-2" @click="editSlide(slide)">Edit</button><button class="btn-danger" @click="removeSlide(slide)">Delete</button></div></div></div></article><div v-if="!slides.length" class="card py-20 text-center"><div class="mx-auto flex h-14 w-14 items-center justify-center rounded-[10px] bg-prinx-50 text-prinx-600"><Icon name="gallery" :size="25" /></div><p class="mt-4 font-black text-slate-800">No carousel items selected</p><p class="mt-1 text-sm text-slate-500">Choose a product or service using the form.</p></div></div></section></div>
-<section v-else class="mt-7"><div class="rounded-[10px] border border-red-200 bg-red-50 p-5"><h2 class="font-black text-red-900">Carousel Trash</h2><p class="mt-1 text-sm text-red-700">Deleted slide settings remain recoverable.</p></div><div class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3"><article v-for="slide in slides" :key="slide.id" class="card p-4"><div class="flex items-center gap-3"><img :src="slideImage(slide)" :alt="slideItem(slide)?.name" class="h-16 w-16 rounded-[9px] border border-slate-200 bg-orange-50 object-contain p-1.5"><div class="min-w-0"><p class="truncate font-black text-slate-900">{{ slide.headline || slideItem(slide)?.name || 'Unavailable item' }}</p><p class="mt-1 text-xs text-slate-500">Deleted {{ new Date(slide.deleted_at).toLocaleString() }}</p></div></div><button class="btn-primary mt-4 w-full" @click="restoreSlide(slide)">Restore slide</button></article><div v-if="!slides.length" class="card col-span-full py-16 text-center text-sm font-semibold text-slate-500">Carousel Trash is empty.</div></div></section></AdminLayout></template>
+<template>
+    <AdminLayout>
+        <Head title="Homepage Carousel" />
+
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <p class="section-kicker">Homepage presentation</p>
+                <h1 class="section-title">Image banner carousel</h1>
+                <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Upload finished promotional banner images for the top of the homepage. Products are no longer used as carousel slides.</p>
+            </div>
+            <button class="btn-light self-start" type="button" @click="switchView(trash ? '' : 'trash')">{{ trash ? 'Back to carousel' : `Trash (${counts.trash || 0})` }}</button>
+        </div>
+
+        <div v-if="!trash" class="mt-7 grid gap-6 xl:grid-cols-[410px_1fr]">
+            <section class="card h-fit overflow-hidden xl:sticky xl:top-24">
+                <div class="border-b border-slate-200 bg-slate-50 px-5 py-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.16em] text-prinx-600">{{ editingId ? 'Editing banner' : 'New banner' }}</p>
+                    <h2 class="mt-1 text-lg font-black text-slate-950">{{ editingId ? 'Update banner' : 'Add homepage banner' }}</h2>
+                </div>
+
+                <form class="space-y-4 p-5" @submit.prevent="save">
+                    <div>
+                        <label class="label">Banner image {{ editingId ? '' : '*' }}</label>
+                        <input type="file" accept="image/jpeg,image/png,image/webp" class="input py-2" @change="onImageSelected">
+                        <p class="error">{{ form.errors.image }}</p>
+                        <p class="mt-1 text-[11px] leading-5 text-slate-400">Recommended size: 1600 × 500 px or a similar wide ratio. Minimum: 1000 × 280 px.</p>
+                    </div>
+
+                    <div v-if="previewImage" class="overflow-hidden rounded-[9px] border border-slate-200 bg-slate-100">
+                        <div class="aspect-[16/5] overflow-hidden">
+                            <img :src="previewImage" :alt="form.image_alt || form.headline || 'Banner preview'" class="h-full w-full object-cover">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="label">Banner name</label>
+                        <input v-model="form.headline" class="input" maxlength="191" placeholder="Example: Back to School Offer">
+                        <p class="mt-1 text-[11px] text-slate-400">Used in admin only; it is not printed over the banner.</p>
+                    </div>
+
+                    <div>
+                        <label class="label">Image alt text</label>
+                        <input v-model="form.image_alt" class="input" maxlength="191" placeholder="Describe what the banner promotes">
+                    </div>
+
+                    <div>
+                        <label class="label">Destination link</label>
+                        <input v-model="form.link_url" class="input" placeholder="/shop or https://example.com/page">
+                        <p class="error">{{ form.errors.link_url }}</p>
+                        <p class="mt-1 text-[11px] text-slate-400">Optional. Clicking the banner opens this page.</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="label">Display order</label>
+                            <input v-model="form.sort_order" type="number" min="0" max="9999" class="input">
+                            <p class="error">{{ form.errors.sort_order }}</p>
+                        </div>
+                        <label class="mt-7 flex items-center gap-2 text-sm font-bold text-slate-700">
+                            <input v-model="form.is_active" type="checkbox" class="h-4 w-4 accent-prinx-500"> Published
+                        </label>
+                    </div>
+
+                    <button class="btn-primary w-full py-3" :disabled="form.processing">{{ form.processing ? 'Saving...' : editingId ? 'Save banner' : 'Add banner' }}</button>
+                    <button v-if="editingId" type="button" class="w-full text-sm font-bold text-slate-500 hover:text-prinx-600" @click="resetForm">Cancel editing</button>
+                </form>
+            </section>
+
+            <section>
+                <div class="mb-4 flex items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-black text-slate-950">Homepage banners</h2>
+                        <p class="mt-1 text-xs text-slate-500">Lower display-order numbers appear first.</p>
+                    </div>
+                    <span class="status bg-prinx-50 text-prinx-700">{{ slides.length }} banners</span>
+                </div>
+
+                <div class="space-y-4">
+                    <article v-for="(slide, index) in slides" :key="slide.id" class="card overflow-hidden">
+                        <div class="grid lg:grid-cols-[360px_1fr]">
+                            <div class="relative aspect-[16/5] overflow-hidden border-b border-slate-200 bg-slate-100 lg:aspect-auto lg:min-h-[160px] lg:border-b-0 lg:border-r">
+                                <img :src="slide.image_url" :alt="slide.image_alt || slide.headline || 'Carousel banner'" class="h-full w-full object-cover">
+                                <span class="absolute left-3 top-3 rounded-[7px] bg-slate-950/85 px-2.5 py-1 text-[9px] font-black uppercase tracking-[.14em] text-white">{{ String(index + 1).padStart(2, '0') }}</span>
+                            </div>
+                            <div class="p-5">
+                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <h3 class="text-lg font-black text-slate-950">{{ slide.headline || 'Homepage banner' }}</h3>
+                                        <p class="mt-1 text-xs font-bold text-slate-400">Order {{ slide.sort_order }}</p>
+                                    </div>
+                                    <span :class="['status', slide.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500']">{{ slide.is_active ? 'Published' : 'Hidden' }}</span>
+                                </div>
+                                <p v-if="slide.image_alt" class="mt-3 text-sm text-slate-600">{{ slide.image_alt }}</p>
+                                <p v-if="slide.link_url" class="mt-2 truncate text-xs font-semibold text-prinx-600">{{ slide.link_url }}</p>
+                                <div class="mt-5 flex justify-end gap-2 border-t border-slate-100 pt-4">
+                                    <button class="btn-light px-3 py-2" @click="editSlide(slide)">Edit</button>
+                                    <button class="btn-danger" @click="removeSlide(slide)">Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <div v-if="!slides.length" class="card py-20 text-center">
+                        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-[10px] bg-prinx-50 text-prinx-600"><Icon name="gallery" :size="25" /></div>
+                        <p class="mt-4 font-black text-slate-800">No image banners yet</p>
+                        <p class="mt-1 text-sm text-slate-500">Upload the first homepage banner using the form.</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <section v-else class="mt-7">
+            <div class="rounded-[10px] border border-red-200 bg-red-50 p-5">
+                <h2 class="font-black text-red-900">Carousel Trash</h2>
+                <p class="mt-1 text-sm text-red-700">Deleted banner images remain recoverable.</p>
+            </div>
+            <div class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <article v-for="slide in slides" :key="slide.id" class="card p-4">
+                    <img :src="slide.image_url" :alt="slide.image_alt || slide.headline || 'Deleted banner'" class="aspect-[16/5] w-full rounded-[8px] border border-slate-200 bg-slate-100 object-cover">
+                    <p class="mt-3 truncate font-black text-slate-900">{{ slide.headline || 'Homepage banner' }}</p>
+                    <p class="mt-1 text-xs text-slate-500">Deleted {{ new Date(slide.deleted_at).toLocaleString() }}</p>
+                    <button class="btn-primary mt-4 w-full" @click="restoreSlide(slide)">Restore banner</button>
+                </article>
+                <div v-if="!slides.length" class="card col-span-full py-16 text-center text-sm font-semibold text-slate-500">Carousel Trash is empty.</div>
+            </div>
+        </section>
+    </AdminLayout>
+</template>
