@@ -6,6 +6,8 @@ use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -52,6 +54,14 @@ class HandleInertiaRequests extends Middleware
             'x' => $value('x_url'),
         ];
         $databaseProfiles = array_values(array_filter($social));
+        $paymentStrip = $value('payment_strip');
+        $paymentStripUrl = null;
+
+        if ($paymentStrip) {
+            $paymentStripUrl = Str::startsWith($paymentStrip, ['http://', 'https://', '/'])
+                ? $paymentStrip
+                : Storage::disk(config('media.disk', 'public'))->url($paymentStrip);
+        }
 
         return [
             ...parent::share($request),
@@ -80,6 +90,7 @@ class HandleInertiaRequests extends Middleware
                 'working_hours' => $value('working_hours'),
                 'maps_url' => $value('maps_url'),
                 'legal_name' => $value('legal_name', config('store.legal_name')),
+                'payment_strip_url' => $paymentStripUrl,
                 'social' => $social,
                 'same_as' => $databaseProfiles !== [] ? $databaseProfiles : config('store.social_profiles'),
                 'image_credit' => config('store.image_credit'),
