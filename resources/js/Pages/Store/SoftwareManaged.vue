@@ -111,10 +111,10 @@ const implementation = [
                     <div v-else class="mt-3 rounded-[8px] border border-slate-200 bg-white px-5 py-12 text-center text-sm text-slate-500">Software solutions are being prepared. Contact Prinx for a custom system consultation.</div>
                 </section>
 
-                <section class="mt-3 grid overflow-hidden rounded-[8px] border border-slate-200 bg-white sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-                    <div v-for="item in capabilities" :key="item[0]" class="flex min-h-[70px] items-center gap-3 border-b border-slate-100 px-4 py-3 sm:border-r lg:border-b-0 last:border-r-0">
-                        <span class="flex h-9 w-9 shrink-0 items-center justify-center text-prinx-600"><svg viewBox="0 0 24 24" class="h-7 w-7 fill-none stroke-current" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><path stroke-linecap="round" d="m8.5 12 2.2 2.2 4.8-5"/></svg></span>
-                        <div><h3 class="text-xs font-semibold text-slate-900">{{ item[0] }}</h3><p class="mt-1 text-xs text-slate-500">{{ item[1] }}</p></div>
+                <section class="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                    <div v-for="item in capabilities" :key="item[0]" class="flex min-h-[105px] items-center gap-4 rounded-[8px] border border-slate-200 bg-white px-5 py-4">
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center text-prinx-600"><svg viewBox="0 0 24 24" class="h-8 w-8 fill-none stroke-current" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><path stroke-linecap="round" d="m8.5 12 2.2 2.2 4.8-5"/></svg></span>
+                        <div><h3 class="text-sm font-semibold text-slate-900">{{ item[0] }}</h3><p class="mt-1 text-xs leading-5 text-slate-500">{{ item[1] }}</p></div>
                     </div>
                 </section>
 
