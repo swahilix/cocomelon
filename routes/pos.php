@@ -2,11 +2,13 @@
 
 use App\Http\Controllers\Admin\LegacyPosRedirectController;
 use App\Http\Controllers\Admin\PosController;
+use App\Http\Controllers\Admin\PosCustomerController;
 use App\Http\Controllers\Admin\PosDocumentController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'permission:use_pos'])->group(function (): void {
     Route::get('pos', [PosController::class, 'index'])->name('pos.index');
+    Route::post('pos/customers', PosCustomerController::class)->name('pos.customers.store');
 
     Route::get('pos/documents', [PosDocumentController::class, 'index'])->name('pos.documents.index');
     Route::post('pos/documents/quotation', [PosDocumentController::class, 'quotation'])->name('pos.documents.quotation');
