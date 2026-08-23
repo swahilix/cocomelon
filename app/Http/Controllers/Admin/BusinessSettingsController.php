@@ -7,6 +7,7 @@ use App\Services\ImageOptimizationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -23,10 +24,13 @@ class BusinessSettingsController extends Controller
     public function edit(): Response
     {
         $settings = DB::table('business_settings')->where('id', 1)->first();
+        $paymentStrip = Schema::hasColumn('business_settings', 'payment_strip')
+            ? $settings?->payment_strip
+            : null;
 
         return Inertia::render('Admin/BusinessSettings/Edit', [
             'settings' => $settings,
-            'paymentStripUrl' => $this->mediaUrl($settings?->payment_strip),
+            'paymentStripUrl' => $this->mediaUrl($paymentStrip),
         ]);
     }
 
@@ -55,8 +59,17 @@ class BusinessSettingsController extends Controller
         ]);
 
         $current = DB::table('business_settings')->where('id', 1)->first();
+        $currentPaymentStrip = Schema::hasColumn('business_settings', 'payment_strip')
+            ? $current?->payment_strip
+            : null;
 
         if ($request->hasFile('payment_strip')) {
+            if (! Schema::hasColumn('business_settings', 'payment_strip')) {
+                throw ValidationException::withMessages([
+                    'payment_strip' => 'Run the latest database migrations before uploading the payment strip.',
+                ]);
+            }
+
             try {
                 $validated['payment_strip'] = $this->images->store(
                     $request->file('payment_strip'),
@@ -74,7 +87,7 @@ class BusinessSettingsController extends Controller
                 ]);
             }
 
-            $this->images->deleteLocal($current?->payment_strip);
+            $this->images->deleteLocal($currentPaymentStrip);
         } else {
             unset($validated['payment_strip']);
         }
