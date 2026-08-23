@@ -19,6 +19,8 @@ const props = defineProps({
 const page = usePage();
 const scanSearch = ref('');
 const scanError = ref('');
+const documentError = ref('');
+const documentProcessing = ref(false);
 const catalogSearch = ref('');
 const category = ref('');
 const brand = ref('');
@@ -176,6 +178,31 @@ function completeSale() {
     });
 }
 
+function createDocument(type) {
+    if (!form.items.length || documentProcessing.value) return;
+    documentError.value = '';
+    documentProcessing.value = true;
+
+    router.post(`/admin/pos/documents/${type}`, {
+        customer_id: form.customer_id || null,
+        customer_name: form.customer_name || null,
+        customer_phone: form.customer_phone || null,
+        customer_email: form.customer_email || null,
+        save_customer: Boolean(form.save_customer),
+        discount: Number(form.discount || 0),
+        notes: form.notes || null,
+        items: form.items.map((item) => ({
+            product_id: Number(item.product_id),
+            quantity: Number(item.quantity),
+            unit_price: Number(item.unit_price),
+        })),
+    }, {
+        preserveScroll: true,
+        onError: (errors) => { documentError.value = errors.document || 'Unable to create this document.'; },
+        onFinish: () => { documentProcessing.value = false; },
+    });
+}
+
 function payExactCash() {
     if (!form.items.length || !props.currentRegister || !cashMethod.value || form.processing) return;
     form.payment_method_id = cashMethod.value.id;
@@ -204,6 +231,7 @@ function clearSale() {
     form._operation_id = newOperationId();
     scanSearch.value = '';
     scanError.value = '';
+    documentError.value = '';
 }
 </script>
 
@@ -212,6 +240,7 @@ function clearSale() {
         <Head title="Point of Sale" />
 
         <template #header-actions>
+            <Link href="/admin/pos/documents" class="flex h-9 items-center gap-1.5 rounded-[7px] px-2.5 text-xs font-medium text-slate-300 transition hover:bg-slate-900 hover:text-white"><Icon name="document-text" :size="16" /><span class="hidden sm:inline">Documents</span></Link>
             <button type="button" class="flex h-9 items-center gap-1.5 rounded-[7px] px-2.5 text-xs font-medium text-slate-300 transition hover:bg-slate-900 hover:text-white" @click="showHeld = true">
                 <Icon name="pause-circle" :size="16" />
                 <span class="hidden sm:inline">Held</span>
@@ -221,6 +250,9 @@ function clearSale() {
 
         <div v-if="form.errors.pos" class="mb-2 flex items-center gap-2 rounded-[8px] border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
             <Icon name="danger" :size="16" class="shrink-0" />{{ form.errors.pos }}
+        </div>
+        <div v-if="documentError" class="mb-2 flex items-center gap-2 rounded-[8px] border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+            <Icon name="danger" :size="16" class="shrink-0" />{{ documentError }}
         </div>
         <div v-if="resumeHold" class="mb-2 rounded-[8px] border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
             Resuming held sale {{ resumeHold.reference }}.
@@ -297,7 +329,13 @@ function clearSale() {
                         <input v-if="!isCashPayment" v-model="form.payment_reference" class="input" placeholder="Transaction / payment reference">
                         <div v-else class="flex h-9 items-center justify-between rounded-[8px] border border-slate-200 bg-white px-3 text-xs"><span class="text-slate-400">Change</span><b class="ml-4">{{ money(change) }}</b></div>
                         <div v-if="selectedPaymentMethod && !isCashPayment && (selectedPaymentMethod.account_number || selectedPaymentMethod.account_name)" class="rounded-[7px] bg-prinx-50 px-2.5 py-2 text-[10px] text-prinx-800 md:col-span-4"><b>{{ selectedPaymentMethod.name }}</b><span v-if="selectedPaymentMethod.account_number"> · {{ selectedPaymentMethod.account_number }}</span><span v-if="selectedPaymentMethod.account_name"> · {{ selectedPaymentMethod.account_name }}</span></div>
-                        <input v-model="form.notes" class="input md:col-span-3" placeholder="Sale note (optional)">
+                        <input v-model="form.notes" class="input md:col-span-3" placeholder="Sale / document note (optional)">
+
+                        <div class="grid grid-cols-2 gap-2 md:col-span-4">
+                            <button type="button" class="flex h-9 items-center justify-center gap-1.5 rounded-[8px] border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 disabled:opacity-50" :disabled="!form.items.length || documentProcessing" @click="createDocument('quotation')"><Icon name="document-text" :size="15" />Generate quotation</button>
+                            <button type="button" class="flex h-9 items-center justify-center gap-1.5 rounded-[8px] border border-prinx-200 bg-prinx-50 px-3 text-xs font-semibold text-prinx-700 transition hover:bg-prinx-100 disabled:opacity-50" :disabled="!form.items.length || documentProcessing" @click="createDocument('invoice')"><Icon name="receipt-item" :size="15" />Generate invoice</button>
+                        </div>
+
                         <div class="grid grid-cols-3 gap-2 md:col-span-4">
                             <button type="button" class="flex h-10 items-center justify-center gap-1.5 rounded-[8px] bg-rose-700 px-3 text-xs font-semibold text-white transition hover:bg-rose-800 disabled:opacity-50" :disabled="!form.items.length || !currentRegister || form.processing" @click="holdSale"><Icon name="pause-circle" :size="16" />Hold</button>
                             <button type="button" class="flex h-10 items-center justify-center gap-1.5 rounded-[8px] bg-emerald-600 px-3 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50" :disabled="!form.items.length || !currentRegister || !cashMethod || form.processing" @click="payExactCash"><Icon name="wallet" :size="16" />Exact cash</button>
