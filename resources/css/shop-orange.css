@@ -1,0 +1,37 @@
+/* Shop palette override: replace the screenshot-reference green with the Prinx orange brand. */
+
+/* Primary green -> Prinx orange */
+[class*="bg-[#009b35]"] { background-color: #ff4d0a !important; }
+[class*="text-[#009b35]"] { color: #ff4d0a !important; }
+[class*="border-[#009b35]"] { border-color: #ff4d0a !important; }
+[class*="accent-[#009b35]"] { accent-color: #ff4d0a !important; }
+
+/* Dark green text / hover -> darker Prinx orange */
+[class*="text-[#008f31]"] { color: #ee3500 !important; }
+[class*="hover:text-[#008f31]"]:hover,
+[class*="hover:text-[#009b35]"]:hover { color: #ee3500 !important; }
+[class*="hover:bg-[#008a30]"]:hover,
+[class*="hover:bg-[#009b35]"]:hover { background-color: #ee3500 !important; }
+
+/* Pale green surfaces -> pale Prinx orange */
+[class*="bg-[#f2fbf5]"] { background-color: #fff4ed !important; }
+[class*="bg-[#f2faf4]"] { background-color: #fff4ed !important; }
+[class*="bg-[#eff9f2]"] { background-color: #fff4ed !important; }
+[class*="hover:bg-[#f2fbf5]"]:hover { background-color: #fff4ed !important; }
+
+/* Green borders / tracks -> orange equivalents */
+[class*="border-[#57be78]"] { border-color: #ff7138 !important; }
+[class*="border-[#bfe7cc]"] { border-color: #ffc9a8 !important; }
+[class*="border-[#cfe8d7]"] { border-color: #ffc9a8 !important; }
+[class*="border-[#8fd6a5]"] { border-color: #ffa270 !important; }
+[class*="hover:border-[#cfe8d7]"]:hover { border-color: #ffc9a8 !important; }
+[class*="hover:border-[#8fd6a5]"]:hover { border-color: #ffa270 !important; }
+[class*="bg-[#cdebd6]"] { background-color: #ffe6d4 !important; }
+
+/* Orange versions of the green shadows used by the shop header/back-to-top control. */
+[class*="shadow-[0_3px_8px_rgba(0,155,53,.18)]"] { box-shadow: 0 3px 8px rgba(255, 77, 10, .18) !important; }
+[class*="shadow-[0_6px_18px_rgba(0,155,53,.3)]"] { box-shadow: 0 6px 18px rgba(255, 77, 10, .30) !important; }
+
+/* Remove the remaining literal greens visible in the redesigned shop UI. */
+[class*="bg-green-600"] { background-color: #ff4d0a !important; }
+[class*="text-[#159447]"] { color: #ff4d0a !important; }
