@@ -13,6 +13,22 @@ const store = computed(() => page.props.store || {});
 const currency = computed(() => store.value.currency || 'TZS');
 const money = (value) => `${currency.value} ${Number(value || 0).toLocaleString('en-TZ', { maximumFractionDigits: 0 })}`;
 const itemCount = computed(() => Number(props.cart?.count || 0));
+const whatsappHref = computed(() => {
+    const digits = String(store.value.whatsapp || store.value.phone || '').replace(/\D/g, '');
+
+    if (!digits) return '';
+
+    const items = (props.cart?.items || []).map((line) => `• ${line.product.name} × ${line.quantity} — ${money(line.line_total)}`);
+    const message = [
+        'Hello Prinx, I would like to checkout this order via WhatsApp:',
+        '',
+        ...items,
+        '',
+        `Grand Total: ${money(props.cart?.total)}`,
+    ].join('\n');
+
+    return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+});
 
 const update = (product, quantity) => {
     const max = product.track_stock ? Number(product.stock_quantity || 0) : 99;
@@ -172,6 +188,10 @@ const discount = (product) => originalPrice(product) ? Math.round((1 - Number(pr
                                 <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" stroke-width="1.8"><rect x="5" y="10" width="14" height="10" rx="2"/><path stroke-linecap="round" d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
                                 Proceed to Checkout
                             </Link>
+                            <a v-if="whatsappHref" :href="whatsappHref" target="_blank" rel="noopener" class="mt-2.5 flex h-11 w-full items-center justify-center gap-2 rounded-[6px] border border-[#25D366] bg-white px-5 text-xs font-semibold text-[#128C7E] transition hover:bg-[#f1fff6]">
+                                <svg viewBox="0 0 24 24" class="h-[18px] w-[18px] fill-current" aria-hidden="true"><path d="M12.04 2a9.84 9.84 0 0 0-8.42 14.92L2 22l5.21-1.58A9.96 9.96 0 1 0 12.04 2Zm0 17.98a8.04 8.04 0 0 1-4.1-1.12l-.29-.17-3.09.94.99-3-.19-.31A7.94 7.94 0 1 1 12.04 19.98Zm4.39-5.95c-.24-.12-1.42-.7-1.64-.78-.22-.08-.38-.12-.54.12-.16.24-.62.78-.76.94-.14.16-.28.18-.52.06-.24-.12-1.01-.37-1.93-1.18-.71-.64-1.19-1.42-1.33-1.66-.14-.24-.02-.37.1-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.78-.2-.48-.39-.41-.54-.42h-.46c-.16 0-.42.06-.64.3-.22.24-.84.82-.84 2 0 1.18.86 2.32.98 2.48.12.16 1.69 2.58 4.1 3.62.57.25 1.02.4 1.37.51.58.18 1.1.16 1.51.1.46-.07 1.42-.58 1.62-1.14.2-.56.2-1.04.14-1.14-.06-.1-.22-.16-.46-.28Z"/></svg>
+                                Checkout by WhatsApp
+                            </a>
                             <Link href="/checkout" class="mt-2.5 flex h-11 w-full items-center justify-center gap-2 rounded-[6px] border border-prinx-300 bg-white px-5 text-xs font-semibold text-prinx-600 transition hover:bg-prinx-50">
                                 <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" stroke-width="1.7"><rect x="6" y="2" width="12" height="20" rx="2"/><path stroke-linecap="round" d="M9 5h6M10 19h4"/></svg>
                                 Mobile Money at Checkout
