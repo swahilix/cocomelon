@@ -56,7 +56,6 @@ const processSteps = [
                 </div>
 
                 <section class="relative mt-4 overflow-hidden rounded-[9px] border border-prinx-100 bg-gradient-to-r from-[#fff8f4] via-[#fffdfb] to-[#fff6f0] px-5 py-6 sm:px-7 lg:min-h-[218px] lg:px-8 lg:py-8">
-                    <div class="pointer-events-none absolute inset-0 opacity-55" style="background-image:radial-gradient(circle at 90% 18%,rgba(255,77,10,.14),transparent 20%),linear-gradient(rgba(255,77,10,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,77,10,.05) 1px,transparent 1px);background-size:auto,28px 28px,28px 28px"></div>
                     <div class="relative z-10 grid items-center gap-8 lg:grid-cols-[.72fr_1.28fr]">
                         <div>
                             <h2 class="max-w-[430px] text-[25px] font-semibold leading-[1.23] tracking-[-.025em] text-slate-950 sm:text-[31px]">
@@ -76,21 +75,10 @@ const processSteps = [
                         </div>
 
                         <div class="relative hidden min-h-[165px] items-end justify-center lg:flex">
-                            <div class="absolute bottom-0 h-[54px] w-[82%] rounded-[50%] border border-prinx-200 bg-white/85 shadow-[0_15px_35px_rgba(15,23,42,.08)]"></div>
-                            <div class="absolute left-[12%] top-[8%] h-5 w-5 rotate-12 rounded-[4px] bg-prinx-400/80"></div>
-                            <div class="absolute right-[14%] top-[12%] flex h-14 w-14 items-center justify-center rounded-[16px] border-2 border-prinx-400 bg-white text-prinx-500 shadow-sm">
-                                <svg viewBox="0 0 24 24" class="h-8 w-8 fill-none stroke-current" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3 5 7v5c0 4.3 2.5 7.3 7 9 4.5-1.7 7-4.7 7-9V7l-7-4Z"/><path stroke-linecap="round" d="m9 12 2 2 4-4"/></svg>
-                            </div>
                             <div class="relative z-10 mb-5 flex items-end justify-center gap-3">
-                                <div class="flex h-[112px] w-[92px] items-center justify-center rounded-[12px] border border-slate-200 bg-white p-2 shadow-[0_12px_28px_rgba(15,23,42,.10)]">
-                                    <img :src="heroImages[0]" alt="Prinx service device" class="max-h-full max-w-full object-contain">
-                                </div>
-                                <div class="flex h-[142px] w-[200px] items-center justify-center rounded-[12px] border border-slate-200 bg-white p-3 shadow-[0_14px_30px_rgba(15,23,42,.12)]">
-                                    <img :src="heroImages[1]" alt="Prinx service equipment" class="max-h-full max-w-full object-contain">
-                                </div>
-                                <div class="flex h-[92px] w-[116px] items-center justify-center rounded-[12px] border border-slate-200 bg-white p-2 shadow-[0_10px_25px_rgba(15,23,42,.10)]">
-                                    <img :src="heroImages[2]" alt="Prinx service accessory" class="max-h-full max-w-full object-contain">
-                                </div>
+                                <img :src="heroImages[0]" alt="Prinx service device" class="h-[112px] w-[92px] object-contain">
+                                <img :src="heroImages[1]" alt="Prinx service equipment" class="h-[142px] w-[200px] object-contain">
+                                <img :src="heroImages[2]" alt="Prinx service accessory" class="h-[92px] w-[116px] object-contain">
                             </div>
                         </div>
                     </div>
