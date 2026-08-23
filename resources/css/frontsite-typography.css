@@ -1,0 +1,14 @@
+/* Public storefront typography guard.
+   Any legacy arbitrary font utility below 12px is raised to 12px.
+   Admin and POS shells intentionally keep their compact typography. */
+body:not(:has(.admin-shell)):not(:has(.pos-shell)) [class*="text-[8px]"],
+body:not(:has(.admin-shell)):not(:has(.pos-shell)) [class*="text-[9px]"],
+body:not(:has(.admin-shell)):not(:has(.pos-shell)) [class*="text-[10px]"],
+body:not(:has(.admin-shell)):not(:has(.pos-shell)) [class*="text-[11px]"],
+body:not(:has(.admin-shell)):not(:has(.pos-shell)) [class*="text-[8."],
+body:not(:has(.admin-shell)):not(:has(.pos-shell)) [class*="text-[9."],
+body:not(:has(.admin-shell)):not(:has(.pos-shell)) [class*="text-[10."],
+body:not(:has(.admin-shell)):not(:has(.pos-shell)) [class*="text-[11."],
+body:not(:has(.admin-shell)):not(:has(.pos-shell)) .image-spec {
+    font-size: 12px !important;
+}
