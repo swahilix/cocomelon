@@ -204,7 +204,7 @@ const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label 
                         </div>
                     </div>
 
-                    <div v-if="products.data.length && viewMode === 'grid'" class="grid grid-cols-2 gap-[10px] sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                    <div v-if="products.data.length && viewMode === 'grid'" class="grid grid-cols-2 gap-[10px] sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                         <article v-for="product in products.data" :key="product.id" class="group min-w-0 overflow-hidden rounded-[8px] border border-slate-200 bg-white transition hover:border-prinx-200 hover:shadow-[0_10px_24px_rgba(15,23,42,.06)]">
                             <Link :href="`/products/${product.slug}`" class="relative block h-[156px] overflow-hidden bg-white p-3">
                                 <img :src="product.image_url" :alt="product.name" class="h-full w-full object-contain transition duration-300 group-hover:scale-[1.025]" loading="lazy" decoding="async">
