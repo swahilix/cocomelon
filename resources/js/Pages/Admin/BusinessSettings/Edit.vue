@@ -3,9 +3,10 @@ import { Head, useForm } from '@inertiajs/vue3';
 import AdminLayout from '../../../Layouts/AdminLayout.vue';
 import Icon from '../../../Components/Icon.vue';
 
-const props = defineProps({ settings: Object });
+const props = defineProps({ settings: Object, paymentStripUrl: String });
 
 const form = useForm({
+    _method: 'put',
     business_name: props.settings?.business_name || 'Prinx Electronics',
     legal_name: props.settings?.legal_name || '',
     email: props.settings?.email || '',
@@ -24,9 +25,14 @@ const form = useForm({
     youtube_url: props.settings?.youtube_url || '',
     x_url: props.settings?.x_url || '',
     maps_url: props.settings?.maps_url || '',
+    payment_strip: null,
 });
 
-const save = () => form.put('/admin/business-settings', { preserveScroll: true });
+const save = () => form.post('/admin/business-settings', {
+    forceFormData: true,
+    preserveScroll: true,
+    onSuccess: () => { form.payment_strip = null; },
+});
 </script>
 
 <template>
@@ -101,6 +107,25 @@ const save = () => form.put('/admin/business-settings', { preserveScroll: true }
                     </div>
                 </section>
 
+                <section class="form-section">
+                    <div class="mb-3 flex items-start gap-2">
+                        <span class="flex h-8 w-8 items-center justify-center rounded-[8px] bg-prinx-50 text-prinx-600"><Icon name="card" :size="17" /></span>
+                        <div><h2 class="font-semibold text-slate-900">Footer payment methods</h2><p class="text-[11px] text-slate-500">Upload one wide “We Accept” strip containing all supported payment logos.</p></div>
+                    </div>
+                    <div>
+                        <label class="label">We Accept strip</label>
+                        <input type="file" class="input" accept="image/jpeg,image/png,image/webp" @change="form.payment_strip = $event.target.files[0] || null">
+                        <p class="image-spec">Recommended: wide transparent image similar to 2048 × 256 px · PNG, JPG or WebP · max 4 MB.</p>
+                        <p v-if="form.errors.payment_strip" class="error">{{ form.errors.payment_strip }}</p>
+                    </div>
+                    <div v-if="paymentStripUrl" class="mt-4">
+                        <p class="label">Current footer strip</p>
+                        <div class="flex min-h-24 items-center justify-center overflow-hidden rounded-[9px] border border-slate-200 bg-white p-4">
+                            <img :src="paymentStripUrl" alt="Accepted payment methods" class="max-h-20 max-w-full object-contain">
+                        </div>
+                    </div>
+                </section>
+
                 <div class="flex justify-end pb-2">
                     <button type="submit" class="btn-primary" :disabled="form.processing"><Icon name="tick-circle" :size="15" /> Save business settings</button>
                 </div>
@@ -117,6 +142,9 @@ const save = () => form.put('/admin/business-settings', { preserveScroll: true }
                             <div v-if="form.email" class="flex items-center gap-2"><Icon name="sms" :size="14" class="text-prinx-600" /><span class="break-all">{{ form.email }}</span></div>
                             <div v-if="form.address || form.city || form.region" class="flex items-start gap-2"><Icon name="location" :size="14" class="mt-0.5 shrink-0 text-prinx-600" /><span>{{ [form.address, form.city, form.region, form.country].filter(Boolean).join(', ') }}</span></div>
                             <div v-if="form.working_hours" class="flex items-center gap-2"><Icon name="clock" :size="14" class="text-prinx-600" /><span>{{ form.working_hours }}</span></div>
+                        </div>
+                        <div v-if="paymentStripUrl" class="mt-5 border-t border-slate-100 pt-4">
+                            <img :src="paymentStripUrl" alt="Accepted payment methods" class="max-h-12 max-w-full object-contain">
                         </div>
                     </div>
                 </section>
