@@ -9,16 +9,6 @@ const page = usePage();
 const store = computed(() => page.props.store || {});
 const featuredImages = computed(() => props.softwareSolutions.filter((item) => item.image_url).slice(0, 3));
 
-const capabilities = [
-    ['Custom Development', 'Built around your needs', 'code'],
-    ['Implementation Support', 'We set up and guide you', 'support'],
-    ['Training & Handover', 'Empower your team', 'people'],
-    ['Cloud Hosting', 'Secure & reliable hosting', 'cloud'],
-    ['Deployment', 'On-premise or cloud', 'deploy'],
-    ['Maintenance & Updates', 'Keep your system running', 'shield'],
-    ['After-Sales Support', "We're here for you", 'headset'],
-];
-
 const reasons = [
     ['Custom-Built', 'Solutions tailored to your business processes.', 'puzzle'],
     ['Scalable', 'Systems that grow with your business and needs.', 'chart'],
@@ -109,13 +99,6 @@ const implementation = [
                         </article>
                     </div>
                     <div v-else class="mt-3 rounded-[8px] border border-slate-200 bg-white px-5 py-12 text-center text-sm text-slate-500">Software solutions are being prepared. Contact Prinx for a custom system consultation.</div>
-                </section>
-
-                <section class="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-                    <div v-for="item in capabilities" :key="item[0]" class="flex min-h-[105px] items-center gap-4 rounded-[8px] border border-slate-200 bg-white px-5 py-4">
-                        <span class="flex h-10 w-10 shrink-0 items-center justify-center text-prinx-600"><svg viewBox="0 0 24 24" class="h-8 w-8 fill-none stroke-current" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><path stroke-linecap="round" d="m8.5 12 2.2 2.2 4.8-5"/></svg></span>
-                        <div><h3 class="text-sm font-semibold text-slate-900">{{ item[0] }}</h3><p class="mt-1 text-xs leading-5 text-slate-500">{{ item[1] }}</p></div>
-                    </div>
                 </section>
 
                 <section class="mt-4 grid gap-3 xl:grid-cols-[1.35fr_.85fr]">
