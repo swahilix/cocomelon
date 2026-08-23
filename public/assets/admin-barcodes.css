@@ -1,0 +1,50 @@
+.barcode-print-area {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, var(--barcode-label-width));
+    align-items: start;
+    gap: 3mm;
+}
+
+.barcode-label {
+    box-sizing: border-box;
+    width: var(--barcode-label-width);
+    height: var(--barcode-label-height);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: #fff;
+    color: #000;
+    padding: 1.4mm 1.6mm;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.barcode-label-bordered { border: .2mm dashed #94a3b8; }
+.barcode-store { text-align: center; font-size: 6.5pt; font-weight: 700; line-height: 1.1; margin-bottom: .4mm; }
+.barcode-product-name { overflow: hidden; text-align: center; font-size: 6.8pt; font-weight: 700; line-height: 1.08; white-space: nowrap; text-overflow: ellipsis; margin-bottom: .5mm; }
+.barcode-svg { display: block; width: 100%; max-width: 100%; height: auto; min-height: 8mm; }
+.barcode-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; column-gap: 1.2mm; row-gap: .2mm; margin-top: .4mm; text-align: center; line-height: 1.05; }
+.barcode-unit-code { flex-basis: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 6.4pt; font-weight: 700; letter-spacing: .02em; }
+.barcode-sku { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 5.7pt; }
+.barcode-price { font-size: 6.5pt; }
+
+@media print {
+    @page { margin: 0; }
+    html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+    .barcode-print-area {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, var(--barcode-label-width)) !important;
+        gap: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        width: 100% !important;
+    }
+    .barcode-label {
+        width: var(--barcode-label-width) !important;
+        height: var(--barcode-label-height) !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+    }
+}
