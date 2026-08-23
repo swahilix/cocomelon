@@ -20,6 +20,7 @@ const sections = computed(() => [
             ['Products', '/admin/products', 'box', ['manage_storefront']],
             ['Stock management', '/admin/stock', 'shop', ['view_inventory', 'manage_purchases']],
             ['Inventory', '/admin/stock/inventory', 'box', ['view_inventory']],
+            ['Barcode printing', '/admin/barcodes', 'box', ['view_inventory', 'manage_storefront']],
             ['Suppliers', '/admin/suppliers', 'profile', ['manage_suppliers']],
             ['Services', '/admin/services', 'setting-2', ['manage_services']],
             ['Homepage carousel', '/admin/carousel', 'monitor', ['manage_storefront']],
