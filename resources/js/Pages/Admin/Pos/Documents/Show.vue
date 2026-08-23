@@ -37,7 +37,7 @@ const printDocument = () => window.print();
 
                 <div class="sm:text-right">
                     <p class="text-[11px] font-semibold uppercase tracking-[.18em] text-prinx-600">{{ document.type === 'quotation' ? 'Quotation' : 'Invoice' }}</p>
-                    <h1 class="mt-1 text-2xl font-semibold text-slate-950">{{ document.reference }}</h1>
+                    <h1 class="mt-1 text-xl font-semibold text-slate-950">{{ document.reference }}</h1>
                     <div class="mt-3 space-y-1 text-xs text-slate-500">
                         <p><span class="font-semibold text-slate-700">Date:</span> {{ document.document_date }}</p>
                         <p v-if="document.type === 'quotation' && document.valid_until"><span class="font-semibold text-slate-700">Valid until:</span> {{ document.valid_until }}</p>
