@@ -1,2 +1,7 @@
 .homepage-store-footer { display: none !important; }
 main:has(.homepage-store-footer) + footer { display: block !important; }
+
+/* Keep the Software consultation CTA on its own full-width row below Why Choose Prinx Software. */
+.xl\:grid-cols-\[1\.35fr_\.85fr\] {
+    grid-template-columns: minmax(0, 1fr) !important;
+}
