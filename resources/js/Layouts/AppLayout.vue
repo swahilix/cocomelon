@@ -143,12 +143,6 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                             </div>
                         </div>
                     </div>
-
-                    <div class="mt-5 flex flex-wrap gap-2 text-xs font-bold">
-                        <span class="inline-flex items-center gap-1.5 rounded-[10px] border border-slate-700 px-3 py-1.5"><Icon name="shield-tick" :size="14" />Secure ordering</span>
-                        <span class="inline-flex items-center gap-1.5 rounded-[10px] border border-slate-700 px-3 py-1.5"><Icon name="headphone" :size="14" />Expert support</span>
-                        <span v-if="store.country" class="inline-flex items-center gap-1.5 rounded-[10px] border border-slate-700 px-3 py-1.5"><Icon name="location" :size="14" />{{ store.country }}</span>
-                    </div>
                 </div>
                 <div><h3 class="font-black text-white">Shop</h3><div class="mt-4 space-y-2 text-sm"><Link href="/shop" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>All products</Link><Link v-for="category in productCategories.slice(0, 4)" :key="category.id" :href="`/shop?category=${encodeURIComponent(category.slug)}`" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>{{ category.name }}</Link></div></div>
                 <div><h3 class="flex items-center gap-2 font-black text-white"><Icon name="headphone" :size="17" />Customer care</h3><div class="mt-4 space-y-2 text-sm"><Link href="/services" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>Technical services</Link><Link href="/pages/shipping" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>Shipping & delivery</Link><Link href="/pages/returns" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>Returns & refunds</Link><Link href="/pages/contact" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>Contact us</Link></div></div>
