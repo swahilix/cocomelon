@@ -60,8 +60,9 @@ class PosDocumentController extends Controller
     {
         $record = DB::table('pos_documents')
             ->leftJoin('users', 'users.id', '=', 'pos_documents.created_by')
+            ->leftJoin('pos_customers', 'pos_customers.id', '=', 'pos_documents.customer_id')
             ->where('pos_documents.id', $document)
-            ->select('pos_documents.*', 'users.name as created_by_name')
+            ->select('pos_documents.*', 'users.name as created_by_name', 'pos_customers.tin as saved_customer_tin')
             ->first();
 
         abort_unless($record, 404);
@@ -153,6 +154,7 @@ class PosDocumentController extends Controller
                     'customer_name' => $validated['customer_name'] ?? null,
                     'customer_phone' => $validated['customer_phone'] ?? null,
                     'customer_email' => $validated['customer_email'] ?? null,
+                    'customer_tin' => $validated['customer_tin'] ?? null,
                     'document_date' => now()->toDateString(),
                     'valid_until' => $type === 'quotation'
                         ? ($validated['valid_until'] ?? now()->addDays(7)->toDateString())
