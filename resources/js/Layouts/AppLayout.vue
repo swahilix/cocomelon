@@ -7,6 +7,7 @@ import Icon from '../Components/Icon.vue';
 const page = usePage();
 const open = ref(false);
 const search = ref('');
+const searchCategory = ref('');
 const user = computed(() => page.props.auth?.user);
 const cartCount = computed(() => page.props.cartCount || 0);
 const productCategories = computed(() => page.props.navigationCategories || []);
@@ -29,7 +30,12 @@ const socialLinks = computed(() => Object.entries(store.value.social || {})
 
         return { key, url, label, short };
     }));
-const submitSearch = () => router.get('/shop', { search: search.value }, { preserveState: false });
+const submitSearch = () => {
+    const params = {};
+    if (search.value.trim()) params.search = search.value.trim();
+    if (searchCategory.value) params.category = searchCategory.value;
+    router.get('/shop', params, { preserveState: false });
+};
 const logout = () => router.post('/logout');
 const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(url));
 </script>
@@ -38,74 +44,134 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
     <div class="min-h-screen bg-slate-50">
         <Flash />
 
-        <div class="bg-slate-950 text-white">
-            <div class="container-shell flex min-h-9 items-center justify-center gap-5 py-2 text-center text-[11px] font-bold sm:justify-between sm:text-xs">
-                <span class="inline-flex items-center gap-2"><Icon name="shield-tick" :size="14" class="text-prinx-400" /> Trusted electronics, professional services and responsive support.</span>
-                <div class="hidden items-center gap-5 text-slate-300 sm:flex">
-                    <a v-if="store.phone" :href="`tel:${store.phone}`" class="inline-flex items-center gap-1.5 hover:text-white"><Icon name="call" :size="14" />{{ store.phone }}</a>
-                    <a v-if="store.email" :href="`mailto:${store.email}`" class="inline-flex items-center gap-1.5 hover:text-white"><Icon name="sms" :size="14" />{{ store.email }}</a>
+        <header class="border-t border-prinx-100 bg-white text-slate-900">
+            <div class="border-b border-slate-200 bg-[#f7f7f7]">
+                <div class="container-shell flex min-h-[44px] items-center justify-between gap-4 text-[12px] text-slate-600 sm:text-[13px]">
+                    <p class="truncate">
+                        <strong class="font-semibold text-slate-950">Welcome to {{ store.name || 'Prinx Electronics' }}!</strong>
+                        <span class="hidden sm:inline"> Great electronics, accessories and professional services every day.</span>
+                    </p>
+                    <div class="hidden shrink-0 items-center divide-x divide-slate-200 lg:flex">
+                        <span class="px-5 font-medium">{{ store.currency || 'TZS' }}</span>
+                        <span class="inline-flex items-center gap-1.5 pl-5 font-medium"><span aria-hidden="true">🇬🇧</span> English <Icon name="arrow-down-1" :size="12" /></span>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-xl">
-            <div class="container-shell flex h-[76px] items-center gap-5">
-                <Link href="/" class="shrink-0">
-                    <img src="/assets/prinx-logo.png" :alt="store.name" class="h-10 w-auto max-w-[210px] object-contain sm:h-11">
-                </Link>
-
-                <nav class="hidden items-center gap-1 lg:flex">
-                    <Link href="/" :class="['rounded-[9px] px-3 py-2 text-sm font-extrabold transition', active('/') ? 'bg-prinx-50 text-prinx-600' : 'text-slate-700 hover:bg-slate-50 hover:text-prinx-600']">Home</Link>
-                    <Link href="/shop" :class="['rounded-[9px] px-3 py-2 text-sm font-extrabold transition', active('/shop') || active('/products') ? 'bg-prinx-50 text-prinx-600' : 'text-slate-700 hover:bg-slate-50 hover:text-prinx-600']">Shop</Link>
-                    <Link href="/services" :class="['rounded-[9px] px-3 py-2 text-sm font-extrabold transition', active('/services') ? 'bg-prinx-50 text-prinx-600' : 'text-slate-700 hover:bg-slate-50 hover:text-prinx-600']">Services</Link>
-                    <Link href="/pages/about" class="rounded-[9px] px-3 py-2 text-sm font-extrabold text-slate-700 transition hover:bg-slate-50 hover:text-prinx-600">About</Link>
-                    <Link href="/pages/contact" class="rounded-[9px] px-3 py-2 text-sm font-extrabold text-slate-700 transition hover:bg-slate-50 hover:text-prinx-600">Contact</Link>
-                </nav>
-
-                <form class="ml-auto hidden max-w-sm flex-1 xl:flex" @submit.prevent="submitSearch">
-                    <div class="relative w-full">
-                        <Icon name="search-normal" :size="20" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input v-model="search" class="input h-11 pl-10 pr-24" placeholder="Search products...">
-                        <button class="absolute right-1.5 top-1/2 inline-flex -translate-y-1/2 items-center gap-1.5 rounded-[8px] bg-slate-950 px-3 py-2 text-xs font-black text-white hover:bg-prinx-500"><Icon name="search-normal" :size="14" />Search</button>
-                    </div>
-                </form>
-
-                <div class="ml-auto flex items-center gap-2 xl:ml-0">
-                    <Link v-if="user?.is_admin" href="/admin" class="btn-light hidden px-3 sm:inline-flex"><Icon name="category" :size="16" />Admin</Link>
-                    <Link v-else-if="!user" href="/login" class="btn-light hidden px-3 sm:inline-flex"><Icon name="login" :size="16" />Sign in</Link>
-                    <button v-else type="button" class="btn-light hidden px-3 sm:inline-flex" @click="logout"><Icon name="logout" :size="16" />Sign out</button>
-
-                    <Link href="/cart" class="relative inline-flex h-11 w-11 items-center justify-center rounded-[10px] border border-slate-200 bg-white text-slate-800 shadow-sm transition hover:border-prinx-300 hover:text-prinx-600" aria-label="Shopping cart">
-                        <Icon name="shopping-cart" :size="21" />
-                        <span v-if="cartCount" class="absolute -right-1.5 -top-1.5 min-w-5 rounded-[10px] bg-prinx-500 px-1 text-center text-[10px] font-black leading-5 text-white">{{ cartCount }}</span>
+            <div class="hidden lg:block">
+                <div class="container-shell flex min-h-[124px] items-center gap-8 py-6">
+                    <Link href="/" class="w-[230px] shrink-0">
+                        <img src="/assets/prinx-logo.png" :alt="store.name" class="h-14 w-auto max-w-[220px] object-contain">
                     </Link>
 
-                    <button class="inline-flex h-11 w-11 items-center justify-center rounded-[10px] border border-slate-200 bg-white lg:hidden" @click="open=!open" aria-label="Menu">
-                        <Icon :name="open ? 'close-circle' : 'menu'" :size="24" />
-                    </button>
+                    <form class="flex h-[52px] min-w-0 flex-1 overflow-hidden border border-slate-300 bg-white" @submit.prevent="submitSearch">
+                        <select v-model="searchCategory" class="w-[200px] shrink-0 border-0 border-r border-slate-200 bg-[#f8f8f8] px-5 text-[14px] font-medium text-slate-700 outline-none">
+                            <option value="">All Categories</option>
+                            <option v-for="category in productCategories" :key="category.id" :value="category.slug">{{ category.name }}</option>
+                        </select>
+                        <input v-model="search" class="min-w-0 flex-1 border-0 px-5 text-[14px] outline-none placeholder:text-slate-400" placeholder="Search products...">
+                        <button type="submit" class="flex w-[86px] shrink-0 items-center justify-center bg-prinx-500 text-white transition hover:bg-prinx-600" aria-label="Search">
+                            <Icon name="search-normal" :size="22" />
+                        </button>
+                    </form>
+
+                    <div class="flex shrink-0 items-center gap-5">
+                        <Link href="/services" class="flex h-12 w-12 items-center justify-center text-slate-800 transition hover:text-prinx-500" title="Services">
+                            <Icon name="refresh-2" :size="29" />
+                        </Link>
+                        <Link href="/pages/contact" class="flex h-12 w-12 items-center justify-center text-slate-800 transition hover:text-prinx-500" title="Customer support">
+                            <Icon name="heart" :size="29" />
+                        </Link>
+                        <Link href="/cart" class="group flex items-center gap-3" aria-label="Shopping cart">
+                            <span class="relative flex h-[56px] w-[56px] items-center justify-center rounded-full bg-prinx-500 text-white transition group-hover:bg-prinx-600">
+                                <Icon name="bag-2" :size="25" />
+                                <span class="absolute -right-1 -top-2 flex h-6 min-w-6 items-center justify-center rounded-full bg-slate-800 px-1 text-[11px] font-semibold text-white">{{ cartCount }}</span>
+                            </span>
+                            <span class="whitespace-nowrap text-[14px] font-semibold text-slate-950">MY CART <span class="font-medium text-prinx-600">- {{ cartCount }} item{{ cartCount === 1 ? '' : 's' }}</span></span>
+                        </Link>
+                    </div>
+                </div>
+
+                <div class="border-b border-slate-200">
+                    <div class="container-shell flex h-[58px] items-stretch">
+                        <div class="group relative flex w-[330px] shrink-0 items-center">
+                            <button type="button" class="flex h-full w-full items-center gap-3 pr-7 text-left text-[15px] font-bold text-slate-950">
+                                <Icon name="menu" :size="23" />
+                                <span>ALL CATEGORIES</span>
+                                <Icon name="arrow-down-1" :size="16" class="ml-auto" />
+                            </button>
+                            <div class="invisible absolute left-0 top-full z-50 w-[300px] translate-y-1 border border-slate-200 bg-white py-2 opacity-0 shadow-xl transition group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                                <Link href="/shop" class="block px-4 py-2.5 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 hover:text-prinx-600">Shop all products</Link>
+                                <Link v-for="category in productCategories" :key="category.id" :href="`/shop?category=${encodeURIComponent(category.slug)}`" class="block border-t border-slate-100 px-4 py-2.5 text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-prinx-600">{{ category.name }}</Link>
+                            </div>
+                        </div>
+
+                        <nav class="flex min-w-0 flex-1 items-stretch gap-1">
+                            <Link href="/" :class="['flex items-center px-5 text-[14px] font-bold transition hover:text-prinx-600', active('/') ? 'text-prinx-600' : 'text-slate-950']">HOME</Link>
+                            <Link href="/shop" :class="['flex items-center px-5 text-[14px] font-bold transition hover:text-prinx-600', active('/shop') || active('/products') ? 'text-prinx-600' : 'text-slate-950']">SHOP</Link>
+                            <Link href="/services" :class="['flex items-center px-5 text-[14px] font-bold transition hover:text-prinx-600', active('/services') ? 'text-prinx-600' : 'text-slate-950']">SERVICES</Link>
+                            <Link href="/pages/about" class="flex items-center px-5 text-[14px] font-bold text-slate-950 transition hover:text-prinx-600">ABOUT</Link>
+                            <Link href="/pages/contact" class="flex items-center px-5 text-[14px] font-bold text-slate-950 transition hover:text-prinx-600">CONTACT</Link>
+                            <Link href="/shop" class="flex items-center px-5 text-[14px] font-bold text-slate-950 transition hover:text-prinx-600">SPECIALS!</Link>
+                        </nav>
+
+                        <div class="ml-auto flex shrink-0 items-center pl-5">
+                            <Link v-if="user?.is_admin" href="/admin" class="inline-flex items-center gap-2 text-[13px] font-semibold text-slate-600 transition hover:text-prinx-600"><Icon name="category" :size="18" />Admin panel</Link>
+                            <button v-else-if="user" type="button" class="inline-flex items-center gap-2 text-[13px] font-semibold text-slate-600 transition hover:text-prinx-600" @click="logout"><Icon name="logout" :size="18" />Sign out</button>
+                            <Link v-else href="/login" class="inline-flex items-center gap-2 text-[13px] font-semibold text-slate-600 transition hover:text-prinx-600"><Icon name="lock" :size="18" />Login or Register</Link>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-b border-slate-200 bg-white">
+                    <div class="container-shell flex h-[44px] items-center gap-8 overflow-hidden whitespace-nowrap text-[13px] text-slate-600">
+                        <strong class="shrink-0 font-bold text-slate-950">Top Categories:</strong>
+                        <Link v-for="category in productCategories.slice(0, 10)" :key="category.id" :href="`/shop?category=${encodeURIComponent(category.slug)}`" class="shrink-0 transition hover:text-prinx-600">{{ category.name }}</Link>
+                        <Link v-if="!productCategories.length" href="/shop" class="transition hover:text-prinx-600">Electronics</Link>
+                        <Link v-if="!productCategories.length" href="/shop" class="transition hover:text-prinx-600">Accessories</Link>
+                        <Link v-if="!productCategories.length" href="/shop" class="transition hover:text-prinx-600">Smartphones</Link>
+                        <Link v-if="!productCategories.length" href="/shop" class="transition hover:text-prinx-600">Laptops</Link>
+                    </div>
                 </div>
             </div>
 
-            <div v-if="open" class="border-t border-slate-200 bg-white lg:hidden">
-                <div class="scrollbar-hidden container-shell max-h-[calc(100vh-110px)] overflow-y-auto py-4">
-                    <form class="mb-4 flex" @submit.prevent="submitSearch">
-                        <div class="relative flex-1"><Icon name="search-normal" :size="17" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" /><input v-model="search" class="input rounded-r-none pl-9" placeholder="Search products"></div>
-                        <button class="btn-primary rounded-l-none"><Icon name="search-normal" :size="15" />Go</button>
+            <div class="lg:hidden">
+                <div class="container-shell flex h-[70px] items-center gap-3">
+                    <Link href="/" class="min-w-0 flex-1">
+                        <img src="/assets/prinx-logo.png" :alt="store.name" class="h-9 w-auto max-w-[175px] object-contain">
+                    </Link>
+                    <Link href="/cart" class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-prinx-500 text-white" aria-label="Shopping cart">
+                        <Icon name="bag-2" :size="20" />
+                        <span v-if="cartCount" class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-900 px-1 text-[9px] font-bold text-white">{{ cartCount }}</span>
+                    </Link>
+                    <button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center border border-slate-200 bg-white" aria-label="Menu" @click="open = !open">
+                        <Icon :name="open ? 'close-circle' : 'menu'" :size="22" />
+                    </button>
+                </div>
+
+                <div class="container-shell pb-3">
+                    <form class="flex h-11 overflow-hidden border border-slate-300 bg-white" @submit.prevent="submitSearch">
+                        <input v-model="search" class="min-w-0 flex-1 border-0 px-3 text-[13px] outline-none" placeholder="Search products...">
+                        <button type="submit" class="flex w-12 items-center justify-center bg-prinx-500 text-white" aria-label="Search"><Icon name="search-normal" :size="19" /></button>
                     </form>
-                    <div class="grid grid-cols-2 gap-2">
-                        <Link href="/" class="rounded-[9px] bg-slate-50 px-3 py-3 font-extrabold text-slate-700">Home</Link>
-                        <Link href="/shop" class="rounded-[9px] bg-slate-50 px-3 py-3 font-extrabold text-slate-700">Shop all</Link>
-                        <Link href="/services" class="rounded-[9px] bg-slate-50 px-3 py-3 font-extrabold text-slate-700">Services</Link>
-                        <Link href="/pages/contact" class="rounded-[9px] bg-slate-50 px-3 py-3 font-extrabold text-slate-700">Contact</Link>
-                    </div>
-                    <p class="mt-5 flex items-center gap-2 px-1 text-[10px] font-black uppercase tracking-[.18em] text-slate-400"><Icon name="category" :size="14" />Product categories</p>
-                    <div class="mt-2 grid grid-cols-2 gap-2">
-                        <Link v-for="category in productCategories" :key="category.id" :href="`/shop?category=${encodeURIComponent(category.slug)}`" class="inline-flex items-center gap-2 rounded-[9px] border border-slate-200 px-3 py-2.5 text-sm font-bold text-slate-700"><Icon name="box" :size="15" />{{ category.name }}</Link>
-                    </div>
-                    <div class="mt-4 border-t border-slate-200 pt-4">
-                        <Link v-if="user?.is_admin" href="/admin" class="flex items-center gap-2 rounded-[9px] px-3 py-2.5 font-bold text-slate-700"><Icon name="category" :size="17" />Admin panel</Link>
-                        <Link v-if="!user" href="/login" class="flex items-center gap-2 rounded-[9px] px-3 py-2.5 font-bold text-slate-700"><Icon name="login" :size="17" />Sign in</Link>
-                        <button v-else class="flex w-full items-center gap-2 rounded-[9px] px-3 py-2.5 text-left font-bold text-slate-700" @click="logout"><Icon name="logout" :size="17" />Sign out</button>
+                </div>
+
+                <div v-if="open" class="border-t border-slate-200 bg-white">
+                    <div class="container-shell max-h-[calc(100vh-125px)] overflow-y-auto py-3">
+                        <div class="grid grid-cols-2 gap-2 text-[13px] font-semibold">
+                            <Link href="/" class="border border-slate-200 px-3 py-3">Home</Link>
+                            <Link href="/shop" class="border border-slate-200 px-3 py-3">Shop all</Link>
+                            <Link href="/services" class="border border-slate-200 px-3 py-3">Services</Link>
+                            <Link href="/pages/about" class="border border-slate-200 px-3 py-3">About</Link>
+                            <Link href="/pages/contact" class="border border-slate-200 px-3 py-3">Contact</Link>
+                            <Link v-if="!user" href="/login" class="border border-slate-200 px-3 py-3">Login / Register</Link>
+                            <Link v-if="user?.is_admin" href="/admin" class="border border-slate-200 px-3 py-3">Admin panel</Link>
+                            <button v-else-if="user" type="button" class="border border-slate-200 px-3 py-3 text-left" @click="logout">Sign out</button>
+                        </div>
+                        <p class="mt-4 text-[11px] font-bold uppercase tracking-[.14em] text-slate-400">Categories</p>
+                        <div class="mt-2 divide-y divide-slate-100 border border-slate-200">
+                            <Link v-for="category in productCategories" :key="category.id" :href="`/shop?category=${encodeURIComponent(category.slug)}`" class="flex items-center justify-between px-3 py-3 text-[13px] font-medium text-slate-700"><span>{{ category.name }}</span><Icon name="arrow-right-3" :size="14" /></Link>
+                        </div>
                     </div>
                 </div>
             </div>
