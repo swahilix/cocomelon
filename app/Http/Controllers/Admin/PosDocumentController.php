@@ -79,6 +79,7 @@ class PosDocumentController extends Controller
             'customer_name' => ['nullable', 'string', 'max:255'],
             'customer_phone' => ['nullable', 'string', 'max:60'],
             'customer_email' => ['nullable', 'email:rfc', 'max:255'],
+            'customer_tin' => ['nullable', 'string', 'max:50'],
             'save_customer' => ['nullable', 'boolean'],
             'discount' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string', 'max:2000'],
@@ -98,6 +99,7 @@ class PosDocumentController extends Controller
                         'name' => $validated['customer_name'],
                         'phone' => $validated['customer_phone'] ?? null,
                         'email' => $validated['customer_email'] ?? null,
+                        'tin' => $validated['customer_tin'] ?? null,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]);
