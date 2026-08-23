@@ -5,3 +5,141 @@ main:has(.homepage-store-footer) + footer { display: block !important; }
 .xl\:grid-cols-\[1\.35fr_\.85fr\] {
     grid-template-columns: minmax(0, 1fr) !important;
 }
+
+/* Why Choose Prinx Software: centered feature-card layout inspired by the provided reference. */
+.xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > h2 {
+    margin: 0 auto !important;
+    text-align: center;
+    font-size: 30px !important;
+    line-height: 1.2 !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.02em;
+}
+
+.xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > .mt-3.grid {
+    display: grid !important;
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    gap: 28px !important;
+    margin-top: 48px !important;
+}
+
+.xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > .mt-3.grid > article {
+    grid-column: span 2 / span 2;
+    min-height: 245px;
+    border: 1px solid #eef2f7 !important;
+    border-radius: 6px !important;
+    background: #f8fafc !important;
+    padding: 30px 26px !important;
+    text-align: center;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.035);
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+.xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > .mt-3.grid > article:hover {
+    transform: translateY(-3px);
+    border-color: #e2e8f0 !important;
+    box-shadow: 0 20px 42px rgba(15, 23, 42, 0.07);
+}
+
+/* Center the final two cards on the second row without changing their content. */
+.xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > .mt-3.grid > article:nth-child(4) {
+    grid-column: 2 / span 2;
+}
+
+.xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > .mt-3.grid > article:nth-child(5) {
+    grid-column: 4 / span 2;
+}
+
+.xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > .mt-3.grid > article > div:first-child {
+    width: 74px !important;
+    height: 74px !important;
+    margin: 0 auto 22px !important;
+    border-radius: 10px !important;
+    align-items: center;
+    justify-content: center;
+}
+
+.xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > .mt-3.grid > article > div:first-child svg {
+    width: 34px !important;
+    height: 34px !important;
+}
+
+.xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > .mt-3.grid > article:nth-child(1) > div:first-child {
+    background: #e7edff;
+    color: #4169e1 !important;
+}
+
+.xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > .mt-3.grid > article:nth-child(2) > div:first-child {
+    background: #fde7f2;
+    color: #ec4899 !important;
+}
+
+.xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > .mt-3.grid > article:nth-child(3) > div:first-child {
+    background: #ede6ff;
+    color: #8b5cf6 !important;
+}
+
+.xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > .mt-3.grid > article:nth-child(4) > div:first-child {
+    background: #ffeadf;
+    color: #f97316 !important;
+}
+
+.xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > .mt-3.grid > article:nth-child(5) > div:first-child {
+    background: #dcf7ef;
+    color: #10b981 !important;
+}
+
+.xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > .mt-3.grid > article h3 {
+    margin-top: 0 !important;
+    font-size: 16px !important;
+    line-height: 1.45 !important;
+    font-weight: 500 !important;
+    color: #0f172a !important;
+}
+
+.xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > .mt-3.grid > article p {
+    max-width: 290px;
+    margin: 12px auto 0 !important;
+    font-size: 13px !important;
+    line-height: 1.8 !important;
+    color: #7c8a9a !important;
+}
+
+.xl\:grid-cols-\[1\.35fr_\.85fr\] > div:nth-child(2) {
+    margin-top: 28px;
+}
+
+@media (max-width: 1023px) {
+    .xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > h2 {
+        font-size: 26px !important;
+    }
+
+    .xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > .mt-3.grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 18px !important;
+        margin-top: 34px !important;
+    }
+
+    .xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > .mt-3.grid > article,
+    .xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > .mt-3.grid > article:nth-child(4),
+    .xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > .mt-3.grid > article:nth-child(5) {
+        grid-column: auto !important;
+    }
+}
+
+@media (max-width: 639px) {
+    .xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > h2 {
+        font-size: 23px !important;
+    }
+
+    .xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > .mt-3.grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 14px !important;
+        margin-top: 26px !important;
+    }
+
+    .xl\:grid-cols-\[1\.35fr_\.85fr\] > div:first-child > .mt-3.grid > article {
+        min-height: 220px;
+        padding: 24px 20px !important;
+    }
+}
