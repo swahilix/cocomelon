@@ -50,9 +50,13 @@ const printDocument = () => window.print();
             <div class="grid gap-6 border-b border-slate-200 py-6 sm:grid-cols-2">
                 <div>
                     <p class="text-[10px] font-semibold uppercase tracking-[.14em] text-slate-400">Prepared for</p>
-                    <p class="mt-2 text-base font-semibold text-slate-950">{{ document.customer_name || 'Walk-in customer' }}</p>
-                    <p v-if="document.customer_phone" class="mt-1 text-sm text-slate-500">{{ document.customer_phone }}</p>
-                    <p v-if="document.customer_email" class="mt-1 text-sm text-slate-500">{{ document.customer_email }}</p>
+                    <p v-if="document.customer_name" class="mt-2 text-sm font-semibold text-slate-700">{{ document.customer_name }}</p>
+                    <p v-else class="mt-2 text-sm font-semibold text-slate-700">Walk-in customer</p>
+                    <div v-if="document.customer_phone || document.customer_email || document.customer_tin || document.saved_customer_tin" class="mt-3 space-y-1 text-xs text-slate-500">
+                        <p v-if="document.customer_phone"><span class="font-semibold text-slate-700">Phone:</span> {{ document.customer_phone }}</p>
+                        <p v-if="document.customer_email"><span class="font-semibold text-slate-700">Email:</span> {{ document.customer_email }}</p>
+                        <p v-if="document.customer_tin || document.saved_customer_tin"><span class="font-semibold text-slate-700">TIN:</span> {{ document.customer_tin || document.saved_customer_tin }}</p>
+                    </div>
                 </div>
                 <div v-if="document.notes" class="sm:text-right">
                     <p class="text-[10px] font-semibold uppercase tracking-[.14em] text-slate-400">Notes</p>
