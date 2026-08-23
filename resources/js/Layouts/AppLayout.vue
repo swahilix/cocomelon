@@ -11,22 +11,24 @@ const user = computed(() => page.props.auth?.user);
 const cartCount = computed(() => page.props.cartCount || 0);
 const productCategories = computed(() => page.props.navigationCategories || []);
 const store = computed(() => page.props.store || {});
-const locationText = computed(() => [store.value.address, store.value.city, store.value.region, store.value.country].filter(Boolean).join(', '));
 const whatsappHref = computed(() => {
     const digits = String(store.value.whatsapp || '').replace(/\D/g, '');
     return digits ? `https://wa.me/${digits}` : null;
 });
-const workingHourLines = computed(() => String(store.value.working_hours || '')
-    .split(/\r?\n|\s*[,;]\s*/)
-    .map((line) => line.trim())
-    .filter(Boolean));
 const socialLinks = computed(() => Object.entries(store.value.social || {})
     .filter(([, url]) => Boolean(url))
-    .map(([key, url]) => ({
-        key,
-        url,
-        label: key === 'x' ? 'X' : key.charAt(0).toUpperCase() + key.slice(1),
-    })));
+    .map(([key, url]) => {
+        const label = key === 'x' ? 'X' : key.charAt(0).toUpperCase() + key.slice(1);
+        const short = {
+            facebook: 'F',
+            instagram: 'IG',
+            youtube: 'YT',
+            tiktok: 'TT',
+            x: 'X',
+        }[key] || label.slice(0, 2).toUpperCase();
+
+        return { key, url, label, short };
+    }));
 const submitSearch = () => router.get('/shop', { search: search.value }, { preserveState: false });
 const logout = () => router.post('/logout');
 const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(url));
@@ -112,61 +114,63 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
         <main><slot /></main>
 
         <footer class="mt-20 border-t border-slate-800 bg-slate-950 text-slate-300">
-            <div class="container-shell grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-5">
-                <div class="lg:col-span-2">
-                    <img src="/assets/prinx-logo.png" :alt="store.name" class="h-11 w-auto brightness-0 invert">
-                    <p class="mt-4 max-w-xl text-sm leading-7 text-slate-400">{{ store.description }}</p>
+            <div class="container-shell py-14 sm:py-16">
+                <div class="grid gap-12 md:grid-cols-2 lg:grid-cols-[1.45fr_.8fr_.9fr_.9fr] lg:gap-10 xl:gap-16">
+                    <div class="max-w-md">
+                        <img src="/assets/prinx-logo.png" :alt="store.name" class="h-11 w-auto brightness-0 invert sm:h-12">
+                        <p class="mt-5 max-w-sm text-sm leading-7 text-slate-400">{{ store.description }}</p>
 
-                    <div class="mt-6 space-y-4">
-                        <a v-if="store.phone" :href="`tel:${store.phone}`" class="group flex items-start gap-3">
-                            <Icon name="call" :size="17" class="mt-0.5 shrink-0 text-prinx-400" />
-                            <span class="min-w-0">
-                                <span class="block text-[9px] font-semibold uppercase tracking-[.14em] text-slate-500">Phone</span>
-                                <span class="mt-0.5 block text-sm font-medium text-slate-300 transition group-hover:text-white">{{ store.phone }}</span>
-                            </span>
-                        </a>
-
-                        <a v-if="store.email" :href="`mailto:${store.email}`" class="group flex items-start gap-3">
-                            <Icon name="sms" :size="17" class="mt-0.5 shrink-0 text-prinx-400" />
-                            <span class="min-w-0">
-                                <span class="block text-[9px] font-semibold uppercase tracking-[.14em] text-slate-500">Email</span>
-                                <span class="mt-0.5 block break-all text-sm font-medium text-slate-300 transition group-hover:text-white">{{ store.email }}</span>
-                            </span>
-                        </a>
-
-                        <a v-if="whatsappHref" :href="whatsappHref" target="_blank" rel="noopener" class="group flex items-start gap-3">
-                            <Icon name="message" :size="17" class="mt-0.5 shrink-0 text-prinx-400" />
-                            <span class="min-w-0">
-                                <span class="block text-[9px] font-semibold uppercase tracking-[.14em] text-slate-500">WhatsApp</span>
-                                <span class="mt-0.5 block text-sm font-medium text-slate-300 transition group-hover:text-white">{{ store.whatsapp }}</span>
-                            </span>
-                        </a>
-
-                        <div v-if="workingHourLines.length" class="flex items-start gap-3">
-                            <Icon name="clock" :size="17" class="mt-0.5 shrink-0 text-prinx-400" />
-                            <div class="min-w-0 flex-1">
-                                <span class="block text-[9px] font-semibold uppercase tracking-[.14em] text-slate-500">Working hours</span>
-                                <div class="mt-1 space-y-1 text-sm font-medium leading-5 text-slate-300">
-                                    <div v-for="line in workingHourLines" :key="line" class="flex items-start gap-2">
-                                        <span class="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-prinx-400"></span>
-                                        <span>{{ line }}</span>
-                                    </div>
-                                </div>
-                            </div>
+                        <div v-if="socialLinks.length" class="mt-7 flex flex-wrap items-center">
+                            <template v-for="(social, index) in socialLinks" :key="social.key">
+                                <span v-if="index" class="mx-3 h-5 w-px bg-slate-800"></span>
+                                <a
+                                    :href="social.url"
+                                    target="_blank"
+                                    rel="noopener"
+                                    :aria-label="social.label"
+                                    :title="social.label"
+                                    class="inline-flex min-w-6 items-center justify-center text-[12px] font-semibold tracking-[.08em] text-slate-400 transition hover:text-prinx-400"
+                                >{{ social.short }}</a>
+                            </template>
                         </div>
                     </div>
-                </div>
-                <div><h3 class="font-black text-white">Shop</h3><div class="mt-4 space-y-2 text-sm"><Link href="/shop" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>All products</Link><Link v-for="category in productCategories.slice(0, 4)" :key="category.id" :href="`/shop?category=${encodeURIComponent(category.slug)}`" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>{{ category.name }}</Link></div></div>
-                <div><h3 class="flex items-center gap-2 font-black text-white"><Icon name="headphone" :size="17" />Customer care</h3><div class="mt-4 space-y-2 text-sm"><Link href="/services" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>Technical services</Link><Link href="/pages/shipping" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>Shipping & delivery</Link><Link href="/pages/returns" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>Returns & refunds</Link><Link href="/pages/contact" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>Contact us</Link></div></div>
-                <div>
-                    <h3 class="flex items-center gap-2 font-black text-white"><Icon name="building" :size="17" />Company</h3>
-                    <div class="mt-4 space-y-2 text-sm"><Link href="/pages/about" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>About {{ store.name }}</Link><Link href="/pages/privacy" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>Privacy policy</Link><Link href="/pages/terms" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>Terms & conditions</Link><a href="/sitemap.xml" class="flex items-center gap-2 hover:text-white"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500"></span>Sitemap</a></div>
-                    <div v-if="socialLinks.length" class="mt-4 flex flex-wrap gap-2">
-                        <a v-for="social in socialLinks" :key="social.key" :href="social.url" target="_blank" rel="noopener" class="inline-flex items-center gap-1 rounded-[7px] border border-slate-700 px-2 py-1 text-[10px] font-semibold text-slate-400 hover:border-slate-500 hover:text-white"><Icon name="global" :size="12" />{{ social.label }}</a>
+
+                    <div>
+                        <h3 class="text-base font-semibold text-white">Company</h3>
+                        <nav class="mt-6 space-y-4 text-sm text-slate-400">
+                            <Link href="/pages/about" class="block transition hover:translate-x-0.5 hover:text-white">About Us</Link>
+                            <Link href="/shop" class="block transition hover:translate-x-0.5 hover:text-white">Shop</Link>
+                            <Link href="/services" class="block transition hover:translate-x-0.5 hover:text-white">Services</Link>
+                            <Link href="/pages/contact" class="block transition hover:translate-x-0.5 hover:text-white">Contact Us</Link>
+                        </nav>
+                    </div>
+
+                    <div>
+                        <h3 class="text-base font-semibold text-white">Support</h3>
+                        <nav class="mt-6 space-y-4 text-sm text-slate-400">
+                            <Link href="/pages/contact" class="block transition hover:translate-x-0.5 hover:text-white">Customer Support</Link>
+                            <Link href="/services" class="block transition hover:translate-x-0.5 hover:text-white">Technical Services</Link>
+                            <Link href="/pages/shipping" class="block transition hover:translate-x-0.5 hover:text-white">Shipping & Delivery</Link>
+                            <Link href="/pages/returns" class="block transition hover:translate-x-0.5 hover:text-white">Returns & Refunds</Link>
+                            <a v-if="whatsappHref" :href="whatsappHref" target="_blank" rel="noopener" class="block transition hover:translate-x-0.5 hover:text-white">WhatsApp Support</a>
+                        </nav>
+                    </div>
+
+                    <div>
+                        <h3 class="text-base font-semibold text-white">Legal Policies</h3>
+                        <nav class="mt-6 space-y-4 text-sm text-slate-400">
+                            <Link href="/pages/terms" class="block transition hover:translate-x-0.5 hover:text-white">Terms & Conditions</Link>
+                            <Link href="/pages/privacy" class="block transition hover:translate-x-0.5 hover:text-white">Privacy Policy</Link>
+                            <Link href="/pages/returns" class="block transition hover:translate-x-0.5 hover:text-white">Refund Policy</Link>
+                            <a href="/sitemap.xml" class="block transition hover:translate-x-0.5 hover:text-white">Sitemap</a>
+                        </nav>
                     </div>
                 </div>
+
+                <div class="mt-12 border-t border-slate-800 pt-6 text-center text-xs leading-5 text-slate-500">
+                    Copyright © {{ store.year }} {{ store.name }}. All rights reserved.
+                </div>
             </div>
-            <div class="border-t border-slate-800 py-5"><div class="container-shell flex flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:justify-between"><span>© {{ store.year }} {{ store.name }}. All rights reserved.</span><span v-if="locationText || store.phone" class="inline-flex items-center gap-1.5"><Icon name="location" :size="13" />{{ locationText }}<template v-if="locationText && store.phone"> · </template>{{ store.phone }}</span></div></div>
         </footer>
     </div>
 </template>
