@@ -46,6 +46,7 @@ const form = useForm({
     customer_name: props.resumeHold?.customer_name || '',
     customer_phone: props.resumeHold?.customer_phone || '',
     customer_email: '',
+    customer_tin: '',
     save_customer: false,
     discount: canDiscount.value ? Number(props.resumeHold?.discount || 0) : 0,
     amount_paid: '',
@@ -163,11 +164,13 @@ function selectCustomer() {
         form.customer_name = customer.name;
         form.customer_phone = customer.phone || '';
         form.customer_email = customer.email || '';
+        form.customer_tin = customer.tin || '';
         showNewCustomer.value = false;
     } else {
         form.customer_name = '';
         form.customer_phone = '';
         form.customer_email = '';
+        form.customer_tin = '';
     }
 }
 
@@ -188,6 +191,7 @@ function createDocument(type) {
         customer_name: form.customer_name || null,
         customer_phone: form.customer_phone || null,
         customer_email: form.customer_email || null,
+        customer_tin: form.customer_tin || null,
         save_customer: Boolean(form.save_customer),
         discount: Number(form.discount || 0),
         notes: form.notes || null,
@@ -224,6 +228,7 @@ function clearSale() {
     form.customer_name = '';
     form.customer_phone = '';
     form.customer_email = '';
+    form.customer_tin = '';
     form.payment_method_id = cashMethod.value?.id || '';
     form.payment_reference = '';
     form.amount_paid = '';
@@ -288,11 +293,12 @@ function clearSale() {
                         </div>
                     </div>
 
-                    <div v-if="showNewCustomer" class="mt-2 grid gap-2 rounded-[8px] bg-slate-50 p-2 sm:grid-cols-3">
+                    <div v-if="showNewCustomer" class="mt-2 grid gap-2 rounded-[8px] bg-slate-50 p-2 sm:grid-cols-2 xl:grid-cols-4">
                         <input v-model="form.customer_name" class="input" placeholder="Customer name">
                         <input v-model="form.customer_phone" class="input" placeholder="Phone">
                         <input v-model="form.customer_email" class="input" placeholder="Email">
-                        <label class="flex items-center gap-2 text-[11px] text-slate-600 sm:col-span-3"><input v-model="form.save_customer" type="checkbox"> Save this customer</label>
+                        <input v-model="form.customer_tin" class="input" placeholder="TIN (optional)">
+                        <label class="flex items-center gap-2 text-[11px] text-slate-600 sm:col-span-2 xl:col-span-4"><input v-model="form.save_customer" type="checkbox"> Save this customer</label>
                     </div>
                 </div>
 
