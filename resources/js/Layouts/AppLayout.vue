@@ -230,8 +230,9 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                     </div>
                 </div>
 
-                <div v-if="store.payment_strip_url" class="mt-6 flex justify-end border-t border-slate-100 pt-5">
-                    <img :src="store.payment_strip_url" alt="Accepted payment methods" class="h-auto max-h-[52px] w-auto max-w-full object-contain">
+                <div v-if="store.payment_strip_url" class="mt-6 flex items-center justify-end gap-3 border-t border-slate-100">
+                    <span class="text-[12px] text-slate-500">We accept</span>
+                    <img :src="store.payment_strip_url" alt="Accepted payment methods" class="h-auto max-h-[35px] w-auto max-w-full object-contain">
                 </div>
             </div>
         </footer>
