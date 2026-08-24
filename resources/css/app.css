@@ -205,6 +205,13 @@
     .admin-table th, .admin-table td { white-space: nowrap; }
 }
 
+@media (max-width: 767px) {
+    .pos-shell main input[placeholder="Unit barcode / SKU / GTIN / item name"] {
+        border-top-right-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+    }
+}
+
 @media (min-width: 640px) {
     .category-carousel-card { flex-basis: calc((100% - 1.5rem) / 3); }
     .category-selector-card { flex-basis: calc((100% - 1.5rem) / 3); }
