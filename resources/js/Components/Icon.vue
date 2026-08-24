@@ -9,6 +9,8 @@ const props = defineProps({
 const aliases = {
     'arrow-left-2': 'arrow-left',
     'arrow-right-3': 'arrow-right',
+    'close-circle': 'x-circle',
+    'menu': 'hamburger-menu',
 };
 
 const resolvedName = computed(() => aliases[props.name] || props.name);
