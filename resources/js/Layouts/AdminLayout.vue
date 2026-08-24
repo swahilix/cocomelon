@@ -50,6 +50,7 @@ const sections = computed(() => [
     {
         label: 'System',
         items: [
+            ['My account', '/admin/account', 'profile', []],
             ['Business settings', '/admin/business-settings', 'setting-2', ['manage_storefront']],
             ['Staff access', '/admin/access', 'profile-2user', ['manage_staff']],
             ['Audit trail', '/admin/audit', 'document-text', ['manage_staff']],
