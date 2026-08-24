@@ -71,6 +71,18 @@ const clearImagePreviews = () => {
 
 const resetCreateForm = () => {
     form.reset();
+
+    // Explicitly restore every select/toggle default. Inertia can retain the
+    // submitted values after a successful request, especially for selects.
+    form._method = 'POST';
+    form.category_id = '';
+    form.brand_id = '';
+    form.status = 'draft';
+    form.condition = 'new';
+    form.track_stock = true;
+    form.featured = false;
+    form.merchant_sync_enabled = true;
+
     form.clearErrors();
     clearImagePreviews();
     replaceMainImage.value = false;
