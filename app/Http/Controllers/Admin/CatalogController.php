@@ -138,7 +138,9 @@ class CatalogController extends Controller
 
     private function handleCategoryImage(Request $request, array $data, ?Category $category = null): array
     {
-        unset($data['image_url']);
+        // A nullable image input can be present as null in an Inertia update.
+        // Remove it from the update payload so the saved image is retained.
+        unset($data['image'], $data['image_url']);
 
         if ($request->hasFile('image')) {
             $oldImage = $category?->image;
