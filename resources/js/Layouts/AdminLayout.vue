@@ -21,7 +21,7 @@ const sections = computed(() => [
             ['GTIN scanner', '/admin/gtin', 'qr-code', ['manage_storefront']],
             ['Software', '/admin/software', 'monitor', ['manage_storefront']],
             ['Stock management', '/admin/stock', 'shop', ['view_inventory', 'manage_purchases']],
-            ['Historical setup', '/admin/historical-data', 'document-text', ['manage_purchases', 'use_pos', 'view_reports']],
+            ['Historical setup', '/admin/historical-data', 'history', ['manage_purchases', 'use_pos', 'view_reports']],
             ['Inventory', '/admin/stock/inventory', 'box', ['view_inventory']],
             ['Barcode printing', '/admin/barcodes', 'box', ['view_inventory', 'manage_storefront']],
             ['Suppliers', '/admin/suppliers', 'truck', ['manage_suppliers']],
@@ -53,7 +53,7 @@ const sections = computed(() => [
         items: [
             ['My account', '/admin/account', 'user-1', []],
             ['Business settings', '/admin/business-settings', 'setting-2', ['manage_storefront']],
-            ['Staff access', '/admin/access', 'profile-2user', ['manage_staff']],
+            ['Staff access', '/admin/access', 'shield-user', ['manage_staff']],
             ['Audit trail', '/admin/audit', 'hierarchy-2', ['manage_staff']],
             ['System monitoring', '/admin/system-monitor', 'monitor', ['view_system_monitor']],
         ].filter((item) => canAny(item[3])),
