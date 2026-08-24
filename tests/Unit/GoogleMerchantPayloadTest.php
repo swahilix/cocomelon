@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Services\GoogleMerchantService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class GoogleMerchantPayloadTest extends TestCase
@@ -63,5 +64,48 @@ class GoogleMerchantPayloadTest extends TestCase
         $this->assertSame('5', $localInventory['localInventoryAttributes']['quantity']);
         $this->assertSame('LIMITED_AVAILABILITY', $localInventory['localInventoryAttributes']['availability']);
         $this->assertSame('750000000000', $localInventory['localInventoryAttributes']['price']['amountMicros']);
+    }
+
+    public function test_avif_storefront_images_use_generated_webp_copies_in_merchant_payload(): void
+    {
+        Storage::fake('public');
+        config([
+            'app.url' => 'https://shop.example.test',
+            'media.disk' => 'public',
+            'merchant.content_language' => 'en',
+            'merchant.feed_label' => 'TZ',
+            'merchant.currency' => 'TZS',
+            'merchant.country' => 'TZ',
+            'merchant.shipping_service' => 'Standard delivery',
+            'merchant.default_shipping_price' => 0,
+        ]);
+
+        Storage::disk('public')->put('products/prinx-phone.avif', 'avif');
+        Storage::disk('public')->put('products/prinx-phone.merchant.webp', 'webp');
+        Storage::disk('public')->put('products/gallery/prinx-phone-gallery.avif', 'avif');
+        Storage::disk('public')->put('products/gallery/prinx-phone-gallery.merchant.webp', 'webp');
+
+        $category = Category::create(['name' => 'Phones', 'is_active' => true]);
+        $product = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Prinx AVIF Phone',
+            'sku' => 'PRINX-AVIF-01',
+            'description' => 'AVIF storefront product with a Merchant WebP fallback.',
+            'price' => 500000,
+            'stock_quantity' => 2,
+            'track_stock' => true,
+            'status' => 'active',
+            'condition' => 'new',
+            'merchant_sync_enabled' => true,
+            'primary_image' => 'products/prinx-phone.avif',
+            'gallery' => ['products/gallery/prinx-phone-gallery.avif'],
+            'gtin' => '1234567890124',
+        ]);
+
+        $payload = app(GoogleMerchantService::class)->payload($product->load('category'));
+
+        $this->assertStringEndsWith('/storage/products/prinx-phone.merchant.webp', $payload['productAttributes']['imageLink']);
+        $this->assertStringEndsWith('/storage/products/gallery/prinx-phone-gallery.merchant.webp', $payload['productAttributes']['additionalImageLinks'][0]);
+        $this->assertStringEndsWith('/storage/products/prinx-phone.avif', $product->image_url);
     }
 }
