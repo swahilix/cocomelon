@@ -6,6 +6,7 @@ import Icon from '../../Components/Icon.vue';
 
 const props = defineProps({
     configured: Boolean,
+    localInventoryConfigured: Boolean,
     credentialsInstalled: Boolean,
     config: Object,
     counts: Object,
@@ -19,6 +20,8 @@ const settingsForm = useForm({
     content_language: props.config.content_language || 'en',
     feed_label: props.config.feed_label || 'TZ',
     currency: props.config.currency || 'TZS',
+    local_inventory_enabled: Boolean(props.config.local_inventory_enabled),
+    store_code: props.config.store_code || '',
 });
 
 const credentialsForm = useForm({ credentials: null });
@@ -58,11 +61,11 @@ const registerGcp = () => {
             <div>
                 <p class="section-kicker">Product distribution</p>
                 <h1 class="section-title">Google Merchant Center</h1>
-                <p class="mt-2 max-w-2xl text-sm text-slate-500">Configure the Merchant API, register the Google Cloud project, test the connection and synchronize eligible products.</p>
+                <p class="mt-2 max-w-2xl text-sm text-slate-500">Configure the Merchant API, local store inventory, Google Cloud registration and product synchronization.</p>
             </div>
             <div class="flex flex-wrap gap-2">
                 <button class="btn-light" :disabled="!configured" @click="test"><Icon name="link-2" :size="17" /> Test connection</button>
-                <button class="btn-primary" :disabled="!configured" @click="sync"><Icon name="refresh-2" :size="17" /> Sync all eligible</button>
+                <button class="btn-primary" :disabled="!configured" @click="sync"><Icon name="refresh-2" :size="17" /> Sync products & inventory</button>
             </div>
         </div>
 
@@ -74,7 +77,7 @@ const registerGcp = () => {
                 <div>
                     <h2 class="font-semibold">{{ configured ? 'Merchant settings are complete' : 'Complete the setup below' }}</h2>
                     <p class="mt-1 text-sm leading-6" :class="configured ? 'text-emerald-700' : 'text-amber-800'">
-                        {{ configured ? 'Credentials and Merchant account settings are present. If Google reports that the GCP project is not registered, use the registration section below once.' : 'Upload credentials and complete the Merchant account settings before testing synchronization.' }}
+                        {{ configured ? 'Credentials and Merchant account settings are present. Local inventory will also be sent when it is enabled and the store code is configured.' : 'Upload credentials and complete the Merchant account settings before testing synchronization.' }}
                     </p>
                 </div>
             </div>
@@ -88,7 +91,7 @@ const registerGcp = () => {
                     </div>
                     <div>
                         <h2 class="font-semibold text-slate-900">Merchant API settings</h2>
-                        <p class="mt-1 text-sm leading-6 text-slate-500">Enter the IDs from your Google Merchant Center account. These settings are saved on the server.</p>
+                        <p class="mt-1 text-sm leading-6 text-slate-500">Enter the IDs from your Google Merchant Center account and connect your physical store inventory.</p>
                     </div>
                 </div>
 
@@ -129,6 +132,30 @@ const registerGcp = () => {
                             <label class="label">Currency</label>
                             <input v-model.trim="settingsForm.currency" class="input" placeholder="TZS" maxlength="3">
                             <p v-if="settingsForm.errors.currency" class="error">{{ settingsForm.errors.currency }}</p>
+                        </div>
+                    </div>
+
+                    <div class="rounded-[9px] border border-slate-200 bg-white p-4">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-semibold text-slate-800">Local store inventory</span>
+                                    <span :class="['status', localInventoryConfigured ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600']">{{ localInventoryConfigured ? 'Ready' : 'Not configured' }}</span>
+                                </div>
+                                <p class="mt-1 text-xs leading-5 text-slate-500">Send stock quantity and availability to Google for Free Local Listings and Local Inventory Ads.</p>
+                            </div>
+                            <input v-model="settingsForm.local_inventory_enabled" type="checkbox" class="mt-1 h-5 w-5 shrink-0 accent-prinx-500">
+                        </div>
+
+                        <div class="mt-4">
+                            <label class="label">Business Profile store code</label>
+                            <input v-model.trim="settingsForm.store_code" class="input" :disabled="!settingsForm.local_inventory_enabled" placeholder="Example: DODOMA-01">
+                            <p class="mt-1 text-[11px] leading-5 text-slate-500">Use the exact store code assigned to this physical location in your linked Google Business Profile. It is case-sensitive.</p>
+                            <p v-if="settingsForm.errors.store_code" class="error">{{ settingsForm.errors.store_code }}</p>
+                        </div>
+
+                        <div v-if="settingsForm.local_inventory_enabled" class="mt-3 rounded-[8px] bg-slate-50 px-3 py-2.5 text-xs leading-5 text-slate-600">
+                            Stock mapping: <strong>0 = Out of stock</strong>, stock at or below the low-stock threshold = <strong>Limited availability</strong>, and higher stock = <strong>In stock</strong>. Quantity is sent automatically for stock-tracked products.
                         </div>
                     </div>
 
@@ -237,12 +264,14 @@ const registerGcp = () => {
                         <div class="flex justify-between gap-3"><dt class="text-slate-500">Integration</dt><dd :class="config.enabled ? 'font-medium text-emerald-600' : 'font-medium text-slate-500'">{{ config.enabled ? 'Enabled' : 'Disabled' }}</dd></div>
                         <div class="flex justify-between gap-3"><dt class="text-slate-500">Account ID</dt><dd class="max-w-40 truncate font-medium">{{ config.account_id || 'Not set' }}</dd></div>
                         <div class="flex justify-between gap-3"><dt class="text-slate-500">Data source</dt><dd class="max-w-40 truncate font-medium">{{ config.data_source_id || 'Not set' }}</dd></div>
+                        <div class="flex justify-between gap-3"><dt class="text-slate-500">Local inventory</dt><dd :class="localInventoryConfigured ? 'font-medium text-emerald-600' : 'font-medium text-amber-600'">{{ localInventoryConfigured ? 'Ready' : config.local_inventory_enabled ? 'Store code needed' : 'Disabled' }}</dd></div>
+                        <div class="flex justify-between gap-3"><dt class="text-slate-500">Store code</dt><dd class="max-w-40 truncate font-medium">{{ config.store_code || 'Not set' }}</dd></div>
                     </dl>
                 </section>
 
                 <section class="rounded-[10px] bg-slate-950 p-5 text-white">
                     <h2 class="font-semibold">Automated refresh</h2>
-                    <p class="mt-2 text-sm leading-6 text-slate-300">For background synchronization, keep the Laravel scheduler and queue worker running.</p>
+                    <p class="mt-2 text-sm leading-6 text-slate-300">After a previously synchronized product's stock changes, the system automatically queues another Merchant sync so online and local availability stay current.</p>
                     <code class="mt-4 block rounded-[8px] bg-black/40 p-3 text-xs text-prinx-300">php artisan schedule:work<br>php artisan queue:work</code>
                 </section>
 
