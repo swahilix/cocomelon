@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\AiProductDescriptionController;
 use App\Http\Controllers\Admin\CatalogController as AdminCatalogController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -58,6 +59,10 @@ Route::get('/sitemap.xml', [FeedController::class, 'sitemap'])->name('sitemap');
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/', DashboardController::class)->name('dashboard');
+
+    Route::get('account', [AccountController::class, 'edit'])->name('account.edit');
+    Route::patch('account/profile', [AccountController::class, 'updateProfile'])->middleware('throttle:20,1')->name('account.profile');
+    Route::patch('account/password', [AccountController::class, 'updatePassword'])->middleware('throttle:6,1')->name('account.password');
 
     Route::post('ai/format-product-description', AiProductDescriptionController::class)->middleware(['permission:manage_storefront', 'throttle:6,1'])->name('ai.format-product-description');
 
