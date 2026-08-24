@@ -55,7 +55,7 @@ const merchantIssues = computed(() => {
     const issues = [];
     if (form.status !== 'active') issues.push('set status to Active');
     if (!form.merchant_sync_enabled) issues.push('enable Google Merchant sync');
-    if (!form.sku) issues.push('add SKU');
+    if (p.id && !form.sku) issues.push('add SKU');
     if (!form.name) issues.push('add product name');
     if (!form.description) issues.push('add description');
     if (!(Number(form.price) > 0)) issues.push('add a valid price');
@@ -158,7 +158,9 @@ onBeforeUnmount(clearImagePreviews);
                         </div>
                         <div>
                             <label class="label">SKU</label>
-                            <input v-model.trim="form.sku" name="sku" class="input">
+                            <input v-if="p.id" v-model.trim="form.sku" name="sku" class="input">
+                            <input v-else value="Generated automatically when saved" class="input bg-slate-50 text-slate-500" disabled>
+                            <p v-if="!p.id" class="mt-1 text-[11px] text-slate-500">A unique PRX SKU will be created automatically.</p>
                             <p v-if="form.errors.sku" class="error">{{ form.errors.sku }}</p>
                         </div>
                         <div>
@@ -172,7 +174,12 @@ onBeforeUnmount(clearImagePreviews);
                             <p v-if="form.errors.brand_id" class="error">{{ form.errors.brand_id }}</p>
                         </div>
                         <div><label class="label">Price</label><input v-model="form.price" name="price" type="number" class="input"><p v-if="form.errors.price" class="error">{{ form.errors.price }}</p></div>
-                        <div><label class="label">Sale price</label><input v-model="form.sale_price" name="sale_price" type="number" class="input"><p v-if="form.errors.sale_price" class="error">{{ form.errors.sale_price }}</p></div>
+                        <div>
+                            <label class="label">Sale price</label>
+                            <input v-model="form.sale_price" name="sale_price" type="number" class="input">
+                            <p class="mt-1 text-[11px] text-slate-500">Same as Price = no discount. Lower than Price = discounted product.</p>
+                            <p v-if="form.errors.sale_price" class="error">{{ form.errors.sale_price }}</p>
+                        </div>
                         <div><label class="label">Stock</label><input v-model="form.stock_quantity" name="stock_quantity" type="number" class="input"></div>
                         <div><label class="label">Low stock alert</label><input v-model="form.low_stock_threshold" name="low_stock_threshold" type="number" class="input"></div>
                         <div class="sm:col-span-2"><label class="label">Short description</label><textarea v-model="form.short_description" name="short_description" class="input" rows="3"></textarea></div>
