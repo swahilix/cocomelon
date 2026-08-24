@@ -7,6 +7,7 @@ use Google\Auth\Credentials\ServiceAccountCredentials;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -150,8 +151,8 @@ class GoogleMerchantService
             'title' => Str::limit($product->name, 150, ''),
             'description' => Str::limit($product->plain_description, 5000, ''),
             'link' => route('products.show', $product),
-            'imageLink' => $this->absoluteUrl($product->image_url),
-            'additionalImageLinks' => collect($product->gallery_urls)->map(fn ($url) => $this->absoluteUrl($url))->take(10)->values()->all(),
+            'imageLink' => $this->merchantImageUrl($product),
+            'additionalImageLinks' => $this->merchantGalleryUrls($product),
             'availability' => $product->in_stock ? 'IN_STOCK' : 'OUT_OF_STOCK',
             'condition' => strtoupper($product->condition),
             'price' => $this->priceObject((float) $product->price),
@@ -189,6 +190,21 @@ class GoogleMerchantService
             'feedLabel' => config('merchant.feed_label'),
             'productAttributes' => $attributes,
         ];
+    }
+
+    public function merchantImageUrl(Product $product): string
+    {
+        return $this->merchantCompatibleUrl($product->primary_image, $product->image_url);
+    }
+
+    public function merchantGalleryUrls(Product $product): array
+    {
+        $rawImages = collect($product->gallery ?? []);
+        $resolvedImages = collect($product->gallery_urls ?? []);
+
+        return $rawImages->values()->map(function ($path, $index) use ($resolvedImages): string {
+            return $this->merchantCompatibleUrl((string) $path, (string) ($resolvedImages->get($index) ?: $path));
+        })->filter()->unique()->take(10)->values()->all();
     }
 
     public function localInventoryPayload(Product $product): array
@@ -272,6 +288,24 @@ class GoogleMerchantService
         ]);
 
         return rtrim(strtr(base64_encode($identifier), '+/', '-_'), '=');
+    }
+
+    protected function merchantCompatibleUrl(?string $storedPath, string $resolvedUrl): string
+    {
+        if (! $storedPath || Str::startsWith($storedPath, ['http://', 'https://', '/'])) {
+            return $this->absoluteUrl($resolvedUrl);
+        }
+
+        if (Str::endsWith(Str::lower($storedPath), '.avif')) {
+            $merchantPath = preg_replace('/\.avif$/i', '.merchant.webp', $storedPath) ?: $storedPath.'.merchant.webp';
+            $disk = Storage::disk(config('media.disk', 'public'));
+
+            if ($disk->exists($merchantPath)) {
+                return $this->absoluteUrl($disk->url($merchantPath));
+            }
+        }
+
+        return $this->absoluteUrl($resolvedUrl);
     }
 
     protected function absoluteUrl(string $url): string
