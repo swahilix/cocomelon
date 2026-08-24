@@ -11,6 +11,7 @@ use App\Services\InventoryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -125,6 +126,10 @@ class ProductController extends Controller
 
     private function validated(Request $request, ?Product $product = null): array
     {
+        if (! $product && blank($request->input('sku'))) {
+            $request->merge(['sku' => $this->generateSku()]);
+        }
+
         return $request->validate([
             'category_id' => [
                 'required',
@@ -137,7 +142,7 @@ class ProductController extends Controller
             'short_description' => ['nullable', 'string', 'max:500'],
             'description' => ['required', 'string', 'max:30000'],
             'price' => ['required', 'numeric', 'min:0'],
-            'sale_price' => ['nullable', 'numeric', 'min:0', 'lt:price'],
+            'sale_price' => ['nullable', 'numeric', 'min:0', 'lte:price'],
             'sale_starts_at' => ['nullable', 'date'],
             'sale_ends_at' => ['nullable', 'date', 'after:sale_starts_at'],
             'stock_quantity' => ['required', 'integer', 'min:0'],
@@ -170,6 +175,15 @@ class ProductController extends Controller
             'meta_description' => ['nullable', 'string', 'max:180'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
+    }
+
+    private function generateSku(): string
+    {
+        do {
+            $sku = 'PRX-'.now()->format('ymd').'-'.strtoupper(Str::random(5));
+        } while (Product::withTrashed()->where('sku', $sku)->exists());
+
+        return $sku;
     }
 
     private function prepareProductData(array $data): array
