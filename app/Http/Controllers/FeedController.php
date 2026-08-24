@@ -5,20 +5,21 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Service;
+use App\Services\GoogleMerchantService;
 use Illuminate\Http\Response;
 use Illuminate\Support\Str;
 
 class FeedController extends Controller
 {
-    public function merchant(): Response
+    public function merchant(GoogleMerchantService $merchant): Response
     {
         $products = Product::with(['brand','category'])->merchantEligible()->get();
         $esc = fn ($value) => htmlspecialchars((string)$value, ENT_XML1|ENT_QUOTES, 'UTF-8');
-        $items = $products->map(function ($p) use ($esc) {
+        $items = $products->map(function ($p) use ($esc, $merchant) {
             $availability = $p->in_stock ? 'in_stock' : 'out_of_stock';
             $sale = ($p->current_price < (float)$p->price) ? '<g:sale_price>'.$esc(number_format($p->current_price,2,'.','').' '.config('store.currency')).'</g:sale_price>' : '';
-            $extra = collect($p->gallery_urls)->take(10)->map(fn ($image) => '<g:additional_image_link>'.$esc(Str::startsWith($image, ['http://','https://']) ? $image : url($image)).'</g:additional_image_link>')->implode('');
-            return '<item><g:id>'.$esc($p->sku).'</g:id><title>'.$esc($p->name).'</title><description>'.$esc(Str::limit($p->plain_description,5000,'')).'</description><link>'.$esc(route('products.show',$p)).'</link><g:image_link>'.$esc($p->image_url).'</g:image_link>'.$extra.'<g:availability>'.$availability.'</g:availability><g:condition>'.$esc($p->condition).'</g:condition><g:price>'.$esc(number_format((float)$p->price,2,'.','').' '.config('store.currency')).'</g:price>'.$sale.($p->brand?'<g:brand>'.$esc($p->brand->name).'</g:brand>':'').($p->gtin?'<g:gtin>'.$esc($p->gtin).'</g:gtin>':'').($p->mpn?'<g:mpn>'.$esc($p->mpn).'</g:mpn>':'').($p->google_product_category?'<g:google_product_category>'.$esc($p->google_product_category).'</g:google_product_category>':'').(($p->product_type || $p->category)?'<g:product_type>'.$esc($p->product_type ?: 'Electronics > '.$p->category->name).'</g:product_type>':'').'</item>';
+            $extra = collect($merchant->merchantGalleryUrls($p))->take(10)->map(fn ($image) => '<g:additional_image_link>'.$esc($image).'</g:additional_image_link>')->implode('');
+            return '<item><g:id>'.$esc($p->sku).'</g:id><title>'.$esc($p->name).'</title><description>'.$esc(Str::limit($p->plain_description,5000,'')).'</description><link>'.$esc(route('products.show',$p)).'</link><g:image_link>'.$esc($merchant->merchantImageUrl($p)).'</g:image_link>'.$extra.'<g:availability>'.$availability.'</g:availability><g:condition>'.$esc($p->condition).'</g:condition><g:price>'.$esc(number_format((float)$p->price,2,'.','').' '.config('store.currency')).'</g:price>'.$sale.($p->brand?'<g:brand>'.$esc($p->brand->name).'</g:brand>':'').($p->gtin?'<g:gtin>'.$esc($p->gtin).'</g:gtin>':'').($p->mpn?'<g:mpn>'.$esc($p->mpn).'</g:mpn>':'').($p->google_product_category?'<g:google_product_category>'.$esc($p->google_product_category).'</g:google_product_category>':'').(($p->product_type || $p->category)?'<g:product_type>'.$esc($p->product_type ?: 'Electronics > '.$p->category->name).'</g:product_type>':'').'</item>';
         })->implode('');
         $xml = '<?xml version="1.0" encoding="UTF-8"?><rss xmlns:g="http://base.google.com/ns/1.0" version="2.0"><channel><title>Prinx Electronics Products</title><link>'.e(config('app.url')).'</link><description>Prinx Electronics product catalogue</description>'.$items.'</channel></rss>';
         return response($xml,200,['Content-Type'=>'application/xml; charset=UTF-8']);
@@ -90,5 +91,4 @@ class FeedController extends Controller
 
         return response($xml, 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
     }
-
 }
