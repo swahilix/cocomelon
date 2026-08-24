@@ -23,6 +23,7 @@ class MerchantController extends Controller
     {
         return Inertia::render('Admin/Merchant', [
             'configured' => $merchant->configured(),
+            'localInventoryConfigured' => $merchant->localInventoryConfigured(),
             'credentialsInstalled' => is_file($merchant->credentialsPath()),
             'config' => [
                 'enabled' => (bool) config('merchant.enabled'),
@@ -31,6 +32,8 @@ class MerchantController extends Controller
                 'feed_label' => config('merchant.feed_label'),
                 'content_language' => config('merchant.content_language'),
                 'currency' => config('merchant.currency'),
+                'local_inventory_enabled' => (bool) config('merchant.local_inventory_enabled'),
+                'store_code' => config('merchant.store_code'),
             ],
             'counts' => [
                 'eligible' => Product::merchantEligible()->count(),
@@ -51,6 +54,8 @@ class MerchantController extends Controller
             'content_language' => ['required', 'regex:/^[a-zA-Z]{2,5}$/', 'max:5'],
             'feed_label' => ['required', 'string', 'max:50'],
             'currency' => ['required', 'regex:/^[A-Za-z]{3}$/'],
+            'local_inventory_enabled' => ['required', 'boolean'],
+            'store_code' => ['nullable', 'required_if:local_inventory_enabled,true', 'string', 'max:100'],
         ]);
 
         $this->writeEnv([
@@ -60,12 +65,14 @@ class MerchantController extends Controller
             'GOOGLE_MERCHANT_CONTENT_LANGUAGE' => strtolower($validated['content_language']),
             'GOOGLE_MERCHANT_FEED_LABEL' => strtoupper($validated['feed_label']),
             'GOOGLE_MERCHANT_CURRENCY' => strtoupper($validated['currency']),
+            'GOOGLE_MERCHANT_LOCAL_INVENTORY_ENABLED' => $validated['local_inventory_enabled'] ? 'true' : 'false',
+            'GOOGLE_MERCHANT_STORE_CODE' => trim((string) ($validated['store_code'] ?? '')),
         ]);
 
         Cache::forget('google-merchant-access-token');
         Artisan::call('config:clear');
 
-        return back()->with('success', 'Google Merchant settings saved. The integration status has been refreshed.');
+        return back()->with('success', 'Google Merchant settings saved. Local inventory will sync automatically when enabled and a valid store code is configured.');
     }
 
     public function uploadCredentials(Request $request, GoogleMerchantService $merchant): RedirectResponse
@@ -135,7 +142,7 @@ class MerchantController extends Controller
             fn ($products) => $products->each(fn ($product) => SyncProductToGoogleMerchant::dispatch($product->id))
         );
 
-        return back()->with('success', 'Eligible products queued for Google Merchant sync.');
+        return back()->with('success', 'Eligible products queued for Google Merchant sync. Local store inventory is included when configured.');
     }
 
     public function sync(Product $product): RedirectResponse
@@ -149,7 +156,7 @@ class MerchantController extends Controller
         try {
             SyncProductToGoogleMerchant::dispatchSync($product->id);
 
-            return back()->with('success', 'Product synchronized with Google Merchant successfully.');
+            return back()->with('success', 'Product synchronized with Google Merchant successfully. Local inventory was included when configured.');
         } catch (Throwable $exception) {
             return back()->with('error', 'Google Merchant sync failed: '.$exception->getMessage());
         }
