@@ -100,7 +100,9 @@ class SoftwareSolutionController extends Controller
             'meta_description' => ['nullable', 'string', 'max:180'],
         ]);
 
-        unset($data['image_url']);
+        // Preserve the current image unless the request explicitly supplies a
+        // replacement file or replacement URL.
+        unset($data['image'], $data['image_url']);
 
         if ($request->hasFile('image')) {
             $oldImage = $software?->image;
