@@ -10,6 +10,7 @@ const aliases = {
     'arrow-left-2': 'arrow-left',
     'arrow-right-3': 'arrow-right',
     'close-circle': 'x-circle',
+    'scan-barcode': 'qr-code',
     'menu': 'hamburger-menu',
 };
 
