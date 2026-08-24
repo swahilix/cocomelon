@@ -78,13 +78,31 @@ async function startScanner() {
         return;
     }
 
+    let zxingError = null;
+
+    try {
+        await startZxingDetector();
+        return;
+    } catch (error) {
+        zxingError = error;
+
+        if (error?.name === 'NotAllowedError') {
+            stopScanner();
+            scannerError.value = 'Camera permission was denied. Allow camera access in your browser settings and try again.';
+            return;
+        }
+
+        stopScanner();
+        scanning.value = true;
+    }
+
     try {
         if ('BarcodeDetector' in window) {
             await startNativeDetector();
             return;
         }
 
-        await startZxingDetector();
+        throw zxingError || new Error('No barcode scanner is available in this browser.');
     } catch (error) {
         stopScanner();
         const name = error?.name || '';
@@ -144,8 +162,8 @@ async function startNativeDetector() {
 async function startZxingDetector() {
     const { BrowserMultiFormatReader } = await import('@zxing/browser');
     zxingReader = new BrowserMultiFormatReader(undefined, {
-        delayBetweenScanAttempts: 250,
-        delayBetweenScanSuccess: 500,
+        delayBetweenScanAttempts: 180,
+        delayBetweenScanSuccess: 350,
     });
 
     zxingControls = await zxingReader.decodeFromConstraints(
