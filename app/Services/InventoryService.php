@@ -41,10 +41,13 @@ class InventoryService
     public function openingBalance(Product|int $product, int $quantity, ?string $notes = null, ?int $userId = null): object
     {
         $productId = $product instanceof Product ? $product->id : $product;
-        $exists = DB::table('stock_movements')->where('product_id', $productId)->exists();
+        $exists = DB::table('stock_movements')
+            ->where('product_id', $productId)
+            ->where('affects_stock', true)
+            ->exists();
 
         if ($exists) {
-            throw new RuntimeException('Opening balance is allowed only for a product without stock movement history.');
+            throw new RuntimeException('Opening balance is allowed only for a product without live stock movement history.');
         }
 
         return $this->setBalance($product, $quantity, 'opening_balance', 'Opening balance', $notes, $userId);
@@ -81,6 +84,10 @@ class InventoryService
 
             if (! $movement) {
                 throw new RuntimeException('Stock movement was not found.');
+            }
+
+            if (! (bool) ($movement->affects_stock ?? true) || (bool) ($movement->is_historical ?? false)) {
+                throw new RuntimeException('Historical reference-only movements cannot be reversed because they never changed current stock. Correct the source record in Historical setup instead.');
             }
 
             if ($movement->type === 'reversal' || $movement->reversal_of_id !== null) {
