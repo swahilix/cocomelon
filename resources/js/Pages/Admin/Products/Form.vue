@@ -151,6 +151,10 @@ const submit = () => {
     form.post('/admin/products', {
         forceFormData: true,
         preserveScroll: false,
+        // POST visits preserve component state by default in Inertia. Disable
+        // that here because a successful create must return a completely fresh
+        // Add Product page, including native select elements.
+        preserveState: false,
         onSuccess: resetCreateForm,
     });
 };
