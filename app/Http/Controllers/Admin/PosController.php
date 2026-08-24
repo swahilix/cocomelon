@@ -26,13 +26,14 @@ class PosController extends Controller
         $products = Product::query()
             ->with(['category:id,name', 'brand:id,name'])
             ->where('status', 'active')
-            ->select(['id', 'category_id', 'brand_id', 'name', 'sku', 'stock_quantity', 'track_stock', 'price', 'sale_price', 'sale_starts_at', 'sale_ends_at', 'primary_image'])
+            ->select(['id', 'category_id', 'brand_id', 'name', 'sku', 'gtin', 'stock_quantity', 'track_stock', 'price', 'sale_price', 'sale_starts_at', 'sale_ends_at', 'primary_image'])
             ->orderBy('name')
             ->get()
             ->map(fn (Product $product) => [
                 'id' => $product->id,
                 'name' => $product->name,
                 'sku' => $product->sku,
+                'gtin' => $product->gtin,
                 'category' => $product->category?->name ?: 'Other',
                 'brand' => $product->brand?->name,
                 'stock_quantity' => $product->stock_quantity,
