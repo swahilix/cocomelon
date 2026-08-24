@@ -106,7 +106,6 @@ function stopScanner() {
     }
 
     if (zxingReader) {
-        try { zxingReader.reset?.(); } catch (_) {}
         zxingReader = null;
     }
 
@@ -199,7 +198,10 @@ async function startNativeDetector() {
 
 async function startZxingDetector() {
     const { BrowserMultiFormatReader } = await import('@zxing/browser');
-    zxingReader = new BrowserMultiFormatReader(undefined, 250);
+    zxingReader = new BrowserMultiFormatReader(undefined, {
+        delayBetweenScanAttempts: 250,
+        delayBetweenScanSuccess: 500,
+    });
 
     zxingControls = await zxingReader.decodeFromConstraints(
         {
