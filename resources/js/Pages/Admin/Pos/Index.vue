@@ -4,6 +4,7 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import PosLayout from '../../../Layouts/PosLayout.vue';
 import Icon from '../../../Components/Icon.vue';
+import MobileBarcodeScanner from '../../../Components/MobileBarcodeScanner.vue';
 
 const props = defineProps({
     products: Array,
@@ -19,6 +20,7 @@ const props = defineProps({
 const page = usePage();
 const scanSearch = ref('');
 const scanError = ref('');
+const mobileScannerOpen = ref(false);
 const documentError = ref('');
 const documentProcessing = ref(false);
 const catalogSearch = ref('');
@@ -160,6 +162,15 @@ async function scanEnter() {
     } else {
         scanError.value = 'No item or unit barcode matched that scan.';
     }
+}
+
+async function handleMobileScan(barcode) {
+    const value = String(barcode || '').trim();
+    if (!value || showNewCustomer.value) return;
+
+    scanSearch.value = value;
+    scanError.value = '';
+    await scanEnter();
 }
 
 function selectCustomer() {
@@ -346,7 +357,12 @@ function clearSale() {
                         </div>
 
                         <div>
-                            <input v-model="scanSearch" class="h-9 min-w-0 w-full rounded-[8px] border border-slate-300 bg-white px-3 text-xs outline-none placeholder:text-slate-400 focus:border-prinx-500 disabled:cursor-not-allowed disabled:bg-slate-100" placeholder="Unit barcode / SKU / item name" :disabled="showNewCustomer" autofocus @keyup.enter="scanEnter">
+                            <div class="flex min-w-0">
+                                <input v-model="scanSearch" class="h-9 min-w-0 flex-1 rounded-l-[8px] border border-r-0 border-slate-300 bg-white px-3 text-xs outline-none placeholder:text-slate-400 focus:border-prinx-500 disabled:cursor-not-allowed disabled:bg-slate-100 md:rounded-[8px] md:border-r" placeholder="Unit barcode / SKU / item name" :disabled="showNewCustomer" autofocus @keyup.enter="scanEnter">
+                                <button type="button" class="flex h-9 w-10 shrink-0 items-center justify-center rounded-r-[8px] border border-slate-300 bg-slate-950 text-white transition hover:bg-prinx-500 disabled:cursor-not-allowed disabled:opacity-50 md:hidden" title="Scan barcode with camera" aria-label="Scan barcode with camera" :disabled="showNewCustomer" @click="mobileScannerOpen = true">
+                                    <Icon name="scan-barcode" :size="18" />
+                                </button>
+                            </div>
                             <p v-if="scanError" class="mt-1 text-[10px] font-medium text-red-600">{{ scanError }}</p>
                         </div>
                     </div>
@@ -430,6 +446,13 @@ function clearSale() {
                 </div>
             </aside>
         </div>
+
+        <MobileBarcodeScanner
+            v-model:open="mobileScannerOpen"
+            title="Scan item barcode"
+            message="Point the rear camera at the unit barcode or SKU barcode."
+            @scanned="handleMobileScan"
+        />
 
         <div v-if="showHeld" class="fixed inset-0 z-[90] bg-slate-950/55 p-0 sm:p-3" @click.self="showHeld = false">
             <div class="ml-auto h-full w-full max-w-md overflow-y-auto bg-white p-3 shadow-2xl sm:rounded-[9px]">
