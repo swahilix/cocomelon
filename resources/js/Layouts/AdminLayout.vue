@@ -21,6 +21,7 @@ const sections = computed(() => [
             ['GTIN scanner', '/admin/gtin', 'scan-barcode', ['manage_storefront']],
             ['Software', '/admin/software', 'monitor', ['manage_storefront']],
             ['Stock management', '/admin/stock', 'shop', ['view_inventory', 'manage_purchases']],
+            ['Historical setup', '/admin/historical-data', 'document-text', ['manage_purchases', 'use_pos', 'view_reports']],
             ['Inventory', '/admin/stock/inventory', 'box', ['view_inventory']],
             ['Barcode printing', '/admin/barcodes', 'box', ['view_inventory', 'manage_storefront']],
             ['Suppliers', '/admin/suppliers', 'profile', ['manage_suppliers']],
