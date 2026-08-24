@@ -221,7 +221,7 @@ class StorefrontController extends Controller
         };
 
         return Inertia::render('Store/Catalog', [
-            'products' => $products->paginate(12)->withQueryString(),
+            'products' => $products->paginate(10)->withQueryString(),
             'categories' => Category::productType()
                 ->active()
                 ->withCount(['products' => fn ($query) => $query->active()])
