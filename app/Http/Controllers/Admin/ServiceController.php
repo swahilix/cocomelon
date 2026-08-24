@@ -120,7 +120,9 @@ class ServiceController extends Controller
             'meta_description' => ['nullable', 'string', 'max:180'],
         ]);
 
-        unset($data['image_url']);
+        // Empty nullable file inputs are submitted as null by Inertia. Never let
+        // that null overwrite the stored image on an ordinary metadata update.
+        unset($data['image'], $data['image_url']);
 
         if ($request->hasFile('image')) {
             $oldImage = $service?->image;
