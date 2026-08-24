@@ -35,3 +35,45 @@
 /* Remove the remaining literal greens visible in the redesigned shop UI. */
 [class*="bg-green-600"] { background-color: #ff4d0a !important; }
 [class*="text-[#159447]"] { color: #ff4d0a !important; }
+
+/* Phone shop filters are modal-only. The existing desktop filter panel is reused
+   as a full-screen overlay so filter logic stays identical on every breakpoint. */
+@media (max-width: 767px) {
+    body.shop-catalog-page section.container-shell.pb-5.pt-6 > div.grid > aside {
+        display: none !important;
+    }
+
+    body.shop-catalog-page.shop-mobile-filters-open section.container-shell.pb-5.pt-6 > div.grid > aside {
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 160 !important;
+        display: block !important;
+        min-width: 0 !important;
+        overflow-y: auto !important;
+        overscroll-behavior: contain;
+        background: rgba(15, 23, 42, .58);
+        padding: max(52px, env(safe-area-inset-top)) 10px max(12px, env(safe-area-inset-bottom));
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+    }
+
+    body.shop-catalog-page.shop-mobile-filters-open section.container-shell.pb-5.pt-6 > div.grid > aside > div {
+        width: 100%;
+        max-width: 430px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    body.shop-catalog-page.shop-mobile-filters-open section.container-shell.pb-5.pt-6 > div.grid > aside > div:first-child {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        margin-bottom: 8px;
+        box-shadow: 0 10px 28px rgba(15, 23, 42, .12);
+    }
+
+    body.shop-catalog-page.shop-mobile-filters-open section.container-shell.pb-5.pt-6 > div.grid > aside > div:nth-child(2) {
+        margin-bottom: 10px;
+        box-shadow: 0 20px 48px rgba(15, 23, 42, .22);
+    }
+}
