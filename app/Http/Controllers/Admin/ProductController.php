@@ -75,17 +75,15 @@ class ProductController extends Controller
         $data = $this->prepareProductData($this->handleImages($request, $validated));
         $data['stock_quantity'] = 0;
 
-        $product = DB::transaction(function () use ($data, $openingStock, $request, $inventory): Product {
+        DB::transaction(function () use ($data, $openingStock, $request, $inventory): void {
             $product = Product::create($data);
 
             if ($product->track_stock && $openingStock > 0) {
                 $inventory->openingBalance($product, $openingStock, 'Initial stock entered when product was created.', $request->user()?->id);
             }
-
-            return $product->refresh();
         });
 
-        return redirect()->route('admin.products.edit', $product)->with('success', 'Product created successfully. Future stock changes must be posted from Stock Management → Inventory.');
+        return redirect()->route('admin.products.create')->with('success', 'Product created successfully. The form is ready for the next product.');
     }
 
     public function update(Request $request, Product $product): RedirectResponse
