@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AiProductDescriptionController;
 use App\Http\Controllers\Admin\CatalogController as AdminCatalogController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\GtinController;
 use App\Http\Controllers\Admin\InquiryController;
 use App\Http\Controllers\Admin\HeroSlideController;
 use App\Http\Controllers\Admin\InventoryController;
@@ -75,6 +76,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 
         Route::resource('products', AdminProductController::class)->except('show');
         Route::post('products/{product}/restore', [AdminProductController::class, 'restore'])->whereNumber('product')->name('products.restore');
+        Route::get('gtin', [GtinController::class, 'index'])->name('gtin.index');
+        Route::patch('gtin/{product}', [GtinController::class, 'update'])->name('gtin.update');
 
         Route::get('catalog', [AdminCatalogController::class, 'index'])->name('catalog.index');
         Route::post('catalog/categories', [AdminCatalogController::class, 'category'])->name('catalog.categories.store');
