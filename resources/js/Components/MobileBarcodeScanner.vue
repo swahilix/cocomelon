@@ -214,7 +214,7 @@ onBeforeUnmount(stopScanner);
                     <h2 class="truncate text-sm font-semibold text-slate-950">{{ title }}</h2>
                 </div>
                 <button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] border border-slate-200 text-slate-600" aria-label="Close scanner" @click="closeScanner">
-                    <Icon name="close-circle" :size="20" />
+                    <Icon name="x-circle" :size="20" />
                 </button>
             </div>
 
@@ -247,7 +247,7 @@ onBeforeUnmount(stopScanner);
 
                 <div class="mt-3 grid grid-cols-2 gap-2">
                     <button type="button" class="flex h-10 items-center justify-center gap-1.5 rounded-[8px] border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50" @click="closeScanner">
-                        <Icon name="close-circle" :size="16" />Close
+                        <Icon name="x-circle" :size="16" />Close
                     </button>
                     <button type="button" class="flex h-10 items-center justify-center gap-1.5 rounded-[8px] bg-prinx-500 text-xs font-semibold text-white hover:bg-prinx-600" @click="retryScanner">
                         <Icon name="refresh-2" :size="16" />Restart camera
