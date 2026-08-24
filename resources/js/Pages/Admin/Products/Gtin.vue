@@ -48,8 +48,12 @@ const progress = computed(() => progressTotal.value > 0
 const normalizedGtin = computed(() => gtin.value.trim());
 const canSave = computed(() => isValidGtin(normalizedGtin.value) && !form.processing);
 
+function hasGtinLength(value) {
+    return /^(?:\d{8}|\d{12}|\d{13}|\d{14})$/.test(String(value || ''));
+}
+
 function isValidGtin(value) {
-    if (!/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/.test(String(value || ''))) return false;
+    if (!hasGtinLength(value)) return false;
 
     const digits = String(value).split('').map(Number);
     const checkDigit = digits.pop();
@@ -66,7 +70,7 @@ function normalizeScan(value) {
     const raw = String(value || '').trim();
     if (/^\d+$/.test(raw)) return raw;
 
-    const ai01 = raw.match(/^(?:\(01\)|01)(\d{14})$/);
+    const ai01 = raw.match(/(?:\(01\)|01)(\d{14})/);
     return ai01?.[1] || '';
 }
 
@@ -105,9 +109,7 @@ function stopScanner() {
         zxingControls = null;
     }
 
-    if (zxingReader) {
-        zxingReader = null;
-    }
+    zxingReader = null;
 
     if (cameraStream) {
         cameraStream.getTracks().forEach((track) => track.stop());
@@ -120,6 +122,7 @@ function stopScanner() {
 async function startScanner() {
     if (!modalOpen.value || !video.value) return;
 
+    stopScanner();
     scannerError.value = '';
     captured.value = false;
     scanning.value = true;
@@ -136,13 +139,33 @@ async function startScanner() {
         return;
     }
 
+    let zxingError = null;
+
     try {
-        if ('BarcodeDetector' in window) {
-            await startNativeDetector();
+        await startZxingDetector();
+        scannerMessage.value = 'Scanner ready. Hold the barcode steady inside the frame.';
+        return;
+    } catch (error) {
+        zxingError = error;
+
+        if (error?.name === 'NotAllowedError') {
+            stopScanner();
+            scannerError.value = 'Camera permission was denied. Allow camera access in your browser settings, or enter the GTIN manually.';
             return;
         }
 
-        await startZxingDetector();
+        stopScanner();
+        scanning.value = true;
+    }
+
+    try {
+        if ('BarcodeDetector' in window) {
+            await startNativeDetector();
+            scannerMessage.value = 'Scanner ready. Hold the barcode steady inside the frame.';
+            return;
+        }
+
+        throw zxingError || new Error('No barcode scanner is available in this browser.');
     } catch (error) {
         stopScanner();
         const name = error?.name || '';
@@ -183,7 +206,10 @@ async function startNativeDetector() {
 
         try {
             const codes = await detector.detect(video.value);
-            const candidate = codes.map((code) => normalizeScan(code.rawValue)).find((value) => isValidGtin(value));
+            const candidate = codes
+                .map((code) => normalizeScan(code.rawValue))
+                .find((value) => hasGtinLength(value));
+
             if (candidate) {
                 capture(candidate);
                 return;
@@ -199,8 +225,8 @@ async function startNativeDetector() {
 async function startZxingDetector() {
     const { BrowserMultiFormatReader } = await import('@zxing/browser');
     zxingReader = new BrowserMultiFormatReader(undefined, {
-        delayBetweenScanAttempts: 250,
-        delayBetweenScanSuccess: 500,
+        delayBetweenScanAttempts: 180,
+        delayBetweenScanSuccess: 350,
     });
 
     zxingControls = await zxingReader.decodeFromConstraints(
@@ -214,9 +240,16 @@ async function startZxingDetector() {
         },
         video.value,
         (result, _error, controls) => {
-            if (!result || captured.value) return;
+            if (!result || captured.value || !scanning.value) return;
+
             const candidate = normalizeScan(result.getText());
-            if (!isValidGtin(candidate)) return;
+            if (!candidate) return;
+
+            if (!hasGtinLength(candidate)) {
+                scannerMessage.value = `Barcode read (${candidate.length} digits), but GTIN must be 8, 12, 13 or 14 digits.`;
+                return;
+            }
+
             try { controls.stop(); } catch (_) {}
             capture(candidate);
         },
@@ -224,11 +257,13 @@ async function startZxingDetector() {
 }
 
 function capture(value) {
-    if (!isValidGtin(value)) return;
+    if (!hasGtinLength(value)) return;
 
     gtin.value = value;
     captured.value = true;
-    scannerMessage.value = `Barcode captured: ${value}`;
+    scannerMessage.value = isValidGtin(value)
+        ? `Barcode captured: ${value}`
+        : `Barcode read: ${value}. The GTIN check digit is invalid; scan again or correct it manually.`;
     stopScanner();
 
     if (navigator.vibrate) navigator.vibrate(70);
@@ -238,6 +273,7 @@ async function scanAgain() {
     gtin.value = '';
     form.clearErrors();
     scannerMessage.value = 'Point the rear camera at the product barcode.';
+    scannerError.value = '';
     captured.value = false;
     await nextTick();
     await startScanner();
@@ -279,6 +315,7 @@ function saveAndNext() {
 
 function manualInput(event) {
     gtin.value = String(event.target.value || '').replace(/\D/g, '').slice(0, 14);
+    captured.value = false;
     form.clearErrors('gtin');
 }
 
@@ -368,8 +405,8 @@ onBeforeUnmount(stopScanner);
                             Camera preview unavailable. You can enter the GTIN manually below.
                         </div>
                         <div v-if="captured" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/90 p-6 text-center text-white">
-                            <div class="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500"><Icon name="tick-circle" :size="25" /></div>
-                            <p class="mt-3 text-xs text-slate-300">Barcode captured</p>
+                            <div :class="['flex h-12 w-12 items-center justify-center rounded-full', isValidGtin(gtin) ? 'bg-emerald-500' : 'bg-amber-500']"><Icon :name="isValidGtin(gtin) ? 'tick-circle' : 'danger'" :size="25" /></div>
+                            <p class="mt-3 text-xs text-slate-300">{{ isValidGtin(gtin) ? 'Barcode captured' : 'Barcode read' }}</p>
                             <strong class="mt-1 text-xl tracking-[.08em]">{{ gtin }}</strong>
                         </div>
                     </div>
@@ -381,7 +418,7 @@ onBeforeUnmount(stopScanner);
                         <label class="label">GTIN</label>
                         <input :value="gtin" inputmode="numeric" autocomplete="off" class="input h-12 text-center text-lg tracking-[.08em]" maxlength="14" placeholder="Scan or enter barcode" @input="manualInput">
                         <p class="mt-1.5 text-[11px] leading-5 text-slate-500">Accepted GTIN lengths: 8, 12, 13 or 14 digits. The check digit is verified before saving.</p>
-                        <p v-if="gtin && !isValidGtin(gtin)" class="mt-1 text-xs font-medium text-amber-600">This is not yet a valid GTIN.</p>
+                        <p v-if="gtin && !isValidGtin(gtin)" class="mt-1 text-xs font-medium text-amber-600">The barcode was read, but this is not a valid GTIN yet. Scan again or correct the digits.</p>
                         <p v-if="form.errors.gtin" class="error">{{ form.errors.gtin }}</p>
                     </div>
 
