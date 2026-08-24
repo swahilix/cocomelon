@@ -19,6 +19,7 @@ class InventoryController extends Controller
             ->all();
 
         $movementTotals = DB::table('stock_movements')
+            ->where('affects_stock', true)
             ->selectRaw('product_id, COUNT(*) as movement_count, COALESCE(SUM(quantity), 0) as movement_delta')
             ->groupBy('product_id')
             ->get()
@@ -33,8 +34,8 @@ class InventoryController extends Controller
             ->orderBy('name')
             ->get()
             ->map(function (Product $product) use ($movementTotals): array {
-                $lastMovement = DB::table('stock_movements')->where('product_id', $product->id)->latest('id')->first();
-                $firstMovement = DB::table('stock_movements')->where('product_id', $product->id)->oldest('id')->first();
+                $lastMovement = DB::table('stock_movements')->where('product_id', $product->id)->where('affects_stock', true)->latest('id')->first();
+                $firstMovement = DB::table('stock_movements')->where('product_id', $product->id)->where('affects_stock', true)->oldest('id')->first();
                 $movementTotal = $movementTotals->get($product->id);
                 $averageCost = (float) $product->average_cost;
                 $status = ! $product->track_stock
@@ -97,12 +98,15 @@ class InventoryController extends Controller
                 'products.sku',
                 'users.name as performed_by',
             )
+            ->latest('stock_movements.created_at')
             ->latest('stock_movements.id')
-            ->limit(30)
+            ->limit(60)
             ->get()
             ->map(function ($movement) use ($reversedIds): array {
                 $manualTypes = ['opening_balance', 'adjustment_increase', 'adjustment_decrease'];
                 $isReversed = in_array((int) $movement->id, $reversedIds, true);
+                $affectsStock = (bool) ($movement->affects_stock ?? true);
+                $historical = (bool) ($movement->is_historical ?? false);
 
                 return [
                     'id' => $movement->id,
@@ -117,8 +121,12 @@ class InventoryController extends Controller
                     'notes' => $movement->notes,
                     'performed_by' => $movement->performed_by,
                     'created_at' => $movement->created_at,
+                    'affects_stock' => $affectsStock,
+                    'is_historical' => $historical,
                     'is_reversed' => $isReversed,
-                    'can_reverse' => in_array($movement->type, $manualTypes, true)
+                    'can_reverse' => $affectsStock
+                        && ! $historical
+                        && in_array($movement->type, $manualTypes, true)
                         && ! $isReversed
                         && $movement->reversal_of_id === null
                         && (int) $movement->quantity !== 0,
