@@ -38,3 +38,19 @@ main:has(.homepage-store-footer) + footer { display: block !important; }
         pointer-events: none;
     }
 }
+
+/* POS mobile camera launcher: match the joined New customer control. */
+@media (max-width: 767px) {
+    button[title="Scan barcode with camera"] {
+        background: #ffffff !important;
+        color: #ee3500 !important;
+        border-color: #cbd5e1 !important;
+        border-left-width: 0 !important;
+        border-radius: 0 8px 8px 0 !important;
+    }
+
+    button[title="Scan barcode with camera"]:hover,
+    button[title="Scan barcode with camera"]:active {
+        background: #fff4ed !important;
+    }
+}
