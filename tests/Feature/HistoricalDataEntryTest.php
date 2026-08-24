@@ -150,9 +150,9 @@ class HistoricalDataEntryTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Admin/Profit/Index')
-                ->where('summary.pos_revenue', 50000.0)
-                ->where('summary.cogs', 40000.0)
-                ->where('summary.gross_profit', 10000.0)
+                ->where('summary.pos_revenue', 50000)
+                ->where('summary.cogs', 40000)
+                ->where('summary.gross_profit', 10000)
             );
     }
 
