@@ -155,12 +155,13 @@ async function scanEnter() {
 
     const q = raw.toLowerCase();
     const exact = props.products.find((item) => String(item.sku || '').toLowerCase() === q)
+        || props.products.find((item) => String(item.gtin || '').toLowerCase() === q)
         || props.products.find((item) => String(item.name || '').toLowerCase() === q);
     if (exact) {
         addProduct(exact);
         scanSearch.value = '';
     } else {
-        scanError.value = 'No item or unit barcode matched that scan.';
+        scanError.value = 'No item, SKU, GTIN or unit barcode matched that scan.';
     }
 }
 
@@ -358,7 +359,7 @@ function clearSale() {
 
                         <div>
                             <div class="flex min-w-0">
-                                <input v-model="scanSearch" class="h-9 min-w-0 flex-1 rounded-l-[8px] border border-r-0 border-slate-300 bg-white px-3 text-xs outline-none placeholder:text-slate-400 focus:border-prinx-500 disabled:cursor-not-allowed disabled:bg-slate-100 md:rounded-[8px] md:border-r" placeholder="Unit barcode / SKU / item name" :disabled="showNewCustomer" autofocus @keyup.enter="scanEnter">
+                                <input v-model="scanSearch" class="h-9 min-w-0 flex-1 rounded-l-[8px] border border-r-0 border-slate-300 bg-white px-3 text-xs outline-none placeholder:text-slate-400 focus:border-prinx-500 disabled:cursor-not-allowed disabled:bg-slate-100 md:rounded-[8px] md:border-r" placeholder="Unit barcode / SKU / GTIN / item name" :disabled="showNewCustomer" autofocus @keyup.enter="scanEnter">
                                 <button type="button" class="flex h-9 w-10 shrink-0 items-center justify-center rounded-r-[8px] border border-slate-300 bg-slate-950 text-white transition hover:bg-prinx-500 disabled:cursor-not-allowed disabled:opacity-50 md:hidden" title="Scan barcode with camera" aria-label="Scan barcode with camera" :disabled="showNewCustomer" @click="mobileScannerOpen = true">
                                     <Icon name="scan-barcode" :size="18" />
                                 </button>
@@ -450,7 +451,7 @@ function clearSale() {
         <MobileBarcodeScanner
             v-model:open="mobileScannerOpen"
             title="Scan item barcode"
-            message="Point the rear camera at the unit barcode or SKU barcode."
+            message="Point the rear camera at the unit barcode, SKU barcode or product barcode."
             @scanned="handleMobileScan"
         />
 
