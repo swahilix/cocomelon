@@ -200,7 +200,14 @@ class ProductController extends Controller
 
     private function handleImages(Request $request, array $data, ?Product $product = null): array
     {
-        unset($data['primary_image_url'], $data['gallery_urls']);
+        // Never allow empty upload controls to erase saved media. A product image
+        // changes only when a real replacement file or explicit replacement URL is supplied.
+        unset(
+            $data['primary_image'],
+            $data['primary_image_url'],
+            $data['gallery'],
+            $data['gallery_urls']
+        );
 
         $metadata = $this->imageMetadata($data);
 
