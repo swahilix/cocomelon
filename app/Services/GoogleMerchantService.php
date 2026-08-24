@@ -20,6 +20,13 @@ class GoogleMerchantService
             && is_file($this->credentialsPath());
     }
 
+    public function localInventoryConfigured(): bool
+    {
+        return $this->configured()
+            && (bool) config('merchant.local_inventory_enabled')
+            && filled(config('merchant.store_code'));
+    }
+
     public function credentialsPath(): string
     {
         $path = (string) config('merchant.credentials_path');
@@ -77,6 +84,31 @@ class GoogleMerchantService
 
         if (! $response->successful()) {
             throw new RuntimeException($response->json('error.message') ?: $response->body());
+        }
+
+        $result = ['product' => $response->json()];
+
+        if ($this->localInventoryConfigured()) {
+            $result['local_inventory'] = $this->syncLocalInventory($product);
+        }
+
+        return $result;
+    }
+
+    public function syncLocalInventory(Product $product): array
+    {
+        if (! $this->localInventoryConfigured()) {
+            throw new RuntimeException('Google Merchant local inventory is not configured. Enable it and set the Business Profile store code.');
+        }
+
+        $accountId = (string) config('merchant.account_id');
+        $productId = $this->encodedProductId($product);
+        $parent = "accounts/{$accountId}/products/{$productId}";
+        $url = config('merchant.base_url')."/inventories/v1/{$parent}/localInventories:insert";
+        $response = $this->client()->post($url, $this->localInventoryPayload($product));
+
+        if (! $response->successful()) {
+            throw new RuntimeException('Local inventory sync failed: '.($response->json('error.message') ?: $response->body()));
         }
 
         return $response->json();
@@ -159,6 +191,27 @@ class GoogleMerchantService
         ];
     }
 
+    public function localInventoryPayload(Product $product): array
+    {
+        $attributes = [
+            'availability' => $this->localAvailability($product),
+            'price' => $this->priceObject((float) $product->price),
+        ];
+
+        if ($product->track_stock) {
+            $attributes['quantity'] = (string) max(0, (int) $product->stock_quantity);
+        }
+
+        if ($product->sale_price && $product->current_price < (float) $product->price) {
+            $attributes['salePrice'] = $this->priceObject((float) $product->sale_price);
+        }
+
+        return [
+            'storeCode' => (string) config('merchant.store_code'),
+            'localInventoryAttributes' => $attributes,
+        ];
+    }
+
     protected function client(): PendingRequest
     {
         return Http::acceptJson()
@@ -189,6 +242,36 @@ class GoogleMerchantService
             'amountMicros' => (string) round($amount * 1000000),
             'currencyCode' => config('merchant.currency'),
         ];
+    }
+
+    protected function localAvailability(Product $product): string
+    {
+        if (! $product->track_stock) {
+            return 'IN_STOCK';
+        }
+
+        $quantity = max(0, (int) $product->stock_quantity);
+
+        if ($quantity === 0) {
+            return 'OUT_OF_STOCK';
+        }
+
+        if ($quantity <= max(0, (int) $product->low_stock_threshold)) {
+            return 'LIMITED_AVAILABILITY';
+        }
+
+        return 'IN_STOCK';
+    }
+
+    protected function encodedProductId(Product $product): string
+    {
+        $identifier = implode('~', [
+            config('merchant.content_language'),
+            config('merchant.feed_label'),
+            $product->sku,
+        ]);
+
+        return rtrim(strtr(base64_encode($identifier), '+/', '-_'), '=');
     }
 
     protected function absoluteUrl(string $url): string
