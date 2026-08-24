@@ -152,10 +152,10 @@ class ProductController extends Controller
             'status' => ['required', 'in:draft,active,archived'],
             'featured' => ['boolean'],
             'merchant_sync_enabled' => ['boolean'],
-            'primary_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192', 'dimensions:min_width=500,min_height=500'],
+            'primary_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,avif', 'max:16384', 'dimensions:min_width=500,min_height=500'],
             'primary_image_url' => ['nullable', 'url', 'max:2048'],
             'gallery' => ['nullable', 'array', 'max:10'],
-            'gallery.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:8192', 'dimensions:min_width=500,min_height=500'],
+            'gallery.*' => ['image', 'mimes:jpg,jpeg,png,webp,avif', 'max:16384', 'dimensions:min_width=500,min_height=500'],
             'gallery_urls' => ['nullable', 'string', 'max:10000'],
             'gtin' => ['nullable', 'string', 'max:50'],
             'mpn' => ['nullable', 'string', 'max:100'],
@@ -210,7 +210,7 @@ class ProductController extends Controller
             $oldImage = $product?->primary_image;
 
             try {
-                $data['primary_image'] = $this->images->store(
+                $data['primary_image'] = $this->images->storeProduct(
                     $request->file('primary_image'),
                     'products',
                     $data['name'],
@@ -230,13 +230,13 @@ class ProductController extends Controller
         if ($request->hasFile('gallery')) {
             foreach ($request->file('gallery') as $index => $image) {
                 try {
-                    $gallery[] = $this->images->store(
+                    $gallery[] = $this->images->storeProduct(
                         $image,
                         'products/gallery',
                         $data['name'].' gallery '.($index + 1),
                         [
                             ...$metadata,
-                            'title' => $data['name'].' product gallery image '.($index + 1),
+                            'title' => $data['name'].' product gallery image '.($index + 1).' | Prinx Electronics',
                         ]
                     );
                 } catch (Throwable $exception) {
@@ -259,18 +259,26 @@ class ProductController extends Controller
         $category = Category::find($data['category_id'] ?? null);
         $brand = Brand::find($data['brand_id'] ?? null);
         $description = trim((string) ($data['meta_description'] ?? $data['short_description'] ?? $data['description'] ?? ''));
+        $slug = trim((string) ($data['slug'] ?? '')) ?: Str::slug((string) ($data['name'] ?? 'product'));
+        $productUrl = rtrim((string) config('app.url'), '/').'/products/'.$slug;
 
         return [
-            'title' => $data['name'].' | Prinx Electronics',
-            'description' => $description,
+            'title' => $data['name'].' | Prinx Electronics Tanzania',
+            'description' => Str::limit($description, 300, ''),
+            'identifier' => (string) ($data['sku'] ?? ''),
+            'source_url' => $productUrl,
+            'brand' => $brand?->name,
+            'category' => $category?->name,
             'keywords' => array_values(array_filter([
                 $data['name'] ?? null,
                 $brand?->name,
                 $category?->name,
                 $data['sku'] ?? null,
-                'electronics',
+                ($data['name'] ?? null) ? 'buy '.$data['name'].' Tanzania' : null,
+                $category?->name ? $category->name.' Tanzania' : null,
                 'Prinx Electronics',
-                'Tanzania',
+                'electronics Tanzania',
+                'Dodoma Tanzania',
             ])),
         ];
     }
