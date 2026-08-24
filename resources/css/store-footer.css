@@ -5,3 +5,36 @@ main:has(.homepage-store-footer) + footer { display: block !important; }
 .xl\:grid-cols-\[1\.35fr_\.85fr\] {
     grid-template-columns: minmax(0, 1fr) !important;
 }
+
+/* Desktop storefront header action labels. */
+@media (min-width: 1024px) {
+    header [title="Account"],
+    header [title="Admin panel"],
+    header [title="Sign out"],
+    header [title="Wishlist"],
+    header [title="Cart"] {
+        position: relative;
+        width: 48px !important;
+        height: 54px !important;
+        padding-bottom: 15px;
+        border-radius: 8px !important;
+    }
+
+    header [title="Account"]::after,
+    header [title="Admin panel"]::after,
+    header [title="Sign out"]::after,
+    header [title="Wishlist"]::after,
+    header [title="Cart"]::after {
+        content: attr(title);
+        position: absolute;
+        left: 50%;
+        bottom: 1px;
+        transform: translateX(-50%);
+        white-space: nowrap;
+        font-size: 9px;
+        line-height: 1;
+        font-weight: 500;
+        color: #475569;
+        pointer-events: none;
+    }
+}
