@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\HistoricalDataController;
+use App\Http\Middleware\PrepareHistoricalPurchaseImport;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin/historical-data')->name('admin.historical.')->middleware(['auth', 'admin'])->group(function (): void {
@@ -9,7 +10,7 @@ Route::prefix('admin/historical-data')->name('admin.historical.')->middleware(['
         ->name('index');
 
     Route::post('purchases', [HistoricalDataController::class, 'storePurchase'])
-        ->middleware('permission:manage_purchases')
+        ->middleware(['permission:manage_purchases', PrepareHistoricalPurchaseImport::class])
         ->name('purchases.store');
     Route::delete('purchases/{purchase}', [HistoricalDataController::class, 'destroyPurchase'])
         ->middleware('permission:manage_purchases')
