@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use JsonException;
@@ -55,7 +56,12 @@ class MerchantController extends Controller
             'feed_label' => ['required', 'string', 'max:50'],
             'currency' => ['required', 'regex:/^[A-Za-z]{3}$/'],
             'local_inventory_enabled' => ['required', 'boolean'],
-            'store_code' => ['nullable', 'required_if:local_inventory_enabled,true', 'string', 'max:100'],
+            'store_code' => [
+                'nullable',
+                Rule::requiredIf(fn () => $request->boolean('local_inventory_enabled')),
+                'string',
+                'max:100',
+            ],
         ]);
 
         $this->writeEnv([
