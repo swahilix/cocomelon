@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class HistoricalDataEntryTest extends TestCase
@@ -81,12 +82,13 @@ class HistoricalDataEntryTest extends TestCase
         $this->assertDatabaseCount('pos_sales', 0);
     }
 
-    public function test_historical_sale_uses_purchase_cost_and_does_not_reduce_current_stock(): void
+    public function test_historical_sale_uses_purchase_cost_does_not_reduce_stock_and_appears_in_profit_report(): void
     {
         [$admin, $product] = $this->fixtures();
         $before = (int) $product->stock_quantity;
         $purchaseDate = now()->subDays(20)->toDateString();
-        $saleAt = now()->subDays(10)->format('Y-m-d H:i:s');
+        $saleDate = now()->subDays(10);
+        $saleAt = $saleDate->format('Y-m-d H:i:s');
         $cashId = (int) DB::table('payment_methods')->where('code', 'cash')->value('id');
 
         $this->actingAs($admin)->post('/admin/historical-data/purchases', [
@@ -142,6 +144,16 @@ class HistoricalDataEntryTest extends TestCase
             'affects_stock' => 0,
             'is_historical' => 1,
         ]);
+
+        $this->actingAs($admin)
+            ->get('/admin/profit?from='.$saleDate->copy()->subDay()->toDateString().'&to='.$saleDate->copy()->addDay()->toDateString().'&source=pos')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/Profit/Index')
+                ->where('summary.pos_revenue', 50000.0)
+                ->where('summary.cogs', 40000.0)
+                ->where('summary.gross_profit', 10000.0)
+            );
     }
 
     private function fixtures(): array
