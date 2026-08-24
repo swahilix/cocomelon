@@ -69,6 +69,15 @@ const clearImagePreviews = () => {
     selectedImagePreviews.value = [];
 };
 
+const resetCreateForm = () => {
+    form.reset();
+    form.clearErrors();
+    clearImagePreviews();
+    replaceMainImage.value = false;
+    isDraggingImages.value = false;
+    if (imageInput.value) imageInput.value.value = '';
+};
+
 const applySelectedImages = (files) => {
     const images = Array.from(files || []).filter((file) => file.type?.startsWith('image/')).slice(0, 10);
     if (!images.length) return;
@@ -129,7 +138,8 @@ const submit = () => {
     form._method = 'POST';
     form.post('/admin/products', {
         forceFormData: true,
-        preserveScroll: true,
+        preserveScroll: false,
+        onSuccess: resetCreateForm,
     });
 };
 
