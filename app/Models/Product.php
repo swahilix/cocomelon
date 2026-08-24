@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Jobs\SyncProductToGoogleMerchant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -43,6 +44,18 @@ class Product extends Model
             $product->sku = strtoupper(trim($product->sku));
             $product->meta_title = $product->meta_title ?: $product->name.' | Prinx Electronics';
             $product->meta_description = $product->meta_description ?: Str::limit(self::descriptionToPlainText((string) ($product->short_description ?: $product->description)), 155, '');
+        });
+
+        static::updated(function (Product $product): void {
+            if (! $product->wasChanged('stock_quantity')) {
+                return;
+            }
+
+            if (! $product->merchant_sync_enabled || $product->status !== 'active' || ! $product->merchant_last_synced_at) {
+                return;
+            }
+
+            SyncProductToGoogleMerchant::dispatch($product->id)->afterCommit();
         });
     }
 
