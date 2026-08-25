@@ -1,6 +1,6 @@
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { usePage } from '@inertiajs/vue3';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { router, usePage } from '@inertiajs/vue3';
 import Icon from './Icon.vue';
 
 const page = usePage();
@@ -8,6 +8,7 @@ const visible = ref(false);
 const copied = ref(false);
 let dismissTimer = null;
 let copiedTimer = null;
+let removeSuccessListener = null;
 
 const success = computed(() => page.props.flash?.success || '');
 const error = computed(() => page.props.flash?.error || '');
@@ -28,6 +29,17 @@ const startDismissTimer = () => {
         visible.value = false;
         dismissTimer = null;
     }, 5000);
+};
+
+const showCurrentFlash = () => {
+    if (!message.value) {
+        dismiss();
+        return;
+    }
+
+    visible.value = true;
+    copied.value = false;
+    startDismissTimer();
 };
 
 const copyMessage = async () => {
@@ -55,20 +67,21 @@ const copyMessage = async () => {
     }, 1800);
 };
 
-watch(message, (value) => {
-    if (!value) {
-        dismiss();
-        return;
-    }
+watch(message, showCurrentFlash, { immediate: true });
 
-    visible.value = true;
-    copied.value = false;
-    startDismissTimer();
-}, { immediate: true });
+onMounted(() => {
+    // Inertia can return the exact same flash text twice in a row (for example,
+    // repeated cart updates). Listen to every successful visit so the alert is
+    // shown again even when the message string itself did not change.
+    removeSuccessListener = router.on('success', () => {
+        window.setTimeout(showCurrentFlash, 0);
+    });
+});
 
 onBeforeUnmount(() => {
     if (dismissTimer) clearTimeout(dismissTimer);
     if (copiedTimer) clearTimeout(copiedTimer);
+    if (removeSuccessListener) removeSuccessListener();
 });
 </script>
 
@@ -83,13 +96,13 @@ onBeforeUnmount(() => {
     >
         <div
             v-if="visible && message"
-            class="fixed right-3 top-3 z-[100] w-[calc(100%-1.5rem)] max-w-[520px] sm:right-5 sm:top-5 sm:w-full"
+            class="fixed right-2.5 top-2.5 z-[100] w-[calc(100%-1.25rem)] max-w-[320px] sm:right-4 sm:top-4 sm:w-full"
             role="alert"
             aria-live="polite"
         >
             <div
                 :class="[
-                    'flex min-h-[86px] items-center gap-4 rounded-[10px] border px-4 py-3.5 shadow-[0_10px_30px_rgba(15,23,42,0.08)] sm:px-5',
+                    'flex min-h-[52px] items-center gap-2.5 rounded-[8px] border px-3 py-2 shadow-[0_8px_22px_rgba(15,23,42,0.08)]',
                     type === 'success'
                         ? 'border-[#ffd9c5] bg-[#fff4ed]'
                         : 'border-red-200 bg-[#fff1f2]',
@@ -97,45 +110,46 @@ onBeforeUnmount(() => {
             >
                 <div
                     :class="[
-                        'flex h-11 w-11 shrink-0 items-center justify-center',
+                        'flex h-7 w-7 shrink-0 items-center justify-center',
                         type === 'success' ? 'text-[#ee3500]' : 'text-red-600',
                     ]"
                 >
-                    <Icon :name="type === 'success' ? 'tick-circle' : 'danger'" :size="28" />
+                    <Icon :name="type === 'success' ? 'tick-circle' : 'danger'" :size="18" />
                 </div>
 
                 <div class="min-w-0 flex-1">
                     <p
                         :class="[
-                            'break-words text-[14px] font-semibold leading-5 sm:text-[15px]',
+                            'break-words text-[11px] font-semibold leading-4 sm:text-xs',
                             type === 'success' ? 'text-[#d92f00]' : 'text-red-700',
                         ]"
                     >
                         {{ type === 'success' ? 'Success' : 'Something went wrong' }}
                     </p>
-                    <p class="mt-1 select-text break-words text-[13px] font-normal leading-5 text-slate-600 sm:text-sm">
+                    <p class="mt-0.5 select-text break-words text-[11px] font-normal leading-4 text-slate-600 sm:text-xs">
                         {{ message }}
                     </p>
                 </div>
 
-                <div class="flex shrink-0 items-center gap-0.5 self-start pt-0.5">
+                <div class="flex shrink-0 items-center gap-0.5 self-start">
                     <button
                         type="button"
                         :class="[
-                            'flex h-8 min-w-8 items-center justify-center gap-1 rounded-[6px] px-1.5 transition',
+                            'flex h-6 w-6 items-center justify-center rounded-[5px] transition',
                             type === 'success'
                                 ? 'text-[#e44a1b] hover:bg-white/70 hover:text-[#bd2b05]'
                                 : 'text-red-400 hover:bg-white/70 hover:text-red-700',
                         ]"
                         :title="copied ? 'Copied' : 'Copy message'"
+                        :aria-label="copied ? 'Message copied' : 'Copy message'"
                         @click="copyMessage"
                     >
-                        <Icon :name="copied ? 'tick-circle' : 'copy'" :size="15" />
+                        <Icon :name="copied ? 'tick-circle' : 'copy'" :size="13" />
                     </button>
                     <button
                         type="button"
                         :class="[
-                            'flex h-8 w-8 items-center justify-center rounded-[6px] transition',
+                            'flex h-6 w-6 items-center justify-center rounded-[5px] transition',
                             type === 'success'
                                 ? 'text-[#e44a1b] hover:bg-white/70 hover:text-[#bd2b05]'
                                 : 'text-red-400 hover:bg-white/70 hover:text-red-700',
@@ -144,7 +158,7 @@ onBeforeUnmount(() => {
                         aria-label="Dismiss notification"
                         @click="dismiss"
                     >
-                        <Icon name="close-circle" :size="16" />
+                        <Icon name="close-circle" :size="13" />
                     </button>
                 </div>
             </div>
