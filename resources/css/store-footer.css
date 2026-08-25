@@ -57,6 +57,11 @@ main form:has(input[type="email"]) button[type="submit"] {
     border-radius: 6px !important;
 }
 
+/* Product details quantity stepper buttons. */
+main .inline-flex.h-9:has(> input[type="number"]) > button {
+    border-radius: 0 !important;
+}
+
 /* POS mobile camera launcher: match the joined New customer control. */
 @media (max-width: 767px) {
     button[title="Scan barcode with camera"] {
