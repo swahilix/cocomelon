@@ -37,12 +37,14 @@ class BusinessSettingsController extends Controller
         }
 
         if ($smsReady) {
-            $safeSettings += [
-                'sms_enabled' => false,
-                'sms_provider' => 'beem',
-                'sms_api_url' => null,
-                'sms_sender_id' => null,
-            ];
+            $provider = strtolower((string) ($settings?->sms_provider ?? 'nextsms'));
+            if (! in_array($provider, ['nextsms', 'momo'], true)) {
+                $provider = 'nextsms';
+            }
+
+            $safeSettings['sms_enabled'] = (bool) ($settings?->sms_enabled ?? false);
+            $safeSettings['sms_provider'] = $provider;
+            $safeSettings['sms_sender_id'] = $settings?->sms_sender_id ?? null;
         }
 
         return Inertia::render('Admin/BusinessSettings/Edit', [
@@ -50,9 +52,8 @@ class BusinessSettingsController extends Controller
             'paymentStripUrl' => $this->mediaUrl($paymentStrip),
             'smsAvailable' => $smsReady,
             'smsSecrets' => [
-                'api_key' => $smsReady && filled($settings?->sms_api_key ?? null),
-                'api_secret' => $smsReady && filled($settings?->sms_api_secret ?? null),
-                'bearer_token' => $smsReady && filled($settings?->sms_bearer_token ?? null),
+                'nextsms_api_key' => $smsReady && filled($settings?->sms_api_key ?? null),
+                'momo_api_token' => $smsReady && filled($settings?->sms_bearer_token ?? null),
             ],
         ]);
     }
@@ -80,19 +81,17 @@ class BusinessSettingsController extends Controller
             'maps_url' => ['nullable', 'url:http,https', 'max:255'],
             'payment_strip' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'sms_enabled' => ['nullable', 'boolean'],
-            'sms_provider' => ['nullable', Rule::in(['beem', 'custom'])],
-            'sms_api_url' => ['nullable', 'url:http,https', 'max:255'],
-            'sms_api_key' => ['nullable', 'string', 'max:1000'],
-            'sms_api_secret' => ['nullable', 'string', 'max:1000'],
+            'sms_provider' => ['nullable', Rule::in(['nextsms', 'momo'])],
+            'sms_api_key' => ['nullable', 'string', 'max:2000'],
             'sms_sender_id' => ['nullable', 'string', 'max:40'],
-            'sms_bearer_token' => ['nullable', 'string', 'max:2000'],
+            'sms_bearer_token' => ['nullable', 'string', 'max:4000'],
         ]);
 
         $current = DB::table('business_settings')->where('id', 1)->first();
         $currentPaymentStrip = Schema::hasColumn('business_settings', 'payment_strip')
             ? $current?->payment_strip
             : null;
-        $smsFieldsSubmitted = $request->hasAny(['sms_enabled', 'sms_provider', 'sms_api_url', 'sms_api_key', 'sms_api_secret', 'sms_sender_id', 'sms_bearer_token']);
+        $smsFieldsSubmitted = $request->hasAny(['sms_enabled', 'sms_provider', 'sms_api_key', 'sms_sender_id', 'sms_bearer_token']);
 
         if ($smsFieldsSubmitted && ! Schema::hasColumn('business_settings', 'sms_enabled')) {
             throw ValidationException::withMessages([
@@ -102,33 +101,35 @@ class BusinessSettingsController extends Controller
 
         if (Schema::hasColumn('business_settings', 'sms_enabled')) {
             $enabled = (bool) ($validated['sms_enabled'] ?? false);
-            $provider = (string) ($validated['sms_provider'] ?? $current?->sms_provider ?? 'beem');
-            $hasApiKey = filled($validated['sms_api_key'] ?? null) || filled($current?->sms_api_key ?? null);
-            $hasApiSecret = filled($validated['sms_api_secret'] ?? null) || filled($current?->sms_api_secret ?? null);
+            $provider = (string) ($validated['sms_provider'] ?? $current?->sms_provider ?? 'nextsms');
             $sender = trim((string) ($validated['sms_sender_id'] ?? $current?->sms_sender_id ?? ''));
-            $url = trim((string) ($validated['sms_api_url'] ?? $current?->sms_api_url ?? ''));
+            $hasNextSmsKey = filled($validated['sms_api_key'] ?? null) || filled($current?->sms_api_key ?? null);
+            $hasMomoToken = filled($validated['sms_bearer_token'] ?? null) || filled($current?->sms_bearer_token ?? null);
 
-            if ($enabled && $provider === 'beem' && (! $hasApiKey || ! $hasApiSecret || $sender === '')) {
+            if ($enabled && $provider === 'nextsms' && (! $hasNextSmsKey || $sender === '')) {
                 throw ValidationException::withMessages([
-                    'sms_enabled' => 'To enable Beem SMS, provide an API key, API secret and sender ID.',
+                    'sms_enabled' => 'To enable Next SMS, provide the Basic API key/token and sender ID.',
                 ]);
             }
 
-            if ($enabled && $provider === 'custom' && $url === '') {
+            if ($enabled && $provider === 'momo' && ! $hasMomoToken) {
                 throw ValidationException::withMessages([
-                    'sms_api_url' => 'A custom SMS webhook URL is required when customer SMS login is enabled.',
+                    'sms_enabled' => 'To enable Momo SMS, provide the Momo Business API token.',
                 ]);
             }
 
-            foreach (['sms_api_key', 'sms_api_secret', 'sms_bearer_token'] as $secretField) {
+            foreach (['sms_api_key', 'sms_bearer_token'] as $secretField) {
                 if (filled($validated[$secretField] ?? null)) {
                     $validated[$secretField] = Crypt::encryptString(trim((string) $validated[$secretField]));
                 } else {
                     unset($validated[$secretField]);
                 }
             }
+
+            // Legacy Beem/custom fields are intentionally no longer accepted or changed here.
+            unset($validated['sms_api_secret'], $validated['sms_api_url']);
         } else {
-            foreach (['sms_enabled', 'sms_provider', 'sms_api_url', 'sms_api_key', 'sms_api_secret', 'sms_sender_id', 'sms_bearer_token'] as $field) {
+            foreach (['sms_enabled', 'sms_provider', 'sms_api_key', 'sms_sender_id', 'sms_bearer_token'] as $field) {
                 unset($validated[$field]);
             }
         }
