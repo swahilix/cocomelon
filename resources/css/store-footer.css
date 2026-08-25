@@ -85,6 +85,19 @@ main section[class~="pb-5"][class~="pt-6"] .mb-4 > div > button {
     }
 }
 
+/* Mobile footer: brand block full width, then two link columns per row. */
+@media (max-width: 639px) {
+    footer > .container-shell > .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        column-gap: 1rem !important;
+        row-gap: 1.75rem !important;
+    }
+
+    footer > .container-shell > .grid > div:first-child {
+        grid-column: 1 / -1;
+    }
+}
+
 /* Home mobile benefits: each service promise is its own horizontal swipe card. */
 @media (max-width: 639px) {
     section[class~="pt-5"][class~="sm:pt-6"] > .container-shell > .overflow-x-auto {
