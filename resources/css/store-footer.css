@@ -38,6 +38,17 @@ main:has(.homepage-store-footer) + footer { display: block !important; }
     }
 }
 
+/* Mobile storefront search button sizing. */
+@media (max-width: 1023px) {
+    header form button[aria-label="Search"] {
+        height: 43px !important;
+        width: 34px !important;
+        margin-top: 4px !important;
+        margin-right: 4px !important;
+        flex: 0 0 34px;
+    }
+}
+
 /* POS mobile camera launcher: match the joined New customer control. */
 @media (max-width: 767px) {
     button[title="Scan barcode with camera"] {
