@@ -36,6 +36,7 @@ const sections = computed(() => [
         label: 'Sales & customers',
         items: [
             ['Point of sale', '/admin/pos', 'shop', ['use_pos']],
+            ['Installments', '/admin/installments', 'money-add', ['use_pos', 'manage_orders']],
             ['Cash registers', '/admin/registers', 'money-add', ['manage_registers']],
             ['Sales', '/admin/sales', 'basket-1', ['use_pos', 'view_reports']],
             ['Expenses', '/admin/expenses', 'bulb', ['manage_expenses']],
