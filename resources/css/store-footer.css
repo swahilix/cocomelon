@@ -108,6 +108,13 @@ footer a[aria-label="Instagram"] {
     }
 }
 
+/* Mobile cart: show two "You May Also Like" products per row. */
+@media (max-width: 639px) {
+    main > .container-shell > div.mt-5.grid > .min-w-0 > section.mt-5 > .mt-3.grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
 /* Home mobile benefits: each service promise is its own horizontal swipe card. */
 @media (max-width: 639px) {
     section[class~="pt-5"][class~="sm:pt-6"] > .container-shell > .overflow-x-auto {
