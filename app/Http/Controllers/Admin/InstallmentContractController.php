@@ -69,7 +69,7 @@ class InstallmentContractController extends Controller
         abort_unless(Storage::disk('local')->exists($plan->signed_contract_path), 404);
 
         $name = trim((string) ($plan->signed_contract_original_name ?: basename($plan->signed_contract_path)));
-        $safeName = str_replace(['"', "\r", "\n"], '', $name);
+        $safeName = preg_replace('/[^A-Za-z0-9._ -]/', '', $name) ?: 'signed-contract';
 
         return response()->file(Storage::disk('local')->path($plan->signed_contract_path), [
             'Content-Type' => $plan->signed_contract_mime ?: 'application/octet-stream',
