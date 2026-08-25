@@ -18,7 +18,7 @@ class HandleInertiaRequests extends Middleware
 
     public function rootView(Request $request): string
     {
-        if ($request->is('admin','admin/*','login','register','cart','checkout','order-success/*','track-order','account/*')) config(['inertia.ssr.enabled' => false]);
+        if ($request->is('admin','admin/*','login','login/*','register','cart','checkout','order-success/*','track-order','account','account/*')) config(['inertia.ssr.enabled' => false]);
         return parent::rootView($request);
     }
 
