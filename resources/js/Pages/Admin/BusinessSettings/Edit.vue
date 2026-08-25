@@ -32,10 +32,8 @@ const form = useForm({
     maps_url: props.settings?.maps_url || '',
     payment_strip: null,
     sms_enabled: Boolean(props.settings?.sms_enabled),
-    sms_provider: props.settings?.sms_provider || 'beem',
-    sms_api_url: props.settings?.sms_api_url || '',
+    sms_provider: ['nextsms', 'momo'].includes(props.settings?.sms_provider) ? props.settings.sms_provider : 'nextsms',
     sms_api_key: '',
-    sms_api_secret: '',
     sms_sender_id: props.settings?.sms_sender_id || '',
     sms_bearer_token: '',
 });
@@ -46,7 +44,6 @@ const save = () => form.post('/admin/business-settings', {
     onSuccess: () => {
         form.payment_strip = null;
         form.sms_api_key = '';
-        form.sms_api_secret = '';
         form.sms_bearer_token = '';
     },
 });
@@ -100,7 +97,7 @@ const save = () => form.post('/admin/business-settings', {
                     <div class="mb-3 flex items-start justify-between gap-3">
                         <div class="flex items-start gap-2">
                             <span class="flex h-8 w-8 items-center justify-center rounded-[8px] bg-prinx-50 text-prinx-600"><Icon name="sms" :size="17" /></span>
-                            <div><h2 class="font-semibold text-slate-900">Customer login SMS</h2><p class="text-[11px] text-slate-500">Send one-time codes when customers sign in with their phone number.</p></div>
+                            <div><h2 class="font-semibold text-slate-900">Customer login SMS</h2><p class="text-[11px] text-slate-500">Choose the SMS gateway used for customer phone verification codes.</p></div>
                         </div>
                         <label v-if="smsAvailable" class="flex shrink-0 cursor-pointer items-center gap-2 text-xs font-semibold text-slate-700"><input v-model="form.sms_enabled" type="checkbox" class="h-4 w-4 accent-prinx-500"> Enabled</label>
                     </div>
@@ -108,27 +105,44 @@ const save = () => form.post('/admin/business-settings', {
                     <div v-if="!smsAvailable" class="rounded-[7px] border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">Run the latest database migrations before configuring customer SMS login.</div>
                     <div v-else class="grid gap-3 sm:grid-cols-2">
                         <div>
-                            <label class="label">SMS provider</label>
-                            <select v-model="form.sms_provider" class="input"><option value="beem">Beem Africa</option><option value="custom">Custom webhook</option></select>
+                            <label class="label">Active SMS provider</label>
+                            <select v-model="form.sms_provider" class="input">
+                                <option value="nextsms">Next SMS</option>
+                                <option value="momo">Momo SMS</option>
+                            </select>
+                            <p class="mt-1 text-[10px] text-slate-500">Save settings after changing this. New OTP messages immediately use the saved provider.</p>
                             <p v-if="form.errors.sms_provider" class="error">{{ form.errors.sms_provider }}</p>
                         </div>
-                        <div><label class="label">Sender ID</label><input v-model="form.sms_sender_id" class="input" placeholder="PRINX"><p v-if="form.errors.sms_sender_id" class="error">{{ form.errors.sms_sender_id }}</p></div>
-
-                        <div class="sm:col-span-2">
-                            <label class="label">{{ form.sms_provider === 'beem' ? 'API URL (optional)' : 'Webhook URL' }}</label>
-                            <input v-model="form.sms_api_url" class="input" :placeholder="form.sms_provider === 'beem' ? 'Leave blank for Beem default endpoint' : 'https://sms-provider.example/send'">
-                            <p v-if="form.errors.sms_api_url" class="error">{{ form.errors.sms_api_url }}</p>
+                        <div>
+                            <label class="label">Sender ID <span v-if="form.sms_provider === 'momo'" class="font-normal text-slate-400">(optional)</span></label>
+                            <input v-model="form.sms_sender_id" class="input" placeholder="PRINX">
+                            <p v-if="form.sms_provider === 'nextsms'" class="mt-1 text-[10px] text-slate-500">Required for Next SMS.</p>
+                            <p v-else class="mt-1 text-[10px] text-slate-500">Momo can use the account default when left blank.</p>
+                            <p v-if="form.errors.sms_sender_id" class="error">{{ form.errors.sms_sender_id }}</p>
                         </div>
 
-                        <template v-if="form.sms_provider === 'beem'">
-                            <div><label class="label">API key</label><input v-model="form.sms_api_key" type="password" autocomplete="new-password" class="input" :placeholder="smsSecrets.api_key ? 'Configured — leave blank to keep' : 'Enter Beem API key'"><p v-if="smsSecrets.api_key" class="mt-1 text-[10px] font-medium text-emerald-600">API key is configured.</p><p v-if="form.errors.sms_api_key" class="error">{{ form.errors.sms_api_key }}</p></div>
-                            <div><label class="label">API secret</label><input v-model="form.sms_api_secret" type="password" autocomplete="new-password" class="input" :placeholder="smsSecrets.api_secret ? 'Configured — leave blank to keep' : 'Enter Beem API secret'"><p v-if="smsSecrets.api_secret" class="mt-1 text-[10px] font-medium text-emerald-600">API secret is configured.</p><p v-if="form.errors.sms_api_secret" class="error">{{ form.errors.sms_api_secret }}</p></div>
+                        <template v-if="form.sms_provider === 'nextsms'">
+                            <div class="sm:col-span-2 rounded-[8px] border border-slate-200 bg-slate-50 p-3">
+                                <div class="mb-3 flex items-start justify-between gap-3"><div><p class="text-xs font-semibold text-slate-900">Next SMS credentials</p><p class="mt-1 text-[10px] leading-4 text-slate-500">Uses the same Messaging Service API V2 single-message integration as the microfinance system.</p></div><span class="rounded-[6px] bg-white px-2 py-1 text-[9px] font-semibold text-slate-500">messaging-service.co.tz</span></div>
+                                <label class="label">Basic API key / token</label>
+                                <input v-model="form.sms_api_key" type="password" autocomplete="new-password" class="input" :placeholder="smsSecrets.nextsms_api_key ? 'Configured — leave blank to keep' : 'Enter Next SMS Basic API key/token'">
+                                <p v-if="smsSecrets.nextsms_api_key" class="mt-1 text-[10px] font-medium text-emerald-600">Next SMS API key is configured.</p>
+                                <p v-if="form.errors.sms_api_key" class="error">{{ form.errors.sms_api_key }}</p>
+                            </div>
                         </template>
 
-                        <div v-else class="sm:col-span-2"><label class="label">Bearer token <span class="text-slate-400">(optional)</span></label><input v-model="form.sms_bearer_token" type="password" autocomplete="new-password" class="input" :placeholder="smsSecrets.bearer_token ? 'Configured — leave blank to keep' : 'Optional authorization token'"><p v-if="smsSecrets.bearer_token" class="mt-1 text-[10px] font-medium text-emerald-600">Bearer token is configured.</p><p v-if="form.errors.sms_bearer_token" class="error">{{ form.errors.sms_bearer_token }}</p></div>
+                        <template v-else>
+                            <div class="sm:col-span-2 rounded-[8px] border border-slate-200 bg-slate-50 p-3">
+                                <div class="mb-3 flex items-start justify-between gap-3"><div><p class="text-xs font-semibold text-slate-900">Momo SMS credentials</p><p class="mt-1 text-[10px] leading-4 text-slate-500">Uses Momo Business Communications API v3 with Bearer token authentication.</p></div><span class="rounded-[6px] bg-white px-2 py-1 text-[9px] font-semibold text-slate-500">business.momo.tz</span></div>
+                                <label class="label">Momo Business API token</label>
+                                <input v-model="form.sms_bearer_token" type="password" autocomplete="new-password" class="input" :placeholder="smsSecrets.momo_api_token ? 'Configured — leave blank to keep' : 'Enter Momo Business API token'">
+                                <p v-if="smsSecrets.momo_api_token" class="mt-1 text-[10px] font-medium text-emerald-600">Momo API token is configured.</p>
+                                <p v-if="form.errors.sms_bearer_token" class="error">{{ form.errors.sms_bearer_token }}</p>
+                            </div>
+                        </template>
 
                         <p v-if="form.errors.sms_enabled" class="error sm:col-span-2">{{ form.errors.sms_enabled }}</p>
-                        <div class="sm:col-span-2 rounded-[7px] border border-slate-200 bg-slate-50 px-3 py-2.5 text-[11px] leading-5 text-slate-600"><strong class="text-slate-800">Customer login flow:</strong> customer enters a Tanzania phone number → receives a 6-digit code → code expires in 5 minutes → verified customer can only access order tracking, payment records and invoices.</div>
+                        <div class="sm:col-span-2 rounded-[7px] border border-slate-200 bg-slate-50 px-3 py-2.5 text-[11px] leading-5 text-slate-600"><strong class="text-slate-800">Provider switching:</strong> both gateway credentials can remain saved. The value in <strong>Active SMS provider</strong> is the only gateway used after you save the form.</div>
                     </div>
                 </section>
 
@@ -184,10 +198,10 @@ const save = () => form.post('/admin/business-settings', {
                 </section>
 
                 <section class="rounded-[9px] border p-3 text-[11px] leading-5" :class="form.sms_enabled ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-slate-200 bg-white text-slate-600'">
-                    <div class="flex gap-2"><Icon name="sms" :size="16" class="mt-0.5 shrink-0" /><div><p class="font-semibold">Customer phone login: {{ form.sms_enabled ? 'Enabled' : 'Disabled' }}</p><p class="mt-1">Provider: {{ form.sms_provider === 'beem' ? 'Beem Africa' : 'Custom webhook' }}</p></div></div>
+                    <div class="flex gap-2"><Icon name="sms" :size="16" class="mt-0.5 shrink-0" /><div><p class="font-semibold">Customer phone login: {{ form.sms_enabled ? 'Enabled' : 'Disabled' }}</p><p class="mt-1">Active provider: {{ form.sms_provider === 'nextsms' ? 'Next SMS' : 'Momo SMS' }}</p></div></div>
                 </section>
 
-                <section class="rounded-[9px] border border-prinx-100 bg-prinx-50 p-3 text-[11px] leading-5 text-prinx-900"><div class="flex gap-2"><Icon name="info-circle" :size="16" class="mt-0.5 shrink-0" /><p>Saved values become the shared business information used by the public website. SMS credentials are encrypted before they are stored.</p></div></section>
+                <section class="rounded-[9px] border border-prinx-100 bg-prinx-50 p-3 text-[11px] leading-5 text-prinx-900"><div class="flex gap-2"><Icon name="info-circle" :size="16" class="mt-0.5 shrink-0" /><p>Next SMS and Momo API credentials are encrypted before storage. Saving the provider selection switches all new customer OTP messages to that gateway.</p></div></section>
             </aside>
         </form>
     </AdminLayout>
