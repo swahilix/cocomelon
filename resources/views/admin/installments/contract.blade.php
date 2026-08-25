@@ -352,10 +352,14 @@
         }
 
         @media print {
+            html,
             body {
-                background: #fff;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+                width: 210mm;
+                min-height: 297mm;
+                margin: 0 !important;
+                background: #fff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
 
             .toolbar {
@@ -363,14 +367,51 @@
             }
 
             .paper {
-                width: 210mm;
-                min-height: 297mm;
-                margin: 0;
-                box-shadow: none;
+                width: 210mm !important;
+                min-height: 297mm !important;
+                margin: 0 !important;
+                padding: 14mm 14mm 12mm !important;
+                background: #fff !important;
+                box-shadow: none !important;
+            }
+
+            .summary-grid {
+                grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+                gap: 8px !important;
+            }
+
+            .bottom-grid {
+                grid-template-columns: 1.15fr .85fr !important;
+                gap: 14px !important;
+                align-items: start !important;
+            }
+
+            .signatures {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 18px !important;
+            }
+
+            .stamp-box {
+                width: 170px !important;
+                height: 170px !important;
+                max-width: none !important;
+            }
+
+            .header,
+            .title-block,
+            .section,
+            .products-wrap,
+            .terms,
+            .bottom-grid,
+            .panel,
+            .footer,
+            .products tr {
+                break-inside: avoid;
+                page-break-inside: avoid;
             }
         }
 
-        @media (max-width: 800px) {
+        @media screen and (max-width: 800px) {
             .paper {
                 width: calc(100% - 20px);
                 min-height: auto;
