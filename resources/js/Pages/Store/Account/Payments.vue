@@ -14,7 +14,7 @@ const date = (value) => value ? new Date(value).toLocaleDateString('en-TZ', { da
         <Head title="Payment Records"><meta head-key="robots" name="robots" content="noindex,nofollow" /></Head>
         <section class="bg-[#fbfbfb] py-5 sm:py-7"><div class="container-shell">
             <nav class="flex items-center gap-2 text-xs font-medium text-slate-500"><Link href="/" class="hover:text-prinx-600">Home</Link><span>/</span><Link href="/account" class="hover:text-prinx-600">My Account</Link><span>/</span><span class="text-prinx-600">Payment Records</span></nav>
-            <div class="mt-3"><h1 class="text-[26px] font-semibold tracking-[-.025em] text-slate-950 sm:text-[30px]">Payment Records</h1><p class="mt-1 text-xs text-slate-500">Your online order payments and payments recorded at Prinx.</p></div>
+            <div class="mt-3"><h1 class="text-[26px] font-semibold tracking-[-.025em] text-slate-950 sm:text-[30px]">Payment Records</h1><p class="mt-1 text-xs text-slate-500">Your online order, store and installment payments recorded at Prinx.</p></div>
             <div class="mt-5"><CustomerAccountNav /></div>
 
             <section class="mt-4 overflow-hidden rounded-[9px] border border-slate-200 bg-white">
