@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Product;
 use App\Services\CartService;
@@ -47,10 +48,12 @@ class CheckoutController extends Controller
                     ...$data,
                     'order_number' => 'PX-'.now()->format('ymd').'-'.strtoupper(Str::random(8)),
                     'user_id' => $request->user()?->id,
+                    'coupon_id' => $summary['coupon']['id'] ?? null,
+                    'coupon_code' => $summary['coupon']['code'] ?? null,
                     'country' => config('store.country'),
                     'subtotal' => $summary['subtotal'],
                     'shipping_total' => $summary['shipping'],
-                    'discount_total' => 0,
+                    'discount_total' => $summary['discount'],
                     'grand_total' => $summary['total'],
                     'currency' => config('store.currency'),
                     // Keep the in-memory model aligned with the database defaults.
@@ -91,6 +94,10 @@ class CheckoutController extends Controller
                         $order->id,
                         'Online checkout',
                     );
+                }
+
+                if (! empty($summary['coupon']['id'])) {
+                    Coupon::query()->whereKey($summary['coupon']['id'])->increment('usage_count');
                 }
 
                 $order->forceFill(['inventory_posted_at' => now()])->save();
