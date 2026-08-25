@@ -309,21 +309,6 @@
             background: #fff;
         }
 
-        .stamp-circle {
-            width: 122px;
-            height: 122px;
-            border: 1px dashed #94a3b8;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 14px;
-            color: var(--muted);
-            font-size: 8.5px;
-            line-height: 1.35;
-        }
-
         .tracking {
             text-align: center;
         }
@@ -530,11 +515,7 @@
 
             <div class="stamp-wrapper">
                 <p class="section-label">{{ $language === 'sw' ? 'Sehemu ya Muhuri wa Ofisi' : 'Office Stamp Area' }}</p>
-                <div class="stamp-box">
-                    <div class="stamp-circle">
-                        {{ $language === 'sw' ? 'Weka muhuri wa mviringo hapa' : 'Apply round office stamp here' }}
-                    </div>
-                </div>
+                <div class="stamp-box"></div>
             </div>
         </div>
 
