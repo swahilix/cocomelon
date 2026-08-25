@@ -49,6 +49,14 @@ main:has(.homepage-store-footer) + footer { display: block !important; }
     }
 }
 
+/* Homepage newsletter subscribe button. */
+main form:has(input[type="email"]) button[type="submit"] {
+    height: 34px !important;
+    margin-top: 3px !important;
+    margin-right: 4px !important;
+    border-radius: 6px !important;
+}
+
 /* POS mobile camera launcher: match the joined New customer control. */
 @media (max-width: 767px) {
     button[title="Scan barcode with camera"] {
