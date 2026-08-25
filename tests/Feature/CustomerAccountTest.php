@@ -73,6 +73,13 @@ class CustomerAccountTest extends TestCase
         $this->get('/account/invoices')->assertInertia(fn (Assert $page) => $page
             ->component('Store/Account/Invoices')
             ->where('invoices.0.reference', 'PX-MINE-001'));
+        $this->get('/account/invoices/order/'.$mine->order_number)->assertInertia(fn (Assert $page) => $page
+            ->component('Store/Account/InvoiceShow')
+            ->where('invoice.reference', 'PX-MINE-001')
+            ->where('invoice.prepared_by_name', 'Online Store')
+            ->where('invoice.customer_address', 'Test Street, Dodoma, Dodoma, TZ')
+            ->where('invoice.order_status', 'confirmed')
+            ->where('invoice.payment_method', 'mobile_money'));
         $this->get('/admin')->assertForbidden();
     }
 
@@ -111,7 +118,6 @@ class CustomerAccountTest extends TestCase
         $this->post('/admin/login', [
             'email' => 'customer@example.test',
             'password' => 'Secure1234',
-            'remember' => false,
         ])->assertSessionHasErrors('email');
 
         $this->assertGuest();
