@@ -40,9 +40,9 @@ class CouponTest extends TestCase
             ->assertSessionHas('success', 'Coupon applied successfully.');
 
         $this->get('/cart')->assertInertia(fn (Assert $page) => $page
-            ->where('cart.subtotal', 150000)
-            ->where('cart.discount', 10000)
-            ->where('cart.total', 140000)
+            ->where('cart.subtotal', 150000.0)
+            ->where('cart.discount', 10000.0)
+            ->where('cart.total', 140000.0)
             ->where('cart.coupon.code', 'ACCESS10'));
     }
 
@@ -92,10 +92,10 @@ class CouponTest extends TestCase
         $this->post('/cart/'.$phone->slug, ['quantity' => 1]);
 
         $this->post('/cart/coupon', ['code' => 'PHONE5K'])->assertSessionHas('success');
-        $this->get('/cart')->assertInertia(fn (Assert $page) => $page->where('cart.discount', 5000));
+        $this->get('/cart')->assertInertia(fn (Assert $page) => $page->where('cart.discount', 5000.0));
 
         $this->post('/cart/coupon', ['code' => 'PRINX20'])->assertSessionHas('success');
-        $this->get('/cart')->assertInertia(fn (Assert $page) => $page->where('cart.discount', 20000));
+        $this->get('/cart')->assertInertia(fn (Assert $page) => $page->where('cart.discount', 20000.0));
 
         $this->post('/cart/coupon', ['code' => 'ORDER20'])
             ->assertSessionHas('error', 'Your order has not reached the minimum amount required for this coupon.');
@@ -103,15 +103,15 @@ class CouponTest extends TestCase
         $this->patch('/cart/'.$charger->slug, ['quantity' => 2]);
         $this->post('/cart/coupon', ['code' => 'ORDER20'])->assertSessionHas('success');
         $this->get('/cart')->assertInertia(fn (Assert $page) => $page
-            ->where('cart.subtotal', 250000)
-            ->where('cart.discount', 50000)
-            ->where('cart.total', 200000));
+            ->where('cart.subtotal', 250000.0)
+            ->where('cart.discount', 50000.0)
+            ->where('cart.total', 200000.0));
     }
 
-    public function test_expired_coupon_is_rejected(): void
+    public function test_expired_and_not_yet_active_coupons_are_rejected(): void
     {
         [$accessories, , $prinx] = $this->catalog();
-        $product = $this->product($accessories, $prinx, 'Cable', 'EXPIRED-CABLE', 20000);
+        $product = $this->product($accessories, $prinx, 'Cable', 'TIME-CABLE', 20000);
 
         Coupon::create([
             'name' => 'Old deal',
@@ -124,9 +124,23 @@ class CouponTest extends TestCase
             'is_active' => true,
         ]);
 
+        Coupon::create([
+            'name' => 'Future deal',
+            'code' => 'FUTURE10',
+            'discount_type' => 'percentage',
+            'discount_value' => 10,
+            'applies_to' => 'all',
+            'starts_at' => now()->addHour(),
+            'ends_at' => now()->addDays(2),
+            'is_active' => true,
+        ]);
+
         $this->post('/cart/'.$product->slug, ['quantity' => 1]);
         $this->post('/cart/coupon', ['code' => 'OLD10'])
             ->assertSessionHas('error', 'This coupon has expired.')
+            ->assertSessionMissing('cart_coupon_code');
+        $this->post('/cart/coupon', ['code' => 'FUTURE10'])
+            ->assertSessionHas('error', 'This coupon is not active yet.')
             ->assertSessionMissing('cart_coupon_code');
     }
 
