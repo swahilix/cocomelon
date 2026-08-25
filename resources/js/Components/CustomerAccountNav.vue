@@ -10,6 +10,7 @@ const items = [
 ];
 const active = (href) => page.url === href || page.url.startsWith(`${href}/`);
 const logout = () => router.post('/logout');
+const phone = () => page.props.auth.user?.phone ? `+255 ${page.props.auth.user.phone}` : 'Customer account';
 </script>
 
 <template>
@@ -17,7 +18,7 @@ const logout = () => router.post('/logout');
         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
             <div>
                 <p class="text-[10px] font-semibold uppercase tracking-[.14em] text-prinx-600">My Prinx</p>
-                <p class="mt-1 text-sm font-semibold text-slate-950">{{ page.props.auth.user?.phone || 'Customer account' }}</p>
+                <p class="mt-1 text-sm font-semibold text-slate-950">{{ phone() }}</p>
             </div>
             <button type="button" class="inline-flex h-8 items-center justify-center gap-1.5 rounded-[6px] border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:border-red-200 hover:text-red-600" @click="logout">
                 <Icon name="logout" :size="14" /> Sign out
