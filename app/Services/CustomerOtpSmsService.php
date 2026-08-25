@@ -18,17 +18,20 @@ class CustomerOtpSmsService
 
     public function send(string $phone, string $code): void
     {
-        $message = "Your Prinx verification code is {$code}. It expires in 5 minutes. Do not share this code.";
+        $this->sendMessage($phone, "Your Prinx verification code is {$code}. It expires in 5 minutes. Do not share this code.");
+    }
 
+    public function sendMessage(string $phone, string $message): void
+    {
         if (app()->environment('testing') && ! config('services.customer_sms.force_http', false)) {
-            Log::info('Customer OTP SMS suppressed in testing.', ['phone' => $phone]);
+            Log::info('Customer SMS suppressed in testing.', ['phone' => $phone, 'message' => $message]);
             return;
         }
 
         $settings = $this->settings();
 
         if (! $settings || ! (bool) ($settings->sms_enabled ?? false)) {
-            throw new RuntimeException('SMS login is not configured yet. Please contact Prinx support.');
+            throw new RuntimeException('SMS is not configured yet. Please enable a provider in Business Settings.');
         }
 
         $provider = strtolower(trim((string) ($settings->sms_provider ?? 'nextsms')));
@@ -71,11 +74,11 @@ class CustomerOtpSmsService
         }
 
         if (! $response->successful()) {
-            Log::warning('Next SMS OTP failed.', [
+            Log::warning('Next SMS message failed.', [
                 'status' => $response->status(),
                 'body' => mb_substr($response->body(), 0, 1000),
             ]);
-            throw new RuntimeException('Next SMS could not send your verification code. Please try again.');
+            throw new RuntimeException('Next SMS could not send the message. Please try again.');
         }
     }
 
@@ -109,11 +112,11 @@ class CustomerOtpSmsService
         }
 
         if (! $response->successful()) {
-            Log::warning('Momo SMS OTP failed.', [
+            Log::warning('Momo SMS message failed.', [
                 'status' => $response->status(),
                 'body' => mb_substr($response->body(), 0, 1000),
             ]);
-            throw new RuntimeException('Momo SMS could not send your verification code. Please try again.');
+            throw new RuntimeException('Momo SMS could not send the message. Please try again.');
         }
     }
 
