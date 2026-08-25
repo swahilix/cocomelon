@@ -15,11 +15,12 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
-use RuntimeException;
 use Throwable;
 
 class InstallmentController extends Controller
 {
+    private const STOCK_RESERVATION_PERCENT = 70.0;
+
     public function index(Request $request): Response
     {
         $status = trim((string) $request->query('status', ''));
@@ -58,6 +59,7 @@ class InstallmentController extends Controller
                 ->values(),
             'paymentMethods' => $this->paymentMethods(),
             'filters' => ['status' => $status, 'search' => $search],
+            'reservationPercent' => self::STOCK_RESERVATION_PERCENT,
             'summary' => [
                 'plans' => $all->count(),
                 'active' => $all->where('status', 'active')->count(),
@@ -184,18 +186,6 @@ class InstallmentController extends Controller
             foreach ($lines as $line) {
                 /** @var Product $product */
                 $product = $line['product'];
-                $movement = $inventory->decrease(
-                    $product,
-                    $line['quantity'],
-                    'installment_reservation',
-                    $reference,
-                    null,
-                    'Reserved for customer installment plan.',
-                    $request->user()?->id,
-                    'installment_plan',
-                    $planId,
-                    'Installment reservation',
-                );
 
                 DB::table('installment_plan_items')->insert([
                     'installment_plan_id' => $planId,
@@ -206,7 +196,7 @@ class InstallmentController extends Controller
                     'unit_price' => $line['unit_price'],
                     'line_total' => $line['line_total'],
                     'unit_cost' => $product->average_cost !== null ? (float) $product->average_cost : null,
-                    'reservation_movement_id' => $movement->id,
+                    'reservation_movement_id' => null,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);
@@ -227,7 +217,23 @@ class InstallmentController extends Controller
                 );
             }
 
-            return ['plan_id' => $planId, 'reference' => $reference, 'payment_id' => $paymentId];
+            $stockReserved = false;
+            if ($initialPayment >= $this->reservationThreshold($netTotal)) {
+                $stockReserved = $this->reservePlanStockLocked(
+                    $planId,
+                    $reference,
+                    $inventory,
+                    $request->user()?->id,
+                    'initial_payment',
+                );
+            }
+
+            return [
+                'plan_id' => $planId,
+                'reference' => $reference,
+                'payment_id' => $paymentId,
+                'stock_reserved' => $stockReserved,
+            ];
         });
 
         $smsError = null;
@@ -235,8 +241,11 @@ class InstallmentController extends Controller
             $smsError = $this->sendPaymentSms((int) $created['payment_id'], $sms);
         }
 
-        $response = redirect('/admin/installments/'.$created['reference'])
-            ->with('success', 'Installment plan created and selected stock reserved.');
+        $message = $created['stock_reserved']
+            ? 'Installment plan created. Payment reached 70%, so the selected stock is now reserved.'
+            : 'Installment plan created. Stock will be reserved when total payments reach 70% of the agreed amount.';
+
+        $response = redirect('/admin/installments/'.$created['reference'])->with('success', $message);
 
         if ($smsError) {
             $response->with('error', 'Initial payment was recorded, but SMS could not be sent: '.$smsError);
@@ -254,10 +263,11 @@ class InstallmentController extends Controller
             'items' => DB::table('installment_plan_items')->where('installment_plan_id', $plan->id)->orderBy('id')->get(),
             'payments' => DB::table('installment_payments')->where('installment_plan_id', $plan->id)->latest('id')->get(),
             'paymentMethods' => $this->paymentMethods(),
+            'reservationPercent' => self::STOCK_RESERVATION_PERCENT,
         ]);
     }
 
-    public function payment(Request $request, string $reference, CustomerOtpSmsService $sms): RedirectResponse
+    public function payment(Request $request, string $reference, CustomerOtpSmsService $sms, InventoryService $inventory): RedirectResponse
     {
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'gt:0'],
@@ -271,7 +281,7 @@ class InstallmentController extends Controller
             throw ValidationException::withMessages(['payment_method_id' => 'Choose an active payment method.']);
         }
 
-        $paymentId = DB::transaction(function () use ($request, $validated, $reference, $method): int {
+        $result = DB::transaction(function () use ($request, $validated, $reference, $method, $inventory): array {
             $plan = DB::table('installment_plans')->where('reference', $reference)->lockForUpdate()->first();
             abort_unless($plan, 404);
 
@@ -286,7 +296,20 @@ class InstallmentController extends Controller
                 throw ValidationException::withMessages(['amount' => 'Payment cannot exceed the remaining balance of TZS '.number_format($remaining, 0).'.']);
             }
 
-            return $this->recordPaymentLocked(
+            $paidAfter = round((float) $plan->paid_amount + $amount, 2);
+            $stockReserved = false;
+
+            if ($paidAfter >= $this->reservationThreshold((float) $plan->net_total)) {
+                $stockReserved = $this->reservePlanStockLocked(
+                    (int) $plan->id,
+                    $plan->reference,
+                    $inventory,
+                    $request->user()?->id,
+                    'amount',
+                );
+            }
+
+            $paymentId = $this->recordPaymentLocked(
                 (int) $plan->id,
                 $plan->reference,
                 (float) $plan->net_total,
@@ -297,10 +320,15 @@ class InstallmentController extends Controller
                 $validated['notes'] ?? null,
                 $request->user()?->id,
             );
+
+            return ['payment_id' => $paymentId, 'stock_reserved' => $stockReserved];
         });
 
-        $smsError = $this->sendPaymentSms($paymentId, $sms);
-        $response = back()->with('success', 'Installment payment received and balance updated.');
+        $smsError = $this->sendPaymentSms((int) $result['payment_id'], $sms);
+        $message = $result['stock_reserved']
+            ? 'Installment payment received. Total payments reached 70%, so the selected stock is now reserved.'
+            : 'Installment payment received and balance updated.';
+        $response = back()->with('success', $message);
 
         if ($smsError) {
             $response->with('error', 'Payment was saved, but the confirmation SMS failed: '.$smsError);
@@ -321,9 +349,9 @@ class InstallmentController extends Controller
             : back()->with('success', 'Payment confirmation SMS sent again.');
     }
 
-    public function release(Request $request, string $reference): RedirectResponse
+    public function release(Request $request, string $reference, InventoryService $inventory): RedirectResponse
     {
-        DB::transaction(function () use ($request, $reference): void {
+        DB::transaction(function () use ($request, $reference, $inventory): void {
             $plan = DB::table('installment_plans')->where('reference', $reference)->lockForUpdate()->first();
             abort_unless($plan, 404);
 
@@ -331,6 +359,14 @@ class InstallmentController extends Controller
             if ($remaining > 0 || $plan->status !== 'paid') {
                 throw ValidationException::withMessages(['release' => 'The full installment balance must be paid before the items can be released.']);
             }
+
+            $this->reservePlanStockLocked(
+                (int) $plan->id,
+                $plan->reference,
+                $inventory,
+                $request->user()?->id,
+                'release',
+            );
 
             DB::table('installment_plans')->where('id', $plan->id)->update([
                 'status' => 'released',
@@ -345,7 +381,7 @@ class InstallmentController extends Controller
 
     public function cancel(Request $request, string $reference, InventoryService $inventory): RedirectResponse
     {
-        DB::transaction(function () use ($request, $reference, $inventory): void {
+        $returnedStock = DB::transaction(function () use ($request, $reference, $inventory): bool {
             $plan = DB::table('installment_plans')->where('reference', $reference)->lockForUpdate()->first();
             abort_unless($plan, 404);
 
@@ -357,8 +393,13 @@ class InstallmentController extends Controller
                 throw ValidationException::withMessages(['cancel' => 'This plan already has payments. Resolve any refund before cancelling it.']);
             }
 
+            $returned = false;
             $items = DB::table('installment_plan_items')->where('installment_plan_id', $plan->id)->lockForUpdate()->get();
             foreach ($items as $item) {
+                if ($item->reservation_movement_id === null || $item->return_movement_id !== null) {
+                    continue;
+                }
+
                 $movement = $inventory->increase(
                     (int) $item->product_id,
                     (int) $item->quantity,
@@ -375,6 +416,7 @@ class InstallmentController extends Controller
                     'return_movement_id' => $movement->id,
                     'updated_at' => now(),
                 ]);
+                $returned = true;
             }
 
             DB::table('installment_plans')->where('id', $plan->id)->update([
@@ -383,9 +425,65 @@ class InstallmentController extends Controller
                 'cancelled_by' => $request->user()?->id,
                 'updated_at' => now(),
             ]);
+
+            return $returned;
         });
 
-        return redirect('/admin/installments')->with('success', 'Installment plan cancelled and reserved stock returned.');
+        return redirect('/admin/installments')->with(
+            'success',
+            $returnedStock ? 'Installment plan cancelled and reserved stock returned.' : 'Installment plan cancelled. No stock had been reserved yet.'
+        );
+    }
+
+    private function reservePlanStockLocked(
+        int $planId,
+        string $planReference,
+        InventoryService $inventory,
+        ?int $userId,
+        string $errorField,
+    ): bool {
+        $items = DB::table('installment_plan_items')
+            ->where('installment_plan_id', $planId)
+            ->lockForUpdate()
+            ->get();
+
+        $unreserved = $items->filter(fn ($item): bool => $item->reservation_movement_id === null);
+        if ($unreserved->isEmpty()) {
+            return false;
+        }
+
+        try {
+            foreach ($unreserved as $item) {
+                $movement = $inventory->decrease(
+                    (int) $item->product_id,
+                    (int) $item->quantity,
+                    'installment_reservation',
+                    $planReference,
+                    null,
+                    'Reserved after installment payments reached '.number_format(self::STOCK_RESERVATION_PERCENT, 0).'%.',
+                    $userId,
+                    'installment_plan',
+                    $planId,
+                    'Installment reservation threshold reached',
+                );
+
+                DB::table('installment_plan_items')->where('id', $item->id)->update([
+                    'reservation_movement_id' => $movement->id,
+                    'updated_at' => now(),
+                ]);
+            }
+        } catch (Throwable $exception) {
+            throw ValidationException::withMessages([
+                $errorField => 'Payments have reached the 70% stock-reservation point, but the stock cannot be reserved: '.$exception->getMessage(),
+            ]);
+        }
+
+        return true;
+    }
+
+    private function reservationThreshold(float $netTotal): float
+    {
+        return round($netTotal * (self::STOCK_RESERVATION_PERCENT / 100), 2);
     }
 
     private function recordPaymentLocked(
@@ -448,10 +546,13 @@ class InstallmentController extends Controller
         }
 
         $remaining = max(0, round((float) $payment->net_total - (float) $payment->paid_amount, 2));
+        $reserved = (float) $payment->paid_amount >= $this->reservationThreshold((float) $payment->net_total);
         $message = 'Prinx: Payment of TZS '.number_format((float) $payment->amount, 0)
             .' received for '.$payment->plan_reference.'. Total paid TZS '.number_format((float) $payment->paid_amount, 0)
             .'. Remaining TZS '.number_format($remaining, 0).'.'
-            .($remaining <= 0 ? ' Your installment is fully paid. Please wait for item release confirmation.' : ' Thank you.');
+            .($remaining <= 0
+                ? ' Your installment is fully paid. Please wait for item release confirmation.'
+                : ($reserved ? ' Your item stock is now reserved.' : ' Stock will be reserved after total payments reach 70%.'));
 
         try {
             $sms->sendMessage((string) $payment->customer_phone, $message);
@@ -492,6 +593,8 @@ class InstallmentController extends Controller
             'paid_amount' => (float) $plan->paid_amount,
             'remaining_amount' => $remaining,
             'progress' => $progress,
+            'reservation_threshold_percent' => self::STOCK_RESERVATION_PERCENT,
+            'reservation_threshold_amount' => $this->reservationThreshold((float) $plan->net_total),
         ];
     }
 
