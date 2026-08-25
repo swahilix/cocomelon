@@ -39,8 +39,15 @@ class CheckoutController extends Controller
             'payment_method' => ['required', 'in:cash_on_delivery,mobile_money,bank_transfer'],
         ]);
 
+        $expectedCouponCode = $request->session()->get('cart_coupon_code');
         $summary = $cart->summary();
         abort_if($summary['items']->isEmpty(), 422, 'Your cart is empty.');
+
+        if ($expectedCouponCode && ! $summary['coupon']) {
+            return back()->withErrors([
+                'checkout' => 'The coupon applied to this order is no longer valid. Please review your cart total before placing the order.',
+            ])->withInput();
+        }
 
         try {
             $order = DB::transaction(function () use ($data, $summary, $request, $inventory): Order {
