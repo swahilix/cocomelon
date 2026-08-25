@@ -12,11 +12,15 @@ use Throwable;
 
 class CustomerOtpSmsService
 {
+    private const NEXTSMS_URL = 'https://messaging-service.co.tz/api/sms/v1/text/single';
+
+    private const MOMO_URL = 'https://business.momo.tz/api/v3/sms/send';
+
     public function send(string $phone, string $code): void
     {
         $message = "Your Prinx verification code is {$code}. It expires in 5 minutes. Do not share this code.";
 
-        if (app()->environment('testing')) {
+        if (app()->environment('testing') && ! config('services.customer_sms.force_http', false)) {
             Log::info('Customer OTP SMS suppressed in testing.', ['phone' => $phone]);
             return;
         }
@@ -27,85 +31,107 @@ class CustomerOtpSmsService
             throw new RuntimeException('SMS login is not configured yet. Please contact Prinx support.');
         }
 
-        $provider = (string) ($settings->sms_provider ?? 'beem');
+        $provider = strtolower(trim((string) ($settings->sms_provider ?? 'nextsms')));
 
-        if ($provider === 'beem') {
-            $this->sendWithBeem($settings, $phone, $message);
+        if ($provider === 'nextsms') {
+            $this->sendWithNextSms($settings, $phone, $message);
             return;
         }
 
-        if ($provider === 'custom') {
-            $this->sendWithCustomWebhook($settings, $phone, $message);
+        if ($provider === 'momo') {
+            $this->sendWithMomo($settings, $phone, $message);
             return;
         }
 
-        throw new RuntimeException('The configured SMS provider is not supported.');
+        throw new RuntimeException('Choose Next SMS or Momo SMS in Business Settings and save the settings again.');
     }
 
-    private function sendWithBeem(object $settings, string $phone, string $message): void
+    private function sendWithNextSms(object $settings, string $phone, string $message): void
     {
-        $key = $this->secret($settings->sms_api_key ?? null);
-        $secret = $this->secret($settings->sms_api_secret ?? null);
+        $apiKey = $this->secret($settings->sms_api_key ?? null);
         $sender = trim((string) ($settings->sms_sender_id ?? ''));
-        $url = trim((string) ($settings->sms_api_url ?? '')) ?: 'https://apisms.beem.africa/v1/send';
+        $recipient = $this->normalizeTanzanianNumber($phone);
 
-        if (! $key || ! $secret || ! $sender) {
-            throw new RuntimeException('Beem SMS credentials are incomplete in Business Settings.');
+        if (! $apiKey || $sender === '') {
+            throw new RuntimeException('Next SMS is not fully configured. Save the API key and sender ID in Business Settings.');
         }
 
         try {
-            $response = Http::timeout(12)
-                ->acceptJson()
-                ->withBasicAuth($key, $secret)
-                ->post($url, [
-                    'source_addr' => $sender,
-                    'encoding' => 0,
-                    'schedule_time' => '',
-                    'message' => $message,
-                    'recipients' => [[
-                        'recipient_id' => 1,
-                        'dest_addr' => ltrim($phone, '+'),
-                    ]],
+            $response = Http::acceptJson()
+                ->asJson()
+                ->timeout(15)
+                ->withHeaders(['Authorization' => 'Basic '.$apiKey])
+                ->post(self::NEXTSMS_URL, [
+                    'from' => $sender,
+                    'to' => $recipient,
+                    'text' => $message,
                 ]);
         } catch (Throwable $exception) {
-            throw new RuntimeException('Could not connect to the SMS provider. Please try again shortly.', previous: $exception);
+            throw new RuntimeException('Could not connect to Next SMS. Please try again shortly.', previous: $exception);
         }
 
         if (! $response->successful()) {
-            Log::warning('Beem OTP SMS failed.', ['status' => $response->status(), 'body' => $response->body()]);
-            throw new RuntimeException('The SMS provider could not send your verification code. Please try again.');
+            Log::warning('Next SMS OTP failed.', [
+                'status' => $response->status(),
+                'body' => mb_substr($response->body(), 0, 1000),
+            ]);
+            throw new RuntimeException('Next SMS could not send your verification code. Please try again.');
         }
     }
 
-    private function sendWithCustomWebhook(object $settings, string $phone, string $message): void
+    private function sendWithMomo(object $settings, string $phone, string $message): void
     {
-        $url = trim((string) ($settings->sms_api_url ?? ''));
-        $sender = trim((string) ($settings->sms_sender_id ?? ''));
         $token = $this->secret($settings->sms_bearer_token ?? null);
+        $sender = trim((string) ($settings->sms_sender_id ?? ''));
+        $recipient = $this->normalizeTanzanianNumber($phone);
 
-        if (! $url) {
-            throw new RuntimeException('Custom SMS webhook URL is missing in Business Settings.');
+        if (! $token) {
+            throw new RuntimeException('Momo SMS is not fully configured. Save the API token in Business Settings.');
         }
 
-        $request = Http::timeout(12)->acceptJson();
-        if ($token) {
-            $request = $request->withToken($token);
+        $payload = [
+            'recipient' => $recipient,
+            'message' => $message,
+        ];
+
+        if ($sender !== '') {
+            $payload['sender_id'] = $sender;
         }
 
         try {
-            $response = $request->post($url, [
-                'to' => $phone,
-                'message' => $message,
-                'sender_id' => $sender ?: null,
-            ]);
+            $response = Http::acceptJson()
+                ->asJson()
+                ->timeout(15)
+                ->withToken($token)
+                ->post(self::MOMO_URL, $payload);
         } catch (Throwable $exception) {
-            throw new RuntimeException('Could not connect to the SMS provider. Please try again shortly.', previous: $exception);
+            throw new RuntimeException('Could not connect to Momo SMS. Please try again shortly.', previous: $exception);
         }
 
         if (! $response->successful()) {
-            Log::warning('Custom OTP SMS failed.', ['status' => $response->status(), 'body' => $response->body()]);
-            throw new RuntimeException('The SMS provider could not send your verification code. Please try again.');
+            Log::warning('Momo SMS OTP failed.', [
+                'status' => $response->status(),
+                'body' => mb_substr($response->body(), 0, 1000),
+            ]);
+            throw new RuntimeException('Momo SMS could not send your verification code. Please try again.');
         }
+    }
+
+    private function normalizeTanzanianNumber(string $number): string
+    {
+        $digits = preg_replace('/\D+/', '', trim($number)) ?? '';
+
+        if (str_starts_with($digits, '0')) {
+            $digits = '255'.substr($digits, 1);
+        } elseif (strlen($digits) === 9) {
+            $digits = '255'.$digits;
+        }
+
+        if (! preg_match('/^255\d{9}$/', $digits)) {
+            throw new RuntimeException('Enter a valid Tanzanian mobile number.');
+        }
+
+        return $digits;
     }
 
     private function settings(): ?object
