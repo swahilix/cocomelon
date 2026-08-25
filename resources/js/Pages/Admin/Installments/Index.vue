@@ -9,6 +9,7 @@ const props = defineProps({
     paymentMethods: { type: Array, default: () => [] },
     filters: { type: Object, default: () => ({}) },
     summary: { type: Object, default: () => ({}) },
+    reservationPercent: { type: Number, default: 70 },
 });
 
 const form = useForm({
@@ -58,6 +59,8 @@ const discountAmount = computed(() => {
     return 0;
 });
 const netTotal = computed(() => Math.max(0, subtotal.value - discountAmount.value));
+const reservationAmount = computed(() => netTotal.value * (Number(props.reservationPercent || 70) / 100));
+const initialPaymentReservesStock = computed(() => netTotal.value > 0 && Number(form.initial_payment || 0) >= reservationAmount.value);
 
 watch(selectedCustomer, (customer) => {
     if (customerMode.value !== 'existing') return;
@@ -108,7 +111,7 @@ const applyFilters = () => router.get('/admin/installments', {
                 <div>
                     <p class="text-[9px] font-semibold uppercase tracking-[.16em] text-prinx-600">Sales & customers</p>
                     <h1 class="mt-1 text-[24px] font-semibold tracking-[-.025em] text-slate-950">Installment plans</h1>
-                    <p class="mt-1 text-[12px] text-slate-500">Reserve one or more products, apply a discount and collect payments gradually until the balance reaches zero.</p>
+                    <p class="mt-1 text-[12px] text-slate-500">Create product agreements and collect payments gradually. Stock is reserved only after payments reach {{ reservationPercent }}% of the agreed amount.</p>
                 </div>
                 <Link href="/admin/customers" class="inline-flex h-9 items-center justify-center rounded-[6px] border border-slate-200 bg-white px-3.5 text-[11px] font-semibold text-slate-700 hover:border-prinx-300 hover:text-prinx-600">Manage customers</Link>
             </div>
@@ -122,7 +125,7 @@ const applyFilters = () => router.get('/admin/installments', {
             </div>
 
             <section class="rounded-[9px] border border-slate-200 bg-white">
-                <div class="border-b border-slate-100 px-4 py-3"><h2 class="text-sm font-semibold text-slate-950">Create installment plan</h2><p class="mt-1 text-[11px] text-slate-500">Selected stock is reserved immediately so it cannot be sold to another customer.</p></div>
+                <div class="border-b border-slate-100 px-4 py-3"><h2 class="text-sm font-semibold text-slate-950">Create installment plan</h2><p class="mt-1 text-[11px] text-slate-500">Creating a plan does not remove stock. The selected quantities are automatically reserved when cumulative payments reach {{ reservationPercent }}%.</p></div>
                 <form class="grid gap-4 p-4 xl:grid-cols-[.8fr_1.2fr_.7fr]" @submit.prevent="submit">
                     <div class="space-y-3">
                         <div class="grid grid-cols-2 gap-1 rounded-[7px] bg-slate-100 p-1">
@@ -171,18 +174,20 @@ const applyFilters = () => router.get('/admin/installments', {
                             <div class="flex justify-between py-1"><span class="text-slate-500">Subtotal</span><strong>{{ money(subtotal) }}</strong></div>
                             <div class="flex justify-between py-1"><span class="text-slate-500">Discount</span><strong class="text-prinx-600">-{{ money(discountAmount) }}</strong></div>
                             <div class="flex justify-between py-1.5 text-[13px]"><span class="font-semibold text-slate-800">Net total</span><strong>{{ money(netTotal) }}</strong></div>
+                            <div class="flex justify-between py-1 text-[10px]"><span class="text-slate-500">Stock reservation at {{ reservationPercent }}%</span><strong class="text-slate-700">{{ money(reservationAmount) }}</strong></div>
                         </div>
                         <label class="block"><span class="mb-1 block text-[10px] font-semibold text-slate-600">Initial payment</span><input v-model.number="form.initial_payment" type="number" min="0" step="0.01" class="h-9 w-full rounded-[6px] border border-slate-200 bg-white px-2 text-xs"></label>
+                        <p v-if="netTotal > 0" :class="['rounded-[6px] px-2.5 py-2 text-[10px] leading-4', initialPaymentReservesStock ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700']">{{ initialPaymentReservesStock ? `This payment reaches ${reservationPercent}%. Stock will be reserved immediately.` : `Stock remains sellable until cumulative payments reach ${money(reservationAmount)} (${reservationPercent}%).` }}</p>
                         <label v-if="Number(form.initial_payment || 0) > 0" class="block"><span class="mb-1 block text-[10px] font-semibold text-slate-600">Payment method</span><select v-model="form.payment_method_id" class="h-9 w-full rounded-[6px] border border-slate-200 bg-white px-2 text-xs"><option v-for="method in paymentMethods" :key="method.id" :value="method.id">{{ method.name }}</option></select></label>
                         <label v-if="Number(form.initial_payment || 0) > 0" class="block"><span class="mb-1 block text-[10px] font-semibold text-slate-600">Payment reference</span><input v-model="form.external_reference" class="h-9 w-full rounded-[6px] border border-slate-200 bg-white px-2 text-xs" placeholder="Optional M-Pesa/bank reference"></label>
                         <p v-if="form.errors.discount_value || form.errors.initial_payment || form.errors.payment_method_id" class="text-[11px] text-red-600">{{ form.errors.discount_value || form.errors.initial_payment || form.errors.payment_method_id }}</p>
-                        <button type="submit" class="flex h-10 w-full items-center justify-center rounded-[6px] bg-prinx-500 px-4 text-xs font-semibold text-white transition hover:bg-prinx-600 disabled:cursor-not-allowed disabled:bg-slate-300" :disabled="form.processing || !netTotal || (customerMode === 'existing' && !form.customer_id)">{{ form.processing ? 'Creating…' : 'Create & reserve stock' }}</button>
+                        <button type="submit" class="flex h-10 w-full items-center justify-center rounded-[6px] bg-prinx-500 px-4 text-xs font-semibold text-white transition hover:bg-prinx-600 disabled:cursor-not-allowed disabled:bg-slate-300" :disabled="form.processing || !netTotal || (customerMode === 'existing' && !form.customer_id)">{{ form.processing ? 'Creating…' : 'Create installment plan' }}</button>
                     </div>
                 </form>
             </section>
 
             <section class="overflow-hidden rounded-[9px] border border-slate-200 bg-white">
-                <div class="flex flex-col gap-3 border-b border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 class="text-sm font-semibold text-slate-950">Customer plans</h2><p class="mt-1 text-[11px] text-slate-500">Open a plan to record payments, resend SMS confirmations or release paid items.</p></div><form class="flex gap-2" @submit.prevent="applyFilters"><input v-model="filterForm.search" class="h-8 w-44 rounded-[6px] border border-slate-200 px-2 text-[11px]" placeholder="Search customer/ref"><select v-model="filterForm.status" class="h-8 rounded-[6px] border border-slate-200 bg-white px-2 text-[11px]"><option value="">All statuses</option><option value="active">Active</option><option value="paid">Paid</option><option value="released">Released</option><option value="cancelled">Cancelled</option></select><button class="h-8 rounded-[6px] bg-slate-950 px-3 text-[11px] font-semibold text-white">Filter</button></form></div>
+                <div class="flex flex-col gap-3 border-b border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 class="text-sm font-semibold text-slate-950">Customer plans</h2><p class="mt-1 text-[11px] text-slate-500">Open a plan to record payments, check reservation progress, resend SMS confirmations or release paid items.</p></div><form class="flex gap-2" @submit.prevent="applyFilters"><input v-model="filterForm.search" class="h-8 w-44 rounded-[6px] border border-slate-200 px-2 text-[11px]" placeholder="Search customer/ref"><select v-model="filterForm.status" class="h-8 rounded-[6px] border border-slate-200 bg-white px-2 text-[11px]"><option value="">All statuses</option><option value="active">Active</option><option value="paid">Paid</option><option value="released">Released</option><option value="cancelled">Cancelled</option></select><button class="h-8 rounded-[6px] bg-slate-950 px-3 text-[11px] font-semibold text-white">Filter</button></form></div>
                 <div v-if="plans.length" class="overflow-x-auto">
                     <table class="min-w-[850px] w-full text-left text-[11px]"><thead class="bg-slate-50 text-[9px] uppercase tracking-[.08em] text-slate-500"><tr><th class="px-4 py-2.5">Reference</th><th class="px-4 py-2.5">Customer</th><th class="px-4 py-2.5">Net total</th><th class="px-4 py-2.5">Paid</th><th class="px-4 py-2.5">Remaining</th><th class="px-4 py-2.5">Progress</th><th class="px-4 py-2.5">Status</th><th class="px-4 py-2.5"></th></tr></thead><tbody class="divide-y divide-slate-100"><tr v-for="plan in plans" :key="plan.id" class="hover:bg-slate-50"><td class="px-4 py-3 font-semibold text-slate-900">{{ plan.reference }}</td><td class="px-4 py-3"><strong class="block font-medium text-slate-800">{{ plan.customer_name }}</strong><span class="text-[10px] text-slate-400">{{ plan.customer_phone }}</span></td><td class="px-4 py-3">{{ money(plan.net_total) }}</td><td class="px-4 py-3 text-emerald-700">{{ money(plan.paid_amount) }}</td><td class="px-4 py-3 font-semibold">{{ money(plan.remaining_amount) }}</td><td class="px-4 py-3"><div class="h-1.5 w-24 overflow-hidden rounded-full bg-slate-100"><div class="h-full bg-prinx-500" :style="{ width: `${plan.progress}%` }"></div></div><span class="mt-1 block text-[9px] text-slate-400">{{ plan.progress }}%</span></td><td class="px-4 py-3"><span :class="['rounded-full px-2 py-1 text-[9px] font-semibold capitalize', statusClass(plan.status)]">{{ plan.status }}</span></td><td class="px-4 py-3 text-right"><Link :href="`/admin/installments/${plan.reference}`" class="text-[10px] font-semibold text-prinx-600">Open →</Link></td></tr></tbody></table>
                 </div>
