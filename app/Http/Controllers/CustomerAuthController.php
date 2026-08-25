@@ -169,7 +169,7 @@ class CustomerAuthController extends Controller
         $local = substr(preg_replace('/\D+/', '', $phone), -9);
 
         return Order::query()
-            ->where('phone', 'like', '%'.$local.'%')
+            ->whereRaw($this->phoneDigitsSql('phone').' LIKE ?', ['%'.$local])
             ->latest('id')
             ->get(['customer_name', 'phone'])
             ->first(fn (Order $order): bool => $this->phoneMatches($order->phone, $phone))
@@ -182,7 +182,7 @@ class CustomerAuthController extends Controller
 
         Order::query()
             ->whereNull('user_id')
-            ->where('phone', 'like', '%'.$local.'%')
+            ->whereRaw($this->phoneDigitsSql('phone').' LIKE ?', ['%'.$local])
             ->select(['id', 'phone'])
             ->chunkById(100, function ($orders) use ($user, $phone): void {
                 $ids = $orders
@@ -225,6 +225,11 @@ class CustomerAuthController extends Controller
         } catch (ValidationException) {
             return false;
         }
+    }
+
+    private function phoneDigitsSql(string $column): string
+    {
+        return "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE({$column}, ''), '+', ''), ' ', ''), '-', ''), '(', ''), ')', ''), '.', '')";
     }
 
     private function otpKey(string $phone): string
