@@ -80,6 +80,10 @@ class CouponController extends Controller
 
     protected function validated(Request $request, ?Coupon $coupon = null): array
     {
+        $request->merge([
+            'code' => strtoupper(trim((string) $request->input('code'))),
+        ]);
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'code' => ['required', 'string', 'max:64', Rule::unique('coupons', 'code')->ignore($coupon?->id)],
@@ -111,7 +115,7 @@ class CouponController extends Controller
     {
         return [
             'name' => $data['name'],
-            'code' => strtoupper(trim($data['code'])),
+            'code' => $data['code'],
             'discount_type' => $data['discount_type'],
             'discount_value' => $data['discount_value'],
             'applies_to' => $data['applies_to'],
