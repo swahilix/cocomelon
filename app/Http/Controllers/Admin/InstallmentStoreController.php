@@ -20,9 +20,9 @@ class InstallmentStoreController extends Controller
     ): RedirectResponse {
         $selection = $request->validate([
             'customer_id' => ['nullable', 'integer', 'exists:pos_customers,id'],
-            'sms_language' => ['required', 'in:en,sw'],
+            'sms_language' => ['nullable', 'in:en,sw'],
         ]);
-        $smsLanguage = (string) $selection['sms_language'];
+        $smsLanguage = (string) ($selection['sms_language'] ?? 'en');
 
         $customerId = (int) ($selection['customer_id'] ?? 0);
         if ($customerId > 0) {
@@ -39,6 +39,7 @@ class InstallmentStoreController extends Controller
             $request->merge([
                 'customer_name' => $customer->name,
                 'customer_phone' => $phone,
+                'sms_language' => $smsLanguage,
             ]);
 
             $response = $installments->store($request, $inventory, $sms);
@@ -70,7 +71,10 @@ class InstallmentStoreController extends Controller
             ]);
         }
 
-        $request->merge(['customer_phone' => $phone]);
+        $request->merge([
+            'customer_phone' => $phone,
+            'sms_language' => $smsLanguage,
+        ]);
         $response = $installments->store($request, $inventory, $sms);
         $this->persistSmsLanguage($response, $smsLanguage);
 
