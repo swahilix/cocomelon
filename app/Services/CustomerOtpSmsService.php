@@ -23,6 +23,8 @@ class CustomerOtpSmsService
 
     public function sendMessage(string $phone, string $message): void
     {
+        $message = $this->localizeInstallmentMessage($message);
+
         if (app()->environment('testing') && ! config('services.customer_sms.force_http', false)) {
             Log::info('Customer SMS suppressed in testing.', ['phone' => $phone, 'message' => $message]);
             return;
@@ -118,6 +120,36 @@ class CustomerOtpSmsService
             ]);
             throw new RuntimeException('Momo SMS could not send the message. Please try again.');
         }
+    }
+
+    private function localizeInstallmentMessage(string $message): string
+    {
+        if (! preg_match(
+            '/^Prinx: Payment of TZS ([0-9,]+) received for (INS-[A-Za-z0-9-]+)\. Total paid TZS ([0-9,]+)\. Remaining TZS ([0-9,]+)\./',
+            $message,
+            $matches
+        )) {
+            return $message;
+        }
+
+        $language = strtolower(trim((string) request()->input('sms_language', '')));
+
+        if (! in_array($language, ['en', 'sw'], true)
+            && Schema::hasTable('installment_plans')
+            && Schema::hasColumn('installment_plans', 'sms_language')) {
+            $language = strtolower((string) DB::table('installment_plans')
+                ->where('reference', $matches[2])
+                ->value('sms_language'));
+        }
+
+        if ($language !== 'sw') {
+            return $message;
+        }
+
+        return 'Prinx: Malipo ya Tsh '.$matches[1]
+            .' yamepokelewa kwa ajili ya '.$matches[2]
+            .'. Jumla ya Kiasi kilicholipwa ni Tsh '.$matches[3]
+            .'. Kiasi kilichosalia ni Tsh '.$matches[4].'. Asante';
     }
 
     private function normalizeTanzanianNumber(string $number): string
