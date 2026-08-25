@@ -9,8 +9,10 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -109,6 +111,8 @@ class CustomerAuthController extends Controller
 
         $user = $this->findOrCreateCustomer($phone);
         $this->claimOrders($user, $phone);
+        $this->claimInstallments($user, $phone);
+        $this->syncCustomerRecord($user, $phone);
 
         Cache::forget($key);
         $request->session()->forget('customer_login_phone');
@@ -166,6 +170,29 @@ class CustomerAuthController extends Controller
 
     private function customerNameFromHistory(string $phone): ?string
     {
+        if (Schema::hasTable('pos_customers')) {
+            $customer = DB::table('pos_customers')
+                ->whereNotNull('phone')
+                ->get(['name', 'phone'])
+                ->first(fn ($candidate): bool => $this->phoneMatches($candidate->phone, $phone));
+
+            if ($customer && filled($customer->name)) {
+                return $customer->name;
+            }
+        }
+
+        if (Schema::hasTable('installment_plans')) {
+            $plan = DB::table('installment_plans')
+                ->whereNotNull('customer_phone')
+                ->latest('id')
+                ->get(['customer_name', 'customer_phone'])
+                ->first(fn ($candidate): bool => $this->phoneMatches($candidate->customer_phone, $phone));
+
+            if ($plan && filled($plan->customer_name)) {
+                return $plan->customer_name;
+            }
+        }
+
         $local = substr(preg_replace('/\D+/', '', $phone), -9);
 
         return Order::query()
@@ -193,6 +220,64 @@ class CustomerAuthController extends Controller
                     Order::query()->whereIn('id', $ids)->update(['user_id' => $user->id]);
                 }
             });
+    }
+
+    private function claimInstallments(User $user, string $phone): void
+    {
+        if (! Schema::hasTable('installment_plans')) {
+            return;
+        }
+
+        $ids = DB::table('installment_plans')
+            ->whereNull('user_id')
+            ->whereNotNull('customer_phone')
+            ->get(['id', 'customer_phone'])
+            ->filter(fn ($plan): bool => $this->phoneMatches($plan->customer_phone, $phone))
+            ->pluck('id');
+
+        if ($ids->isNotEmpty()) {
+            DB::table('installment_plans')->whereIn('id', $ids)->update([
+                'user_id' => $user->id,
+                'updated_at' => now(),
+            ]);
+        }
+    }
+
+    private function syncCustomerRecord(User $user, string $phone): void
+    {
+        if (! Schema::hasTable('pos_customers')) {
+            return;
+        }
+
+        $existing = DB::table('pos_customers')
+            ->whereNotNull('phone')
+            ->get(['id', 'phone', 'email'])
+            ->first(fn ($customer): bool => $this->phoneMatches($customer->phone, $phone));
+
+        $publicEmail = str_ends_with((string) $user->email, '@phone.prinx.local') ? null : $user->email;
+
+        if ($existing) {
+            $updates = [
+                'name' => $user->name ?: 'Prinx Customer',
+                'phone' => $phone,
+                'updated_at' => now(),
+            ];
+            if (blank($existing->email) && filled($publicEmail)) {
+                $updates['email'] = $publicEmail;
+            }
+            DB::table('pos_customers')->where('id', $existing->id)->update($updates);
+            return;
+        }
+
+        DB::table('pos_customers')->insert([
+            'name' => $user->name ?: 'Prinx Customer',
+            'phone' => $phone,
+            'email' => $publicEmail,
+            'tin' => null,
+            'notes' => 'Customer account linked by verified phone login.',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     private function normalizePhone(string $input): string
