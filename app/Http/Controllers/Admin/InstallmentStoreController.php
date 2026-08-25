@@ -20,7 +20,9 @@ class InstallmentStoreController extends Controller
     ): RedirectResponse {
         $selection = $request->validate([
             'customer_id' => ['nullable', 'integer', 'exists:pos_customers,id'],
+            'sms_language' => ['required', 'in:en,sw'],
         ]);
+        $smsLanguage = (string) $selection['sms_language'];
 
         $customerId = (int) ($selection['customer_id'] ?? 0);
         if ($customerId > 0) {
@@ -39,7 +41,10 @@ class InstallmentStoreController extends Controller
                 'customer_phone' => $phone,
             ]);
 
-            return $installments->store($request, $inventory, $sms);
+            $response = $installments->store($request, $inventory, $sms);
+            $this->persistSmsLanguage($response, $smsLanguage);
+
+            return $response;
         }
 
         $newCustomer = $request->validate([
@@ -66,8 +71,24 @@ class InstallmentStoreController extends Controller
         }
 
         $request->merge(['customer_phone' => $phone]);
+        $response = $installments->store($request, $inventory, $sms);
+        $this->persistSmsLanguage($response, $smsLanguage);
 
-        return $installments->store($request, $inventory, $sms);
+        return $response;
+    }
+
+    private function persistSmsLanguage(RedirectResponse $response, string $language): void
+    {
+        if (! preg_match('#/admin/installments/(INS-[A-Za-z0-9-]+)#', $response->getTargetUrl(), $matches)) {
+            return;
+        }
+
+        DB::table('installment_plans')
+            ->where('reference', $matches[1])
+            ->update([
+                'sms_language' => $language,
+                'updated_at' => now(),
+            ]);
     }
 
     private function normalizePhone(string $input, string $field): string
