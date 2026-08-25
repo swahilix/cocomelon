@@ -43,6 +43,8 @@ class PageController extends Controller
 
         abort_unless(isset($pages[$page]), 404);
 
-        return Inertia::render('Store/StaticPage', ['page' => $pages[$page]]);
+        $component = $page === 'about' ? 'Store/About' : 'Store/StaticPage';
+
+        return Inertia::render($component, ['page' => $pages[$page]]);
     }
 }
