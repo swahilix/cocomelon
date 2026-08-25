@@ -46,6 +46,14 @@ class HandleInertiaRequests extends Middleware
         if ($authUser && Str::endsWith((string) ($authUser['email'] ?? ''), '@phone.prinx.local')) {
             $authUser['email'] = null;
         }
+        if ($authUser && ! ($authUser['is_admin'] ?? false) && filled($authUser['phone'] ?? null)) {
+            $digits = preg_replace('/\D+/', '', (string) $authUser['phone']);
+            if (strlen($digits) === 12 && str_starts_with($digits, '255')) {
+                $authUser['phone'] = substr($digits, 3);
+            } elseif (strlen($digits) === 10 && str_starts_with($digits, '0')) {
+                $authUser['phone'] = substr($digits, 1);
+            }
+        }
 
         $business = Schema::hasTable('business_settings')
             ? DB::table('business_settings')->where('id', 1)->first()
