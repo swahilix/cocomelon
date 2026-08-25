@@ -62,6 +62,15 @@ main .inline-flex.h-9:has(> input[type="number"]) > button {
     border-radius: 0 !important;
 }
 
+/* Shop grid/list arrangement control. */
+main section[class~="pb-5"][class~="pt-6"] div[class~="h-[34px]"][class~="overflow-hidden"] {
+    border-radius: 0 !important;
+}
+
+main section[class~="pb-5"][class~="pt-6"] div[class~="h-[34px]"][class~="overflow-hidden"] > button {
+    border-radius: 0 !important;
+}
+
 /* POS mobile camera launcher: match the joined New customer control. */
 @media (max-width: 767px) {
     button[title="Scan barcode with camera"] {
