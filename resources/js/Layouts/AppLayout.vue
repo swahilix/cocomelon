@@ -82,12 +82,9 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                         <Link v-if="user?.is_admin" href="/admin" class="flex h-10 w-10 items-center justify-center rounded-full text-slate-900 transition hover:bg-amber-50 hover:text-amber-700" title="Admin panel" aria-label="Admin panel">
                             <svg viewBox="0 0 24 24" class="h-[22px] w-[22px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path stroke-linecap="round" d="M5 20c.7-4.2 3-6.3 7-6.3s6.3 2.1 7 6.3"/></svg>
                         </Link>
-                        <Link v-else-if="!user" href="/login" class="flex h-10 w-10 items-center justify-center rounded-full text-slate-900 transition hover:bg-amber-50 hover:text-amber-700" title="Account" aria-label="Account">
+                        <Link v-else :href="user ? '/account' : '/login'" class="flex h-10 w-10 items-center justify-center rounded-full text-slate-900 transition hover:bg-amber-50 hover:text-amber-700" title="Account" aria-label="Account">
                             <svg viewBox="0 0 24 24" class="h-[22px] w-[22px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path stroke-linecap="round" d="M5 20c.7-4.2 3-6.3 7-6.3s6.3 2.1 7 6.3"/></svg>
                         </Link>
-                        <button v-else type="button" class="flex h-10 w-10 items-center justify-center rounded-full text-slate-900 transition hover:bg-amber-50 hover:text-amber-700" title="Sign out" aria-label="Sign out" @click="logout">
-                            <svg viewBox="0 0 24 24" class="h-[21px] w-[21px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9"/></svg>
-                        </button>
 
                         <span class="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-900" title="Wishlist">
                             <svg viewBox="0 0 24 24" class="h-[22px] w-[22px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 9.2c0 5.4-8.5 10-8.5 10s-8.5-4.6-8.5-10A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8Z"/></svg>
@@ -167,8 +164,8 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                             <Link href="/pages/about" class="rounded-[8px] border border-slate-200 px-3 py-3">About</Link>
                             <Link href="/pages/contact" class="rounded-[8px] border border-slate-200 px-3 py-3">Contact</Link>
                             <Link v-if="!user" href="/login" class="rounded-[8px] border border-slate-200 px-3 py-3">Account</Link>
-                            <Link v-if="user?.is_admin" href="/admin" class="rounded-[8px] border border-slate-200 px-3 py-3">Admin panel</Link>
-                            <button v-else-if="user" type="button" class="rounded-[8px] border border-slate-200 px-3 py-3 text-left" @click="logout">Sign out</button>
+                            <Link v-else-if="user?.is_admin" href="/admin" class="rounded-[8px] border border-slate-200 px-3 py-3">Admin panel</Link>
+                            <Link v-else href="/account" class="rounded-[8px] border border-slate-200 px-3 py-3">My Account</Link>
                         </div>
                         <p class="mt-4 text-[10px] font-bold uppercase tracking-[.14em] text-slate-400">All Categories</p>
                         <div class="mt-2 divide-y divide-slate-100 overflow-hidden rounded-[8px] border border-slate-200">
