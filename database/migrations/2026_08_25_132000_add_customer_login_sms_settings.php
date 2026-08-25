@@ -13,7 +13,7 @@ return new class extends Migration
         }
 
         $missing = [];
-        foreach (['sms_enabled', 'sms_provider', 'sms_api_url', 'sms_api_key', 'sms_api_secret', 'sms_sender_id', 'sms_bearer_token'] as $column) {
+        foreach (['sms_enabled', 'sms_provider', 'sms_api_key', 'sms_sender_id', 'sms_bearer_token'] as $column) {
             $missing[$column] = ! Schema::hasColumn('business_settings', $column);
         }
 
@@ -28,14 +28,8 @@ return new class extends Migration
             if ($missing['sms_provider']) {
                 $table->string('sms_provider', 30)->default('nextsms');
             }
-            if ($missing['sms_api_url']) {
-                $table->string('sms_api_url')->nullable();
-            }
             if ($missing['sms_api_key']) {
                 $table->text('sms_api_key')->nullable();
-            }
-            if ($missing['sms_api_secret']) {
-                $table->text('sms_api_secret')->nullable();
             }
             if ($missing['sms_sender_id']) {
                 $table->string('sms_sender_id', 40)->nullable();
@@ -55,9 +49,7 @@ return new class extends Migration
         $columns = [
             'sms_enabled',
             'sms_provider',
-            'sms_api_url',
             'sms_api_key',
-            'sms_api_secret',
             'sms_sender_id',
             'sms_bearer_token',
         ];
