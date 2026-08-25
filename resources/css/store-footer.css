@@ -41,7 +41,7 @@ main:has(.homepage-store-footer) + footer { display: block !important; }
 /* Mobile storefront search button sizing. */
 @media (max-width: 1023px) {
     header form button[aria-label="Search"] {
-        height: 43px !important;
+        height: 34px !important;
         width: 34px !important;
         margin-top: 4px !important;
         margin-right: 4px !important;
