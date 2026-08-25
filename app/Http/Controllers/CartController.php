@@ -60,4 +60,26 @@ class CartController extends Controller
 
         return back()->with('success', 'Cart cleared.');
     }
+
+    public function applyCoupon(Request $request, CartService $cart): RedirectResponse
+    {
+        $data = $request->validate([
+            'code' => ['required', 'string', 'max:64'],
+        ]);
+
+        $result = $cart->applyCoupon($data['code']);
+
+        if (! $result['valid']) {
+            return back()->with('error', $result['message']);
+        }
+
+        return back()->with('success', $result['message']);
+    }
+
+    public function removeCoupon(CartService $cart): RedirectResponse
+    {
+        $cart->removeCoupon();
+
+        return back()->with('success', 'Coupon removed.');
+    }
 }
