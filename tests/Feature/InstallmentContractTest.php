@@ -13,7 +13,7 @@ class InstallmentContractTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_staff_can_generate_installment_contract_in_english_and_swahili(): void
+    public function test_staff_can_generate_branded_installment_contract_in_english_and_swahili(): void
     {
         $admin = $this->admin();
         $reference = $this->installmentPlan();
@@ -22,6 +22,13 @@ class InstallmentContractTest extends TestCase
             ->get('/admin/installments/'.$reference.'/contract?language=en')
             ->assertOk()
             ->assertSee('Installment Purchase Agreement')
+            ->assertSee('Prinx')
+            ->assertDontSee('Ptix')
+            ->assertSee('assets/prinx-logo.png')
+            ->assertSee('Tracking Barcode')
+            ->assertSee('id="installment-barcode"', false)
+            ->assertSee('data-reference="'.$reference.'"', false)
+            ->assertSee('CODE128')
             ->assertSee('Contract Customer')
             ->assertSee('+255712345678')
             ->assertSee('Test Smartphone')
@@ -32,6 +39,9 @@ class InstallmentContractTest extends TestCase
             ->get('/admin/installments/'.$reference.'/contract?language=sw')
             ->assertOk()
             ->assertSee('Mkataba wa Manunuzi kwa Awamu')
+            ->assertSee('Prinx')
+            ->assertDontSee('Ptix')
+            ->assertSee('Barcode ya Ufuatiliaji')
             ->assertSee('Contract Customer')
             ->assertSee('Test Smartphone')
             ->assertSee('bidhaa nyingine inayopatikana dukani yenye thamani inayokaribiana');
