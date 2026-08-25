@@ -27,7 +27,7 @@ const startDismissTimer = () => {
     dismissTimer = setTimeout(() => {
         visible.value = false;
         dismissTimer = null;
-    }, 30000);
+    }, 5000);
 };
 
 const copyMessage = async () => {
