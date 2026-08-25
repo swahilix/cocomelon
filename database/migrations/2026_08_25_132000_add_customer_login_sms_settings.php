@@ -26,7 +26,7 @@ return new class extends Migration
                 $table->boolean('sms_enabled')->default(false);
             }
             if ($missing['sms_provider']) {
-                $table->string('sms_provider', 30)->default('beem');
+                $table->string('sms_provider', 30)->default('nextsms');
             }
             if ($missing['sms_api_url']) {
                 $table->string('sms_api_url')->nullable();
