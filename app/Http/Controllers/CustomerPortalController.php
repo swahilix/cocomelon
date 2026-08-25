@@ -178,18 +178,18 @@ class CustomerPortalController extends Controller
             return $online->sortByDesc('date')->values();
         }
 
-        $variants = $this->phoneVariants((string) $request->user()->phone);
-        if ($variants === []) {
+        $local = $this->localPhoneDigits((string) $request->user()->phone);
+        if (! $local) {
             return $online->sortByDesc('date')->values();
         }
 
-        $customerIds = $this->posCustomerIds($variants);
+        $customerIds = $this->posCustomerIds($local);
         $hasCustomerId = Schema::hasColumn('pos_sales', 'customer_id');
         $hasPaymentReference = Schema::hasColumn('pos_sales', 'payment_reference');
 
         $pos = DB::table('pos_sales')
-            ->where(function ($query) use ($variants, $customerIds, $hasCustomerId): void {
-                $query->whereIn('customer_phone', $variants);
+            ->where(function ($query) use ($local, $customerIds, $hasCustomerId): void {
+                $query->whereRaw($this->phoneDigitsSql('customer_phone').' LIKE ?', ['%'.$local]);
                 if ($hasCustomerId && $customerIds !== []) {
                     $query->orWhereIn('customer_id', $customerIds);
                 }
@@ -215,18 +215,18 @@ class CustomerPortalController extends Controller
             return collect();
         }
 
-        $variants = $this->phoneVariants((string) $request->user()->phone);
-        if ($variants === []) {
+        $local = $this->localPhoneDigits((string) $request->user()->phone);
+        if (! $local) {
             return collect();
         }
 
-        $customerIds = $this->posCustomerIds($variants);
+        $customerIds = $this->posCustomerIds($local);
         $hasCustomerId = Schema::hasColumn('pos_documents', 'customer_id');
 
         return DB::table('pos_documents')
             ->where('type', 'invoice')
-            ->where(function ($query) use ($variants, $customerIds, $hasCustomerId): void {
-                $query->whereIn('customer_phone', $variants);
+            ->where(function ($query) use ($local, $customerIds, $hasCustomerId): void {
+                $query->whereRaw($this->phoneDigitsSql('customer_phone').' LIKE ?', ['%'.$local]);
                 if ($hasCustomerId && $customerIds !== []) {
                     $query->orWhereIn('customer_id', $customerIds);
                 }
@@ -235,20 +235,24 @@ class CustomerPortalController extends Controller
             ->get();
     }
 
-    private function posCustomerIds(array $variants): array
+    private function posCustomerIds(string $local): array
     {
-        if ($variants === [] || ! Schema::hasTable('pos_customers')) {
+        if (! Schema::hasTable('pos_customers')) {
             return [];
         }
 
-        return DB::table('pos_customers')->whereIn('phone', $variants)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        return DB::table('pos_customers')
+            ->whereRaw($this->phoneDigitsSql('phone').' LIKE ?', ['%'.$local])
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
     }
 
-    private function phoneVariants(string $phone): array
+    private function localPhoneDigits(string $phone): ?string
     {
         $digits = preg_replace('/\D+/', '', $phone);
         if (! $digits) {
-            return [];
+            return null;
         }
 
         if (strlen($digits) === 10 && str_starts_with($digits, '0')) {
@@ -258,10 +262,14 @@ class CustomerPortalController extends Controller
         }
 
         if (! str_starts_with($digits, '255') || strlen($digits) !== 12) {
-            return [];
+            return null;
         }
 
-        $local = substr($digits, 3);
-        return array_values(array_unique(['+'.$digits, $digits, '0'.$local, $local]));
+        return substr($digits, -9);
+    }
+
+    private function phoneDigitsSql(string $column): string
+    {
+        return "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE({$column}, ''), '+', ''), ' ', ''), '-', ''), '(', ''), ')', ''), '.', '')";
     }
 }
