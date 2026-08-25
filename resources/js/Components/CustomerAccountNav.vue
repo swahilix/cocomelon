@@ -5,7 +5,7 @@ import Icon from './Icon.vue';
 const page = usePage();
 const items = [
     { label: 'Track Orders', text: 'Follow order progress and delivery status', href: '/account/orders', icon: 'shopping-cart' },
-    { label: 'Payment Records', text: 'Review your online and store payments', href: '/account/payments', icon: 'wallet' },
+    { label: 'Payment Records', text: 'Review your online and store payments', href: '/account/payments', icon: 'bank-card' },
     { label: 'Invoices', text: 'View your order and POS invoices', href: '/account/invoices', icon: 'document-text-2' },
 ];
 const active = (href) => page.url === href || page.url.startsWith(`${href}/`);
