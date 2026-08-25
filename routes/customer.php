@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\CustomerPortalController;
+use App\Http\Controllers\WishlistController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
@@ -21,4 +22,10 @@ Route::prefix('account')->name('customer.account.')->middleware('auth')->group(f
     Route::get('/payments', [CustomerPortalController::class, 'payments'])->name('payments');
     Route::get('/invoices', [CustomerPortalController::class, 'invoices'])->name('invoices');
     Route::get('/invoices/{source}/{reference}', [CustomerPortalController::class, 'invoice'])->whereIn('source', ['order', 'pos'])->name('invoices.show');
+});
+
+Route::prefix('wishlist')->name('wishlist.')->middleware('auth')->group(function (): void {
+    Route::get('/', [WishlistController::class, 'index'])->name('index');
+    Route::post('/{product}', [WishlistController::class, 'store'])->name('store');
+    Route::delete('/{product}', [WishlistController::class, 'destroy'])->name('destroy');
 });

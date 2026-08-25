@@ -18,7 +18,7 @@ class HandleInertiaRequests extends Middleware
 
     public function rootView(Request $request): string
     {
-        if ($request->is('admin','admin/*','login','login/*','register','cart','checkout','order-success/*','track-order','account','account/*')) config(['inertia.ssr.enabled' => false]);
+        if ($request->is('admin','admin/*','login','login/*','register','cart','checkout','order-success/*','track-order','account','account/*','wishlist','wishlist/*')) config(['inertia.ssr.enabled' => false]);
         return parent::rootView($request);
     }
 
@@ -55,6 +55,17 @@ class HandleInertiaRequests extends Middleware
             }
         }
 
+        $wishlistProducts = collect();
+        if ($user && Schema::hasTable('wishlists') && Schema::hasTable('products')) {
+            $wishlistProducts = DB::table('wishlists')
+                ->join('products', 'products.id', '=', 'wishlists.product_id')
+                ->where('wishlists.user_id', $user->id)
+                ->where('products.status', 'active')
+                ->whereNull('products.deleted_at')
+                ->orderByDesc('wishlists.id')
+                ->get(['wishlists.product_id', 'products.slug']);
+        }
+
         $business = Schema::hasTable('business_settings')
             ? DB::table('business_settings')->where('id', 1)->first()
             : null;
@@ -86,6 +97,9 @@ class HandleInertiaRequests extends Middleware
                 'permissions' => $permissions,
             ],
             'cartCount' => collect($cart)->sum(),
+            'wishlistCount' => $wishlistProducts->count(),
+            'wishlistProductIds' => $wishlistProducts->pluck('product_id')->map(fn ($id) => (int) $id)->values()->all(),
+            'wishlistProductSlugs' => $wishlistProducts->pluck('slug')->filter()->values()->all(),
             'navigationCategories' => $navigationCategories,
             'navigationServiceCategories' => $navigationServiceCategories,
             'store' => [
