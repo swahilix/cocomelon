@@ -68,16 +68,23 @@ class InstallmentPlanTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Store/Account/Installments')
                 ->where('plans.0.reference', $plan->reference)
-                ->where('plans.0.remaining_amount', 100000.0));
+                ->where('plans.0.remaining_amount', 100000));
 
         $this->get('/account/installments/'.$plan->reference)
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Store/Account/InstallmentShow')
                 ->where('plan.reference', $plan->reference)
-                ->where('plan.paid_amount', 50000.0)
-                ->where('plan.remaining_amount', 100000.0)
+                ->where('plan.paid_amount', 50000)
+                ->where('plan.remaining_amount', 100000)
                 ->has('items', 2)
                 ->has('payments', 1));
+
+        $this->get('/account/payments')
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Store/Account/Payments')
+                ->where('payments.0.source', 'Installment payment')
+                ->where('payments.0.reference', $plan->reference)
+                ->where('payments.0.amount', 50000));
 
         $this->actingAs($admin)->post('/admin/installments/'.$plan->reference.'/payments', [
             'amount' => 100000,
