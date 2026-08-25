@@ -1,5 +1,5 @@
 <script setup>
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, onMounted, ref } from 'vue';
 import AppLayout from '../../Layouts/AppLayout.vue';
 
@@ -10,6 +10,8 @@ const termsAccepted = ref(false);
 const saveInformation = ref(false);
 const termsError = ref('');
 const deliveryMethod = ref('standard');
+const couponCode = ref(props.cart?.coupon?.code || '');
+const couponProcessing = ref(false);
 
 const form = useForm({
     customer_name: page.props.auth.user?.name || '',
@@ -68,6 +70,26 @@ onMounted(() => {
         localStorage.removeItem('prinx-checkout-profile');
     }
 });
+
+const applyCoupon = () => {
+    const code = couponCode.value.trim();
+    if (!code || couponProcessing.value) return;
+    router.post('/cart/coupon', { code }, {
+        preserveScroll: true,
+        onStart: () => { couponProcessing.value = true; },
+        onFinish: () => { couponProcessing.value = false; },
+    });
+};
+
+const removeCoupon = () => {
+    if (couponProcessing.value) return;
+    router.delete('/cart/coupon', {
+        preserveScroll: true,
+        onStart: () => { couponProcessing.value = true; },
+        onSuccess: () => { couponCode.value = ''; },
+        onFinish: () => { couponProcessing.value = false; },
+    });
+};
 
 const submit = () => {
     termsError.value = '';
@@ -297,6 +319,7 @@ const submit = () => {
                         <div class="mt-2 space-y-3 border-t border-slate-200 pt-4 text-xs">
                             <div class="flex items-center justify-between"><span class="text-slate-600">Subtotal ({{ itemLabel }})</span><strong class="text-slate-900">{{ money(cart.subtotal) }}</strong></div>
                             <div class="flex items-center justify-between"><span class="text-slate-600">Estimated Shipping</span><strong class="text-slate-900">{{ cart.shipping ? money(cart.shipping) : 'Included' }}</strong></div>
+                            <div v-if="cart.discount" class="flex items-center justify-between text-emerald-700"><span>Coupon discount <strong v-if="cart.coupon">({{ cart.coupon.code }})</strong></span><strong>-{{ money(cart.discount) }}</strong></div>
                         </div>
 
                         <div class="mt-4 flex items-end justify-between border-t border-slate-200 pt-4">
@@ -304,10 +327,14 @@ const submit = () => {
                             <strong class="text-xl font-semibold text-prinx-600">{{ money(cart.total) }}</strong>
                         </div>
 
-                        <div class="mt-4 flex h-10 overflow-hidden rounded-[6px] border border-slate-200 bg-slate-50/60 opacity-70">
-                            <input disabled class="min-w-0 flex-1 border-0 bg-transparent px-3 text-xs text-slate-500 outline-none" placeholder="Coupon codes coming soon">
-                            <span class="flex w-[82px] items-center justify-center bg-slate-200 text-xs font-semibold text-slate-500">Apply</span>
+                        <div v-if="cart.coupon" class="mt-4 flex items-center justify-between gap-3 rounded-[6px] border border-emerald-200 bg-emerald-50 px-3 py-2.5">
+                            <div class="min-w-0"><p class="text-[10px] font-semibold uppercase tracking-[.08em] text-emerald-700">Coupon applied</p><p class="mt-1 truncate text-xs font-semibold text-slate-800">{{ cart.coupon.code }} · Save {{ money(cart.discount) }}</p></div>
+                            <button type="button" class="shrink-0 text-xs font-semibold text-red-600 hover:text-red-700 disabled:opacity-50" :disabled="couponProcessing" @click="removeCoupon">Remove</button>
                         </div>
+                        <form v-else class="mt-4 flex h-10 overflow-hidden rounded-[6px] border border-slate-200 bg-white" @submit.prevent="applyCoupon">
+                            <input v-model="couponCode" class="min-w-0 flex-1 border-0 bg-transparent px-3 text-xs uppercase outline-none placeholder:normal-case" placeholder="Enter coupon code">
+                            <button type="submit" class="mr-[2px] mt-[2px] h-[34px] w-[82px] rounded-[5px] bg-prinx-500 text-xs font-semibold text-white transition hover:bg-prinx-600 disabled:cursor-not-allowed disabled:opacity-50" :disabled="couponProcessing || !couponCode.trim()">{{ couponProcessing ? 'Applying...' : 'Apply' }}</button>
+                        </form>
 
                         <div class="mt-4 flex items-start gap-3 rounded-[8px] bg-prinx-50 px-4 py-3.5">
                             <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[6px] bg-white text-prinx-600">
