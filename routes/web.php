@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\AiProductDescriptionController;
 use App\Http\Controllers\Admin\CatalogController as AdminCatalogController;
+use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GtinController;
 use App\Http\Controllers\Admin\InquiryController;
@@ -39,6 +40,8 @@ Route::get('/pages/{page}', [PageController::class, 'show'])->whereIn('page', ['
 
 Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
 Route::delete('/cart', [CartController::class, 'clear'])->name('cart.clear');
+Route::post('/cart/coupon', [CartController::class, 'applyCoupon'])->name('cart.coupon.apply');
+Route::delete('/cart/coupon', [CartController::class, 'removeCoupon'])->name('cart.coupon.remove');
 Route::post('/cart/{product}', [CartController::class, 'store'])->name('cart.store');
 Route::patch('/cart/{product}', [CartController::class, 'update'])->name('cart.update');
 Route::delete('/cart/{product}', [CartController::class, 'destroy'])->name('cart.destroy');
@@ -93,6 +96,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         Route::match(['post', 'patch'], 'catalog/brands/{brand}', [AdminCatalogController::class, 'updateBrand'])->name('catalog.brands.update');
         Route::delete('catalog/brands/{brand}', [AdminCatalogController::class, 'destroyBrand'])->name('catalog.brands.destroy');
         Route::post('catalog/brands/{brand}/restore', [AdminCatalogController::class, 'restoreBrand'])->whereNumber('brand')->name('catalog.brands.restore');
+
+        Route::get('coupons', [CouponController::class, 'index'])->name('coupons.index');
+        Route::post('coupons', [CouponController::class, 'store'])->name('coupons.store');
+        Route::patch('coupons/{coupon}', [CouponController::class, 'update'])->name('coupons.update');
+        Route::delete('coupons/{coupon}', [CouponController::class, 'destroy'])->name('coupons.destroy');
     });
 
     Route::middleware('permission:manage_services')->group(function (): void {
