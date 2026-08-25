@@ -115,6 +115,11 @@ footer a[aria-label="Instagram"] {
     }
 }
 
+/* Cart page: remove the bottom trust/support strip. */
+main > .container-shell > section[class~="mt-6"][class~="bg-prinx-100"][class~="lg:grid-cols-4"] {
+    display: none !important;
+}
+
 /* Home mobile benefits: each service promise is its own horizontal swipe card. */
 @media (max-width: 639px) {
     section[class~="pt-5"][class~="sm:pt-6"] > .container-shell > .overflow-x-auto {
