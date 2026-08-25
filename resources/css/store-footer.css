@@ -16,7 +16,6 @@ main:has(.homepage-store-footer) + footer { display: block !important; }
         position: relative;
         width: 48px !important;
         height: 54px !important;
-        padding-bottom: 15px;
         border-radius: 8px !important;
     }
 
