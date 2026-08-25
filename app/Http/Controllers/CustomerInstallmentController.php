@@ -53,8 +53,18 @@ class CustomerInstallmentController extends Controller
     private function serializePlan(object $plan): array
     {
         $remaining = max(0, round((float) $plan->net_total - (float) $plan->paid_amount, 2));
+        $data = (array) $plan;
+
+        unset(
+            $data['signed_contract_path'],
+            $data['signed_contract_original_name'],
+            $data['signed_contract_mime'],
+            $data['signed_contract_uploaded_at'],
+            $data['signed_contract_uploaded_by'],
+        );
+
         return [
-            ...((array) $plan),
+            ...$data,
             'subtotal' => (float) $plan->subtotal,
             'discount_amount' => (float) $plan->discount_amount,
             'net_total' => (float) $plan->net_total,
