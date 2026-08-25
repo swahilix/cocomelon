@@ -18,6 +18,10 @@ const paymentForm = useForm({
     notes: '',
 });
 
+const signedContractForm = useForm({
+    signed_contract: null,
+});
+
 const money = (value) => `TZS ${new Intl.NumberFormat('en-TZ', { maximumFractionDigits: 0 }).format(Number(value || 0))}`;
 const dateTime = (value) => value ? new Date(value).toLocaleString('en-TZ', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
 const statusClass = computed(() => ({ active: 'bg-amber-50 text-amber-700', paid: 'bg-emerald-50 text-emerald-700', released: 'bg-sky-50 text-sky-700', cancelled: 'bg-slate-100 text-slate-500' }[props.plan.status] || 'bg-slate-100 text-slate-600'));
@@ -31,6 +35,11 @@ const postPayment = () => paymentForm.post(`/admin/installments/${props.plan.ref
     onSuccess: () => paymentForm.reset('external_reference', 'notes'),
 });
 const resendSms = (payment) => router.post(`/admin/installments/${props.plan.reference}/payments/${payment.id}/sms`, {}, { preserveScroll: true });
+const uploadSignedContract = () => signedContractForm.post(`/admin/installments/${props.plan.reference}/contract/signed`, {
+    forceFormData: true,
+    preserveScroll: true,
+    onSuccess: () => signedContractForm.reset(),
+});
 const releaseItems = () => {
     if (window.confirm('Confirm that all reserved items are being released to this customer?')) router.post(`/admin/installments/${props.plan.reference}/release`, {}, { preserveScroll: true });
 };
@@ -85,6 +94,36 @@ const cancelPlan = () => {
                     <template v-else><div class="flex min-h-[210px] flex-col items-center justify-center text-center"><h2 class="text-sm font-semibold text-slate-950">{{ plan.status === 'released' ? 'Items released' : 'Plan cancelled' }}</h2><p class="mt-1 text-[11px] text-slate-500">{{ plan.status === 'released' ? `Released ${dateTime(plan.released_at)}` : 'No further payments can be recorded.' }}</p></div></template>
                 </section>
             </div>
+
+            <section class="overflow-hidden rounded-[9px] border border-slate-200 bg-white">
+                <div class="border-b border-slate-100 px-4 py-3">
+                    <h2 class="text-sm font-semibold text-slate-950">Installment contract</h2>
+                    <p class="mt-1 text-[11px] text-slate-500">Generate a simple Ptix agreement in English or Swahili, print it for signatures and office stamp, then upload the signed copy for records.</p>
+                </div>
+                <div class="grid gap-4 p-4 lg:grid-cols-[1fr_.9fr]">
+                    <div>
+                        <p class="text-[10px] font-semibold uppercase tracking-[.08em] text-slate-400">Generate contract</p>
+                        <div class="mt-2 flex flex-wrap gap-2">
+                            <a :href="`/admin/installments/${plan.reference}/contract?language=en`" target="_blank" rel="noopener" class="inline-flex h-9 items-center justify-center rounded-[6px] bg-slate-950 px-3.5 text-[11px] font-semibold text-white">English contract</a>
+                            <a :href="`/admin/installments/${plan.reference}/contract?language=sw`" target="_blank" rel="noopener" class="inline-flex h-9 items-center justify-center rounded-[6px] border border-slate-200 bg-white px-3.5 text-[11px] font-semibold text-slate-700 hover:border-prinx-300 hover:text-prinx-600">Swahili contract</a>
+                        </div>
+                        <p class="mt-2 max-w-xl text-[10px] leading-4 text-slate-500">The generated page includes the customer name and phone, selected product(s), agreed price, full-payment-before-release statement, alternative-item option, both signatures and an office stamp area. Use Print / Save PDF from the contract page.</p>
+                    </div>
+
+                    <div class="rounded-[7px] bg-slate-50 p-3">
+                        <div v-if="plan.signed_contract_original_name" class="mb-3 flex items-start justify-between gap-3 rounded-[6px] border border-emerald-100 bg-emerald-50 px-3 py-2.5">
+                            <div class="min-w-0"><strong class="block text-[11px] font-semibold text-emerald-800">Signed copy on file</strong><p class="mt-0.5 truncate text-[10px] text-emerald-700">{{ plan.signed_contract_original_name }}</p><p class="mt-1 text-[9px] text-emerald-600">Uploaded {{ dateTime(plan.signed_contract_uploaded_at) }}</p></div>
+                            <a :href="`/admin/installments/${plan.reference}/contract/signed`" target="_blank" rel="noopener" class="shrink-0 text-[10px] font-semibold text-emerald-700">View</a>
+                        </div>
+                        <form class="space-y-2" @submit.prevent="uploadSignedContract">
+                            <label class="block"><span class="mb-1 block text-[10px] font-semibold text-slate-600">{{ plan.signed_contract_original_name ? 'Replace signed contract' : 'Upload signed contract' }}</span><input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" class="block w-full rounded-[6px] border border-slate-200 bg-white px-2 py-2 text-[10px] text-slate-600 file:mr-2 file:rounded-[5px] file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-[10px] file:font-semibold" required @change="signedContractForm.signed_contract = $event.target.files?.[0] || null"></label>
+                            <p class="text-[9px] leading-4 text-slate-400">PDF, JPG or PNG. Maximum 10 MB. The file is kept in private application storage.</p>
+                            <p v-if="signedContractForm.errors.signed_contract" class="text-[10px] text-red-600">{{ signedContractForm.errors.signed_contract }}</p>
+                            <button class="h-9 rounded-[6px] bg-prinx-500 px-3.5 text-[11px] font-semibold text-white disabled:bg-slate-300" :disabled="signedContractForm.processing || !signedContractForm.signed_contract">{{ signedContractForm.processing ? 'Uploading…' : (plan.signed_contract_original_name ? 'Replace signed copy' : 'Save signed copy') }}</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
 
             <section class="overflow-hidden rounded-[9px] border border-slate-200 bg-white"><div class="border-b border-slate-100 px-4 py-3"><h2 class="text-sm font-semibold text-slate-950">Installment products</h2><p class="mt-1 text-[11px] text-slate-500">{{ stockReserved ? `These quantities are reserved and no longer part of sellable stock.` : `These products are part of the agreement but remain sellable until payments reach ${reservationPercent}%.` }}</p></div><div class="overflow-x-auto"><table class="min-w-[650px] w-full text-left text-[11px]"><thead class="bg-slate-50 text-[9px] uppercase text-slate-500"><tr><th class="px-4 py-2.5">Product</th><th class="px-4 py-2.5">SKU</th><th class="px-4 py-2.5">Qty</th><th class="px-4 py-2.5">Unit price</th><th class="px-4 py-2.5 text-right">Line total</th></tr></thead><tbody class="divide-y divide-slate-100"><tr v-for="item in items" :key="item.id"><td class="px-4 py-3 font-medium text-slate-900">{{ item.product_name }}</td><td class="px-4 py-3 text-slate-500">{{ item.sku || '—' }}</td><td class="px-4 py-3">{{ item.quantity }}</td><td class="px-4 py-3">{{ money(item.unit_price) }}</td><td class="px-4 py-3 text-right font-semibold">{{ money(item.line_total) }}</td></tr></tbody></table></div></section>
 
