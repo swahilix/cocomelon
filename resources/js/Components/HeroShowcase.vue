@@ -102,26 +102,26 @@ onBeforeUnmount(clearTimer);
                             @click="goTo(index)"
                         ></button>
                     </div>
-                </div>
 
-                <button
-                    v-if="carouselSlides.length > 1"
-                    type="button"
-                    class="absolute left-2 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-600 shadow-[0_5px_16px_rgba(15,23,42,.10)] transition hover:border-prinx-200 hover:text-prinx-600 sm:left-0 sm:h-11 sm:w-11 sm:-translate-x-1/2 sm:bg-white sm:shadow-[0_7px_22px_rgba(15,23,42,.10)]"
-                    aria-label="Previous banner"
-                    @click="previous"
-                >
-                    <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current sm:h-5 sm:w-5" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m14 6-6 6 6 6"/></svg>
-                </button>
-                <button
-                    v-if="carouselSlides.length > 1"
-                    type="button"
-                    class="absolute right-2 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-600 shadow-[0_5px_16px_rgba(15,23,42,.10)] transition hover:border-prinx-200 hover:text-prinx-600 sm:right-0 sm:h-11 sm:w-11 sm:translate-x-1/2 sm:bg-white sm:shadow-[0_7px_22px_rgba(15,23,42,.10)]"
-                    aria-label="Next banner"
-                    @click="next"
-                >
-                    <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current sm:h-5 sm:w-5" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m10 6 6 6-6 6"/></svg>
-                </button>
+                    <div v-if="carouselSlides.length > 1" class="absolute bottom-2 right-2 z-20 flex items-center gap-1.5 sm:bottom-4 sm:right-4 sm:gap-2">
+                        <button
+                            type="button"
+                            class="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-600 shadow-[0_5px_16px_rgba(15,23,42,.10)] backdrop-blur transition hover:border-prinx-200 hover:text-prinx-600 sm:h-10 sm:w-10 sm:bg-white"
+                            aria-label="Previous banner"
+                            @click="previous"
+                        >
+                            <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current sm:h-[18px] sm:w-[18px]" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m14 6-6 6 6 6"/></svg>
+                        </button>
+                        <button
+                            type="button"
+                            class="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-600 shadow-[0_5px_16px_rgba(15,23,42,.10)] backdrop-blur transition hover:border-prinx-200 hover:text-prinx-600 sm:h-10 sm:w-10 sm:bg-white"
+                            aria-label="Next banner"
+                            @click="next"
+                        >
+                            <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current sm:h-[18px] sm:w-[18px]" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m10 6 6 6-6 6"/></svg>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
