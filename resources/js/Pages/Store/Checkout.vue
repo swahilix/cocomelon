@@ -280,7 +280,6 @@ const submit = () => {
                                             <svg v-else viewBox="0 0 24 24" class="h-7 w-7 shrink-0 fill-none stroke-slate-600" stroke-width="1.6"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9h.01M18 15h.01"/></svg>
                                             <span class="min-w-0"><strong class="block text-xs font-semibold text-slate-900">{{ method.title }}</strong><span class="mt-1 block text-xs leading-5 text-slate-500">{{ method.text }}</span></span>
                                         </div>
-                                        <div v-if="method.value === 'mobile_money'" class="mt-3 flex flex-wrap items-center gap-3 pl-8 text-xs font-bold"><span class="text-emerald-600">M-Pesa</span><span class="text-red-500">Airtel Money</span><span class="text-blue-600">Tigo Pesa</span></div>
                                     </button>
                                 </div>
                                 <p v-if="form.errors.payment_method" class="mt-2 text-xs text-red-600">{{ form.errors.payment_method }}</p>
