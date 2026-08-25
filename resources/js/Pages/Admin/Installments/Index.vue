@@ -16,6 +16,7 @@ const form = useForm({
     customer_id: '',
     customer_name: '',
     customer_phone: '',
+    sms_language: 'en',
     items: [{ product_id: '', quantity: 1 }],
     discount_type: 'none',
     discount_value: 0,
@@ -146,8 +147,16 @@ const applyFilters = () => router.get('/admin/installments', {
                             <p class="text-[9px] leading-4 text-slate-400">The new person will also be saved in Customers and available for future POS or installment transactions.</p>
                         </template>
 
+                        <label class="block">
+                            <span class="mb-1 block text-[10px] font-semibold text-slate-600">SMS confirmation language</span>
+                            <select v-model="form.sms_language" class="h-9 w-full rounded-[6px] border border-slate-200 bg-white px-2 text-xs outline-none focus:border-prinx-400" required>
+                                <option value="en">English</option>
+                                <option value="sw">Swahili</option>
+                            </select>
+                            <span class="mt-1 block text-[9px] leading-4 text-slate-400">All installment payment confirmation messages for this plan will use this language.</span>
+                        </label>
                         <label class="block"><span class="mb-1 block text-[10px] font-semibold text-slate-600">Plan notes</span><textarea v-model="form.notes" rows="3" class="w-full rounded-[6px] border border-slate-200 px-3 py-2 text-xs outline-none focus:border-prinx-400" placeholder="Optional agreement notes"></textarea></label>
-                        <p v-if="form.errors.customer_id || form.errors.customer_name || form.errors.customer_phone || form.errors.items" class="text-[11px] text-red-600">{{ form.errors.customer_id || form.errors.customer_name || form.errors.customer_phone || form.errors.items }}</p>
+                        <p v-if="form.errors.customer_id || form.errors.customer_name || form.errors.customer_phone || form.errors.sms_language || form.errors.items" class="text-[11px] text-red-600">{{ form.errors.customer_id || form.errors.customer_name || form.errors.customer_phone || form.errors.sms_language || form.errors.items }}</p>
                     </div>
 
                     <div>
