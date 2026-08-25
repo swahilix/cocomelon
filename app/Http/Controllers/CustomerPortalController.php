@@ -157,7 +157,7 @@ class CustomerPortalController extends Controller
     private function ordersQuery(Request $request): Builder
     {
         $user = $request->user();
-        abort_if($user?->is_admin, 403);
+        abort_if(! $user || $user->is_admin, 403);
 
         return Order::query()->where('user_id', $user->id)->latest('id');
     }
@@ -179,14 +179,18 @@ class CustomerPortalController extends Controller
         }
 
         $variants = $this->phoneVariants((string) $request->user()->phone);
+        if ($variants === []) {
+            return $online->sortByDesc('date')->values();
+        }
+
         $customerIds = $this->posCustomerIds($variants);
+        $hasCustomerId = Schema::hasColumn('pos_sales', 'customer_id');
+        $hasPaymentReference = Schema::hasColumn('pos_sales', 'payment_reference');
 
         $pos = DB::table('pos_sales')
-            ->where(function ($query) use ($variants, $customerIds): void {
-                if ($variants !== []) {
-                    $query->whereIn('customer_phone', $variants);
-                }
-                if ($customerIds !== []) {
+            ->where(function ($query) use ($variants, $customerIds, $hasCustomerId): void {
+                $query->whereIn('customer_phone', $variants);
+                if ($hasCustomerId && $customerIds !== []) {
                     $query->orWhereIn('customer_id', $customerIds);
                 }
             })
@@ -197,7 +201,7 @@ class CustomerPortalController extends Controller
                 'reference' => $sale->reference,
                 'amount' => (float) $sale->amount_paid,
                 'method' => str_replace('_', ' ', (string) $sale->payment_method),
-                'payment_reference' => $sale->payment_reference ?? null,
+                'payment_reference' => $hasPaymentReference ? ($sale->payment_reference ?? null) : null,
                 'status' => (float) $sale->amount_paid >= (float) $sale->total ? 'paid' : 'pending',
                 'date' => $sale->created_at,
             ]);
@@ -212,15 +216,18 @@ class CustomerPortalController extends Controller
         }
 
         $variants = $this->phoneVariants((string) $request->user()->phone);
+        if ($variants === []) {
+            return collect();
+        }
+
         $customerIds = $this->posCustomerIds($variants);
+        $hasCustomerId = Schema::hasColumn('pos_documents', 'customer_id');
 
         return DB::table('pos_documents')
             ->where('type', 'invoice')
-            ->where(function ($query) use ($variants, $customerIds): void {
-                if ($variants !== []) {
-                    $query->whereIn('customer_phone', $variants);
-                }
-                if ($customerIds !== []) {
+            ->where(function ($query) use ($variants, $customerIds, $hasCustomerId): void {
+                $query->whereIn('customer_phone', $variants);
+                if ($hasCustomerId && $customerIds !== []) {
                     $query->orWhereIn('customer_id', $customerIds);
                 }
             })
@@ -251,7 +258,7 @@ class CustomerPortalController extends Controller
         }
 
         if (! str_starts_with($digits, '255') || strlen($digits) !== 12) {
-            return [$phone];
+            return [];
         }
 
         $local = substr($digits, 3);
