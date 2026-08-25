@@ -1,6 +1,6 @@
 <script setup>
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import AdminLayout from '../../../Layouts/AdminLayout.vue';
 
 const props = defineProps({
@@ -12,6 +12,7 @@ const props = defineProps({
 });
 
 const form = useForm({
+    customer_id: '',
     customer_name: '',
     customer_phone: '',
     items: [{ product_id: '', quantity: 1 }],
@@ -23,6 +24,10 @@ const form = useForm({
     notes: '',
 });
 
+const customers = ref([]);
+const customersLoading = ref(true);
+const customerMode = ref('existing');
+const customerSearch = ref('');
 const filterForm = useForm({ search: props.filters.search || '', status: props.filters.status || '' });
 const productById = (id) => props.products.find((product) => Number(product.id) === Number(id));
 const money = (value) => `TZS ${new Intl.NumberFormat('en-TZ', { maximumFractionDigits: 0 }).format(Number(value || 0))}`;
@@ -32,6 +37,15 @@ const statusClass = (status) => ({
     released: 'bg-sky-50 text-sky-700',
     cancelled: 'bg-slate-100 text-slate-500',
 }[status] || 'bg-slate-100 text-slate-600');
+
+const selectedCustomer = computed(() => customers.value.find((customer) => Number(customer.id) === Number(form.customer_id)) || null);
+const filteredCustomers = computed(() => {
+    const query = customerSearch.value.trim().toLowerCase();
+    if (!query) return customers.value;
+    return customers.value.filter((customer) => [customer.name, customer.phone, customer.email, customer.tin]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query)));
+});
 
 const subtotal = computed(() => form.items.reduce((total, item) => {
     const product = productById(item.product_id);
@@ -44,6 +58,37 @@ const discountAmount = computed(() => {
     return 0;
 });
 const netTotal = computed(() => Math.max(0, subtotal.value - discountAmount.value));
+
+watch(selectedCustomer, (customer) => {
+    if (customerMode.value !== 'existing') return;
+    form.customer_name = customer?.name || '';
+    form.customer_phone = customer?.phone || '';
+});
+
+const setCustomerMode = (mode) => {
+    customerMode.value = mode;
+    form.customer_id = '';
+    form.customer_name = '';
+    form.customer_phone = '';
+    customerSearch.value = '';
+    form.clearErrors('customer_id', 'customer_name', 'customer_phone');
+};
+
+onMounted(async () => {
+    try {
+        const response = await fetch('/admin/customers/options', {
+            credentials: 'same-origin',
+            headers: { Accept: 'application/json' },
+        });
+        if (response.ok) {
+            const payload = await response.json();
+            customers.value = payload.customers || [];
+            if (!customers.value.length) customerMode.value = 'new';
+        }
+    } finally {
+        customersLoading.value = false;
+    }
+});
 
 const addRow = () => form.items.push({ product_id: '', quantity: 1 });
 const removeRow = (index) => { if (form.items.length > 1) form.items.splice(index, 1); };
@@ -65,6 +110,7 @@ const applyFilters = () => router.get('/admin/installments', {
                     <h1 class="mt-1 text-[24px] font-semibold tracking-[-.025em] text-slate-950">Installment plans</h1>
                     <p class="mt-1 text-[12px] text-slate-500">Reserve one or more products, apply a discount and collect payments gradually until the balance reaches zero.</p>
                 </div>
+                <Link href="/admin/customers" class="inline-flex h-9 items-center justify-center rounded-[6px] border border-slate-200 bg-white px-3.5 text-[11px] font-semibold text-slate-700 hover:border-prinx-300 hover:text-prinx-600">Manage customers</Link>
             </div>
 
             <div class="grid grid-cols-2 gap-2 lg:grid-cols-5">
@@ -79,10 +125,26 @@ const applyFilters = () => router.get('/admin/installments', {
                 <div class="border-b border-slate-100 px-4 py-3"><h2 class="text-sm font-semibold text-slate-950">Create installment plan</h2><p class="mt-1 text-[11px] text-slate-500">Selected stock is reserved immediately so it cannot be sold to another customer.</p></div>
                 <form class="grid gap-4 p-4 xl:grid-cols-[.8fr_1.2fr_.7fr]" @submit.prevent="submit">
                     <div class="space-y-3">
-                        <label class="block"><span class="mb-1 block text-[10px] font-semibold text-slate-600">Customer name</span><input v-model="form.customer_name" class="h-9 w-full rounded-[6px] border border-slate-200 px-3 text-xs outline-none focus:border-prinx-400" required></label>
-                        <label class="block"><span class="mb-1 block text-[10px] font-semibold text-slate-600">Phone number</span><input v-model="form.customer_phone" class="h-9 w-full rounded-[6px] border border-slate-200 px-3 text-xs outline-none focus:border-prinx-400" placeholder="0712 345 678" required></label>
-                        <label class="block"><span class="mb-1 block text-[10px] font-semibold text-slate-600">Notes</span><textarea v-model="form.notes" rows="3" class="w-full rounded-[6px] border border-slate-200 px-3 py-2 text-xs outline-none focus:border-prinx-400" placeholder="Optional agreement notes"></textarea></label>
-                        <p v-if="form.errors.customer_name || form.errors.customer_phone || form.errors.items" class="text-[11px] text-red-600">{{ form.errors.customer_name || form.errors.customer_phone || form.errors.items }}</p>
+                        <div class="grid grid-cols-2 gap-1 rounded-[7px] bg-slate-100 p-1">
+                            <button type="button" :class="['h-8 rounded-[5px] text-[10px] font-semibold transition', customerMode === 'existing' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500']" @click="setCustomerMode('existing')">Existing customer</button>
+                            <button type="button" :class="['h-8 rounded-[5px] text-[10px] font-semibold transition', customerMode === 'new' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500']" @click="setCustomerMode('new')">New customer</button>
+                        </div>
+
+                        <template v-if="customerMode === 'existing'">
+                            <label class="block"><span class="mb-1 block text-[10px] font-semibold text-slate-600">Find customer</span><input v-model="customerSearch" class="h-9 w-full rounded-[6px] border border-slate-200 px-3 text-xs outline-none focus:border-prinx-400" placeholder="Search name, phone, email or TIN"></label>
+                            <label class="block"><span class="mb-1 block text-[10px] font-semibold text-slate-600">Customer</span><select v-model="form.customer_id" class="h-9 w-full rounded-[6px] border border-slate-200 bg-white px-2 text-[11px] outline-none focus:border-prinx-400" required><option value="">{{ customersLoading ? 'Loading customers…' : 'Choose existing customer' }}</option><option v-for="customer in filteredCustomers" :key="customer.id" :value="customer.id">{{ customer.name }} · {{ customer.phone }}</option></select></label>
+                            <div v-if="selectedCustomer" class="rounded-[7px] border border-emerald-100 bg-emerald-50/60 p-2.5"><strong class="block text-[11px] font-semibold text-slate-900">{{ selectedCustomer.name }}</strong><p class="mt-0.5 text-[10px] text-slate-600">{{ selectedCustomer.phone }}</p><p v-if="selectedCustomer.email || selectedCustomer.tin" class="mt-1 text-[9px] text-slate-500"><span v-if="selectedCustomer.email">{{ selectedCustomer.email }}</span><span v-if="selectedCustomer.email && selectedCustomer.tin"> · </span><span v-if="selectedCustomer.tin">TIN {{ selectedCustomer.tin }}</span></p></div>
+                            <p v-if="!customersLoading && !customers.length" class="rounded-[6px] bg-amber-50 px-2.5 py-2 text-[10px] text-amber-700">No saved customers yet. Choose New customer to add the first one.</p>
+                        </template>
+
+                        <template v-else>
+                            <label class="block"><span class="mb-1 block text-[10px] font-semibold text-slate-600">Customer name</span><input v-model="form.customer_name" class="h-9 w-full rounded-[6px] border border-slate-200 px-3 text-xs outline-none focus:border-prinx-400" required></label>
+                            <label class="block"><span class="mb-1 block text-[10px] font-semibold text-slate-600">Phone number</span><input v-model="form.customer_phone" class="h-9 w-full rounded-[6px] border border-slate-200 px-3 text-xs outline-none focus:border-prinx-400" placeholder="0712 345 678" required></label>
+                            <p class="text-[9px] leading-4 text-slate-400">The new person will also be saved in Customers and available for future POS or installment transactions.</p>
+                        </template>
+
+                        <label class="block"><span class="mb-1 block text-[10px] font-semibold text-slate-600">Plan notes</span><textarea v-model="form.notes" rows="3" class="w-full rounded-[6px] border border-slate-200 px-3 py-2 text-xs outline-none focus:border-prinx-400" placeholder="Optional agreement notes"></textarea></label>
+                        <p v-if="form.errors.customer_id || form.errors.customer_name || form.errors.customer_phone || form.errors.items" class="text-[11px] text-red-600">{{ form.errors.customer_id || form.errors.customer_name || form.errors.customer_phone || form.errors.items }}</p>
                     </div>
 
                     <div>
@@ -114,7 +176,7 @@ const applyFilters = () => router.get('/admin/installments', {
                         <label v-if="Number(form.initial_payment || 0) > 0" class="block"><span class="mb-1 block text-[10px] font-semibold text-slate-600">Payment method</span><select v-model="form.payment_method_id" class="h-9 w-full rounded-[6px] border border-slate-200 bg-white px-2 text-xs"><option v-for="method in paymentMethods" :key="method.id" :value="method.id">{{ method.name }}</option></select></label>
                         <label v-if="Number(form.initial_payment || 0) > 0" class="block"><span class="mb-1 block text-[10px] font-semibold text-slate-600">Payment reference</span><input v-model="form.external_reference" class="h-9 w-full rounded-[6px] border border-slate-200 bg-white px-2 text-xs" placeholder="Optional M-Pesa/bank reference"></label>
                         <p v-if="form.errors.discount_value || form.errors.initial_payment || form.errors.payment_method_id" class="text-[11px] text-red-600">{{ form.errors.discount_value || form.errors.initial_payment || form.errors.payment_method_id }}</p>
-                        <button type="submit" class="flex h-10 w-full items-center justify-center rounded-[6px] bg-prinx-500 px-4 text-xs font-semibold text-white transition hover:bg-prinx-600 disabled:cursor-not-allowed disabled:bg-slate-300" :disabled="form.processing || !netTotal">{{ form.processing ? 'Creating…' : 'Create & reserve stock' }}</button>
+                        <button type="submit" class="flex h-10 w-full items-center justify-center rounded-[6px] bg-prinx-500 px-4 text-xs font-semibold text-white transition hover:bg-prinx-600 disabled:cursor-not-allowed disabled:bg-slate-300" :disabled="form.processing || !netTotal || (customerMode === 'existing' && !form.customer_id)">{{ form.processing ? 'Creating…' : 'Create & reserve stock' }}</button>
                     </div>
                 </form>
             </section>
