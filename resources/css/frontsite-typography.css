@@ -12,3 +12,14 @@ body:not(:has(.admin-shell)):not(:has(.pos-shell)) [class*="text-[11."],
 body:not(:has(.admin-shell)):not(:has(.pos-shell)) .image-spec {
     font-size: 12px !important;
 }
+
+@media (max-width: 639px) {
+    .container-shell {
+        margin-left: auto;
+        margin-right: auto;
+        width: 100%;
+        max-width: 80rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+}
