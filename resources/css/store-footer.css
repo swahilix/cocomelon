@@ -69,6 +69,16 @@ main section[class~="pb-5"][class~="pt-6"] .mb-4 > div > button {
     border-radius: 0 !important;
 }
 
+/* Footer Instagram icon. */
+footer a[aria-label="Instagram"] {
+    font-size: 0 !important;
+    color: transparent !important;
+    background-image: url('https://i.ibb.co/0p9ny3mx/instagram.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 18px 18px;
+}
+
 /* POS mobile camera launcher: match the joined New customer control. */
 @media (max-width: 767px) {
     button[title="Scan barcode with camera"] {
