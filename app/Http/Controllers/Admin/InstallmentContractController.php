@@ -70,6 +70,7 @@ class InstallmentContractController extends Controller
 
         $name = trim((string) ($plan->signed_contract_original_name ?: basename($plan->signed_contract_path)));
         $safeName = str_replace(['"', "\r", "\n"], '', $name);
+        $safeName = str_replace('"', '', $safeName);
 
         return response()->file(Storage::disk('local')->path($plan->signed_contract_path), [
             'Content-Type' => $plan->signed_contract_mime ?: 'application/octet-stream',
