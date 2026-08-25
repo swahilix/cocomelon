@@ -62,13 +62,6 @@ main .inline-flex.h-9:has(> input[type="number"]) > button {
     border-radius: 0 !important;
 }
 
-/* Cart coupon Apply button. */
-main div[title="Coupon codes are not currently enabled"] > button {
-    height: 34px !important;
-    margin-top: 2px !important;
-    margin-right: 2px !important;
-}
-
 /* Shop grid/list arrangement controls and Filters button. */
 main section[class~="pb-5"][class~="pt-6"] div[class~="h-[34px]"][class~="overflow-hidden"],
 main section[class~="pb-5"][class~="pt-6"] div[class~="h-[34px]"][class~="overflow-hidden"] > button,
