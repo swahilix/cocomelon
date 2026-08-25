@@ -13,7 +13,7 @@ class InstallmentPlanTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_can_create_discounted_multi_item_plan_reserve_stock_and_receive_payments(): void
+    public function test_admin_can_create_discounted_multi_item_plan_and_stock_is_reserved_at_70_percent(): void
     {
         $admin = $this->admin();
         $customer = $this->customer('+255712345678');
@@ -46,15 +46,14 @@ class InstallmentPlanTest extends TestCase
         $this->assertSame(50000.0, (float) $plan->paid_amount);
         $this->assertSame('active', $plan->status);
 
-        $this->assertSame(3, $phone->fresh()->stock_quantity);
-        $this->assertSame(4, $charger->fresh()->stock_quantity);
+        $this->assertSame(4, $phone->fresh()->stock_quantity, 'Stock must remain sellable below the 70% threshold.');
+        $this->assertSame(6, $charger->fresh()->stock_quantity);
         $this->assertDatabaseCount('installment_plan_items', 2);
-        $this->assertDatabaseHas('stock_movements', [
-            'product_id' => $phone->id,
-            'type' => 'installment_reservation',
-            'quantity' => -1,
+        $this->assertSame(0, DB::table('installment_plan_items')->whereNotNull('reservation_movement_id')->count());
+        $this->assertDatabaseMissing('stock_movements', [
             'source_type' => 'installment_plan',
             'source_id' => $plan->id,
+            'type' => 'installment_reservation',
         ]);
         $this->assertDatabaseHas('installment_payments', [
             'installment_plan_id' => $plan->id,
@@ -86,22 +85,40 @@ class InstallmentPlanTest extends TestCase
                 ->where('payments.0.reference', $plan->reference)
                 ->where('payments.0.amount', 50000));
 
+        // TZS 105,000 is exactly 70% of the agreed TZS 150,000 net amount.
         $this->actingAs($admin)->post('/admin/installments/'.$plan->reference.'/payments', [
-            'amount' => 100000,
+            'amount' => 55000,
             'payment_method_id' => $cashId,
             'external_reference' => 'CASH-002',
+        ])->assertRedirect();
+
+        $plan = DB::table('installment_plans')->where('id', $plan->id)->first();
+        $this->assertSame(105000.0, (float) $plan->paid_amount);
+        $this->assertSame('active', $plan->status);
+        $this->assertSame(3, $phone->fresh()->stock_quantity);
+        $this->assertSame(4, $charger->fresh()->stock_quantity);
+        $this->assertSame(2, DB::table('installment_plan_items')->whereNotNull('reservation_movement_id')->count());
+        $this->assertDatabaseHas('stock_movements', [
+            'product_id' => $phone->id,
+            'type' => 'installment_reservation',
+            'quantity' => -1,
+            'source_type' => 'installment_plan',
+            'source_id' => $plan->id,
+        ]);
+
+        $this->actingAs($admin)->post('/admin/installments/'.$plan->reference.'/payments', [
+            'amount' => 45000,
+            'payment_method_id' => $cashId,
+            'external_reference' => 'CASH-003',
         ])->assertRedirect();
 
         $plan = DB::table('installment_plans')->where('id', $plan->id)->first();
         $this->assertSame(150000.0, (float) $plan->paid_amount);
         $this->assertSame('paid', $plan->status);
         $this->assertNotNull($plan->paid_at);
-        $this->assertDatabaseCount('installment_payments', 2);
-        $this->assertDatabaseHas('installment_payments', [
-            'installment_plan_id' => $plan->id,
-            'amount' => 100000,
-            'sms_status' => 'sent',
-        ]);
+        $this->assertDatabaseCount('installment_payments', 3);
+        $this->assertSame(3, $phone->fresh()->stock_quantity, 'Later payments must not reserve the same stock twice.');
+        $this->assertSame(4, $charger->fresh()->stock_quantity);
 
         $this->post('/admin/installments/'.$plan->reference.'/release')
             ->assertRedirect();
@@ -112,7 +129,7 @@ class InstallmentPlanTest extends TestCase
         $this->assertSame(3, $phone->fresh()->stock_quantity, 'Releasing already-reserved stock must not deduct inventory twice.');
     }
 
-    public function test_unpaid_active_plan_can_be_cancelled_and_reserved_stock_is_restored(): void
+    public function test_unpaid_active_plan_can_be_cancelled_without_changing_stock_before_reservation_threshold(): void
     {
         $admin = $this->admin();
         $product = $this->product('Reserved Laptop', 'INS-LAPTOP', 800000, 2);
@@ -127,16 +144,16 @@ class InstallmentPlanTest extends TestCase
         ])->assertRedirect();
 
         $plan = DB::table('installment_plans')->first();
-        $this->assertSame(1, $product->fresh()->stock_quantity);
+        $this->assertSame(2, $product->fresh()->stock_quantity);
+        $this->assertNull(DB::table('installment_plan_items')->where('installment_plan_id', $plan->id)->value('reservation_movement_id'));
 
         $this->delete('/admin/installments/'.$plan->reference)->assertRedirect('/admin/installments');
 
         $this->assertSame('cancelled', DB::table('installment_plans')->where('id', $plan->id)->value('status'));
         $this->assertSame(2, $product->fresh()->stock_quantity);
-        $this->assertDatabaseHas('stock_movements', [
+        $this->assertDatabaseMissing('stock_movements', [
             'product_id' => $product->id,
             'type' => 'installment_cancellation',
-            'quantity' => 1,
             'source_id' => $plan->id,
         ]);
     }
@@ -165,7 +182,40 @@ class InstallmentPlanTest extends TestCase
             ->assertSessionHasErrors('release');
 
         $this->assertSame('active', DB::table('installment_plans')->where('id', $plan->id)->value('status'));
-        $this->assertSame(2, $product->fresh()->stock_quantity);
+        $this->assertSame(3, $product->fresh()->stock_quantity, 'A 12.5% payment must not reserve stock.');
+    }
+
+    public function test_payment_that_reaches_70_percent_is_rejected_if_stock_can_no_longer_be_reserved(): void
+    {
+        $admin = $this->admin();
+        $product = $this->product('Limited Phone', 'INS-LIMITED', 100000, 1);
+        $cashId = (int) DB::table('payment_methods')->where('code', 'cash')->value('id');
+
+        $this->actingAs($admin)->post('/admin/installments', [
+            'customer_name' => 'Waiting Customer',
+            'customer_phone' => '0719 000 002',
+            'items' => [['product_id' => $product->id, 'quantity' => 1]],
+            'discount_type' => 'none',
+            'discount_value' => 0,
+            'initial_payment' => 0,
+        ])->assertRedirect();
+
+        $plan = DB::table('installment_plans')->first();
+        $this->assertSame(1, $product->fresh()->stock_quantity);
+
+        // The item is sold elsewhere before this installment reaches its reservation threshold.
+        DB::table('products')->where('id', $product->id)->update(['stock_quantity' => 0]);
+
+        $this->actingAs($admin)->post('/admin/installments/'.$plan->reference.'/payments', [
+            'amount' => 70000,
+            'payment_method_id' => $cashId,
+        ])->assertSessionHasErrors('amount');
+
+        $plan = DB::table('installment_plans')->where('id', $plan->id)->first();
+        $this->assertSame(0.0, (float) $plan->paid_amount, 'The threshold payment must roll back if reservation fails.');
+        $this->assertDatabaseCount('installment_payments', 0);
+        $this->assertNull(DB::table('installment_plan_items')->where('installment_plan_id', $plan->id)->value('reservation_movement_id'));
+        $this->assertSame(0, $product->fresh()->stock_quantity);
     }
 
     public function test_customer_installment_pages_require_login_and_are_private(): void
