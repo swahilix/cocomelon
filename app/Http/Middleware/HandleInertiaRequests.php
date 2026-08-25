@@ -42,6 +42,11 @@ class HandleInertiaRequests extends Middleware
             $role = $user->role ? ['id' => $user->role->id, 'name' => $user->role->name, 'slug' => $user->role->slug] : null;
         }
 
+        $authUser = $user?->only('id','name','email','phone','is_admin');
+        if ($authUser && Str::endsWith((string) ($authUser['email'] ?? ''), '@phone.prinx.local')) {
+            $authUser['email'] = null;
+        }
+
         $business = Schema::hasTable('business_settings')
             ? DB::table('business_settings')->where('id', 1)->first()
             : null;
@@ -68,7 +73,7 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $user?->only('id','name','email','phone','is_admin'),
+                'user' => $authUser,
                 'role' => $role,
                 'permissions' => $permissions,
             ],
