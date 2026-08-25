@@ -90,6 +90,13 @@ class CustomerPortalController extends Controller
 
         if ($source === 'order') {
             $order = $this->ordersQuery($request)->with('items')->where('order_number', $reference)->firstOrFail();
+            $address = collect([
+                $order->address_line_1,
+                $order->address_line_2,
+                $order->city,
+                $order->region,
+                $order->country,
+            ])->filter(fn ($value) => filled($value))->implode(', ');
 
             return Inertia::render('Store/Account/InvoiceShow', [
                 'invoice' => [
@@ -97,9 +104,14 @@ class CustomerPortalController extends Controller
                     'reference' => $order->order_number,
                     'date' => $order->created_at,
                     'due_date' => null,
+                    'prepared_by_name' => 'Online Store',
                     'customer_name' => $order->customer_name,
                     'customer_phone' => $order->phone,
                     'customer_email' => $order->email,
+                    'customer_address' => $address ?: null,
+                    'customer_tin' => null,
+                    'notes' => $order->notes,
+                    'order_status' => $order->status,
                     'subtotal' => (float) $order->subtotal,
                     'discount' => (float) $order->discount_total,
                     'shipping' => (float) $order->shipping_total,
@@ -121,7 +133,16 @@ class CustomerPortalController extends Controller
         $id = filter_var($reference, FILTER_VALIDATE_INT);
         abort_unless($id, 404);
 
-        $invoice = $this->posInvoices($request)->firstWhere('id', (int) $id);
+        $ownedInvoice = $this->posInvoices($request)->firstWhere('id', (int) $id);
+        abort_unless($ownedInvoice, 404);
+
+        $invoice = DB::table('pos_documents')
+            ->leftJoin('users', 'users.id', '=', 'pos_documents.created_by')
+            ->leftJoin('pos_customers', 'pos_customers.id', '=', 'pos_documents.customer_id')
+            ->where('pos_documents.id', (int) $id)
+            ->select('pos_documents.*', 'users.name as created_by_name', 'pos_customers.tin as saved_customer_tin')
+            ->first();
+
         abort_unless($invoice, 404);
 
         return Inertia::render('Store/Account/InvoiceShow', [
@@ -130,9 +151,14 @@ class CustomerPortalController extends Controller
                 'reference' => $invoice->reference,
                 'date' => $invoice->document_date ?: $invoice->created_at,
                 'due_date' => $invoice->due_date,
+                'prepared_by_name' => $invoice->created_by_name ?: 'Staff',
                 'customer_name' => $invoice->customer_name,
                 'customer_phone' => $invoice->customer_phone,
                 'customer_email' => $invoice->customer_email,
+                'customer_address' => null,
+                'customer_tin' => ($invoice->customer_tin ?? null) ?: ($invoice->saved_customer_tin ?? null),
+                'notes' => $invoice->notes,
+                'order_status' => null,
                 'subtotal' => (float) $invoice->subtotal,
                 'discount' => (float) $invoice->discount,
                 'shipping' => 0,
