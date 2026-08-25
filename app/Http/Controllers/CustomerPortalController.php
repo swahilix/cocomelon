@@ -199,14 +199,15 @@ class CustomerPortalController extends Controller
             'status' => $order->payment_status,
             'date' => $order->created_at,
         ]);
+        $installments = $this->installmentPaymentRecords($request);
 
         if (! Schema::hasTable('pos_sales')) {
-            return $online->sortByDesc('date')->values();
+            return $online->concat($installments)->sortByDesc('date')->values();
         }
 
         $local = $this->localPhoneDigits((string) $request->user()->phone);
         if (! $local) {
-            return $online->sortByDesc('date')->values();
+            return $online->concat($installments)->sortByDesc('date')->values();
         }
 
         $customerIds = $this->posCustomerIds($local);
@@ -232,7 +233,44 @@ class CustomerPortalController extends Controller
                 'date' => $sale->created_at,
             ]);
 
-        return $online->concat($pos)->sortByDesc('date')->values();
+        return $online->concat($pos)->concat($installments)->sortByDesc('date')->values();
+    }
+
+    private function installmentPaymentRecords(Request $request): Collection
+    {
+        if (! Schema::hasTable('installment_plans') || ! Schema::hasTable('installment_payments')) {
+            return collect();
+        }
+
+        $user = $request->user();
+        $local = $this->localPhoneDigits((string) $user->phone);
+
+        return DB::table('installment_payments')
+            ->join('installment_plans', 'installment_plans.id', '=', 'installment_payments.installment_plan_id')
+            ->where(function ($query) use ($user, $local): void {
+                $query->where('installment_plans.user_id', $user->id);
+                if ($local) {
+                    $query->orWhereRaw($this->phoneDigitsSql('installment_plans.customer_phone').' LIKE ?', ['%'.$local]);
+                }
+            })
+            ->latest('installment_payments.id')
+            ->get([
+                'installment_payments.reference as payment_reference_code',
+                'installment_payments.amount',
+                'installment_payments.payment_method_name',
+                'installment_payments.external_reference',
+                'installment_payments.created_at',
+                'installment_plans.reference as plan_reference',
+            ])
+            ->map(fn ($payment): array => [
+                'source' => 'Installment payment',
+                'reference' => $payment->plan_reference,
+                'amount' => (float) $payment->amount,
+                'method' => $payment->payment_method_name,
+                'payment_reference' => $payment->external_reference ?: $payment->payment_reference_code,
+                'status' => 'paid',
+                'date' => $payment->created_at,
+            ]);
     }
 
     private function posInvoices(Request $request): Collection
