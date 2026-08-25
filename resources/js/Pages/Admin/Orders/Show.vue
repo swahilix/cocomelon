@@ -36,6 +36,22 @@ const money = (value) => `TZS ${Number(value || 0).toLocaleString()}`;
 
                 <section class="card p-5">
                     <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <h2 class="font-semibold">Payment summary</h2>
+                            <p class="mt-1 text-xs text-slate-500">Final online checkout totals recorded for this order.</p>
+                        </div>
+                        <Icon name="percentage-circle" :size="21" class="text-prinx-600" />
+                    </div>
+                    <div class="mt-4 space-y-3 text-sm">
+                        <div class="flex items-center justify-between gap-4"><span class="text-slate-500">Subtotal</span><strong>{{ money(order.subtotal) }}</strong></div>
+                        <div class="flex items-center justify-between gap-4"><span class="text-slate-500">Shipping</span><strong>{{ money(order.shipping_total) }}</strong></div>
+                        <div v-if="Number(order.discount_total || 0) > 0" class="flex items-center justify-between gap-4 text-emerald-700"><span>Discount <strong v-if="order.coupon_code">({{ order.coupon_code }})</strong></span><strong>-{{ money(order.discount_total) }}</strong></div>
+                        <div class="flex items-center justify-between gap-4 border-t border-slate-200 pt-3"><span class="font-semibold text-slate-900">Grand total</span><strong class="text-lg text-prinx-600">{{ money(order.grand_total) }}</strong></div>
+                    </div>
+                </section>
+
+                <section class="card p-5">
+                    <div class="flex items-center justify-between gap-3">
                         <div><h2 class="font-semibold">Inventory ledger</h2><p class="mt-1 text-xs text-slate-500">Stock activity linked directly to this online order.</p></div>
                         <Icon name="box" :size="21" class="text-prinx-600" />
                     </div>
