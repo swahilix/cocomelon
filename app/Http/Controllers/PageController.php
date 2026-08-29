@@ -44,7 +44,29 @@ class PageController extends Controller
         abort_unless(isset($pages[$page]), 404);
 
         $component = $page === 'about' ? 'Store/About' : 'Store/StaticPage';
+        $locator = null;
 
-        return Inertia::render($component, ['page' => $pages[$page]]);
+        if (
+            $page === 'contact'
+            && Schema::hasTable('business_settings')
+            && Schema::hasColumn('business_settings', 'google_maps_api_key')
+            && filled($business?->google_maps_api_key)
+        ) {
+            $locator = [
+                'apiKey' => $business->google_maps_api_key,
+                'locations' => [[
+                    'title' => 'Prinx Tech',
+                    'address1' => 'Uhindini Street',
+                    'address2' => 'Dodoma, Tanzania',
+                    'coords' => ['lat' => -6.1759075, 'lng' => 35.7490705],
+                    'placeId' => 'ChIJ89WEjrrlTRgRikjhlXOgR0Q',
+                ]],
+            ];
+        }
+
+        return Inertia::render($component, [
+            'page' => $pages[$page],
+            'locator' => $locator,
+        ]);
     }
 }

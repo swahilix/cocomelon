@@ -56,6 +56,7 @@ const sections = computed(() => [
         items: [
             ['My account', '/admin/account', 'user-1', []],
             ['Business settings', '/admin/business-settings', 'setting-2', ['manage_storefront']],
+            ['Map settings', '/admin/business-settings/maps', 'location', ['manage_storefront']],
             ['Staff access', '/admin/access', 'shield-user', ['manage_staff']],
             ['Audit trail', '/admin/audit', 'hierarchy-2', ['manage_staff']],
             ['System monitoring', '/admin/system-monitor', 'monitor', ['view_system_monitor']],
@@ -66,6 +67,7 @@ const sections = computed(() => [
 const active = (url) => {
     if (url === '/admin') return page.url === '/admin';
     if (url === '/admin/stock') return page.url === '/admin/stock';
+    if (url === '/admin/business-settings') return page.url === '/admin/business-settings';
     return page.url.startsWith(url);
 };
 const closeMenu = () => { open.value = false; };
