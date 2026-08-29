@@ -43,7 +43,11 @@ class PageController extends Controller
 
         abort_unless(isset($pages[$page]), 404);
 
-        $component = $page === 'about' ? 'Store/About' : 'Store/StaticPage';
+        $component = match ($page) {
+            'about' => 'Store/About',
+            'contact' => 'Store/Contact',
+            default => 'Store/StaticPage',
+        };
         $locator = null;
 
         if (
