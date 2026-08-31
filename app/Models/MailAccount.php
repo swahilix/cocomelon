@@ -94,4 +94,23 @@ class MailAccount extends Model
     {
         return $query->where('send_enabled', true);
     }
+
+    public function scopeAssignedTo(Builder $query, User $user, string $capability = 'read'): Builder
+    {
+        if ($user->hasPermission('mail.view_all_mailboxes')) {
+            return $query;
+        }
+
+        $column = match ($capability) {
+            'send' => 'can_send',
+            'delete' => 'can_delete',
+            'manage' => 'can_manage',
+            default => 'can_read',
+        };
+
+        return $query->whereHas('users', function (Builder $users) use ($user, $column): void {
+            $users->where('users.id', $user->getKey())
+                ->where("mail_account_user.{$column}", true);
+        });
+    }
 }
