@@ -96,7 +96,9 @@ class MailSettingsController extends Controller
         $validated = $this->validateMailbox($request, true);
 
         DB::transaction(function () use ($request, $validated): void {
-            $account = MailAccount::query()->create($this->mailboxPayload($validated, $request, true));
+            $account = new MailAccount();
+            $account->forceFill($this->mailboxPayload($validated, $request, true));
+            $account->save();
 
             $account->users()->syncWithoutDetaching([
                 $request->user()->getKey() => [
@@ -115,7 +117,8 @@ class MailSettingsController extends Controller
     {
         Gate::authorize('manageSettings', $mailAccount);
         $validated = $this->validateMailbox($request, false, $mailAccount);
-        $mailAccount->update($this->mailboxPayload($validated, $request, false));
+        $mailAccount->forceFill($this->mailboxPayload($validated, $request, false));
+        $mailAccount->save();
 
         return back()->with('success', 'Mailbox settings updated.');
     }
