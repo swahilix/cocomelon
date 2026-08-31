@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\MailAccount;
 use App\Models\User;
+use App\Services\Mail\MailCredentialVault;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -17,6 +17,10 @@ use Inertia\Response;
 
 class MailSettingsController extends Controller
 {
+    public function __construct(private readonly MailCredentialVault $credentials)
+    {
+    }
+
     public function index(Request $request): Response
     {
         $user = $request->user();
@@ -37,12 +41,12 @@ class MailSettingsController extends Controller
                     'imap_port' => $account->imap_port,
                     'imap_encryption' => $account->imap_encryption,
                     'imap_username' => $account->imap_username,
-                    'imap_password_set' => filled($account->getRawOriginal('imap_password_encrypted')),
+                    'imap_password_set' => $account->hasStoredImapPassword(),
                     'smtp_host' => $account->smtp_host,
                     'smtp_port' => $account->smtp_port,
                     'smtp_encryption' => $account->smtp_encryption,
                     'smtp_username' => $account->smtp_username,
-                    'smtp_password_set' => filled($account->getRawOriginal('smtp_password_encrypted')),
+                    'smtp_password_set' => $account->hasStoredSmtpPassword(),
                     'from_name' => $account->from_name,
                     'reply_to' => $account->reply_to,
                     'signature_html' => $account->signature_html,
@@ -237,11 +241,11 @@ class MailSettingsController extends Controller
         }
 
         if ($creating || filled($validated['imap_password'] ?? null)) {
-            $payload['imap_password_encrypted'] = Crypt::encryptString((string) $validated['imap_password']);
+            $payload['imap_password_encrypted'] = $this->credentials->encrypt((string) $validated['imap_password']);
         }
 
         if ($creating || filled($validated['smtp_password'] ?? null)) {
-            $payload['smtp_password_encrypted'] = Crypt::encryptString((string) $validated['smtp_password']);
+            $payload['smtp_password_encrypted'] = $this->credentials->encrypt((string) $validated['smtp_password']);
         }
 
         return $payload;
