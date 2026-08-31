@@ -1,5 +1,6 @@
 <script setup>
 import { Head, router, useForm } from '@inertiajs/vue3';
+import axios from 'axios';
 import { computed, ref } from 'vue';
 import AdminLayout from '../../../Layouts/AdminLayout.vue';
 import Icon from '../../../Components/Icon.vue';
@@ -9,6 +10,10 @@ const props = defineProps({ accounts: Array, staff: Array, can: Object });
 const editorOpen = ref(false);
 const editing = ref(null);
 const accessAccount = ref(null);
+const connectionTest = ref({
+    imap: { loading: false, ok: null, message: '' },
+    smtp: { loading: false, ok: null, message: '' },
+});
 
 const emptyMailbox = () => ({
     name: '', email: '', provider: 'cPanel / Custom',
@@ -21,9 +26,17 @@ const form = useForm(emptyMailbox());
 const accessForm = useForm({ assignments: [] });
 const isCreate = computed(() => !editing.value);
 
+function resetConnectionTests() {
+    connectionTest.value = {
+        imap: { loading: false, ok: null, message: '' },
+        smtp: { loading: false, ok: null, message: '' },
+    };
+}
+
 function fillMailbox(values) {
     Object.assign(form, emptyMailbox(), values, { imap_password: '', smtp_password: '' });
     form.clearErrors();
+    resetConnectionTests();
 }
 
 function openCreate() {
@@ -42,12 +55,59 @@ function closeEditor() {
     editorOpen.value = false;
     editing.value = null;
     form.clearErrors();
+    resetConnectionTests();
 }
 
 function saveMailbox() {
     const options = { preserveScroll: true, onSuccess: closeEditor };
     if (editing.value) form.put(`/admin/mail-settings/${editing.value.id}`, options);
     else form.post('/admin/mail-settings', options);
+}
+
+async function testConnection(type) {
+    const state = connectionTest.value[type];
+    const prefix = type === 'imap' ? 'imap' : 'smtp';
+    const password = form[`${prefix}_password`];
+    const storedPassword = type === 'imap' ? editing.value?.imap_password_set : editing.value?.smtp_password_set;
+
+    if (!form[`${prefix}_host`] || !form[`${prefix}_port`] || !form[`${prefix}_username`]) {
+        state.ok = false;
+        state.message = `Enter the ${type.toUpperCase()} host, port and username first.`;
+        return;
+    }
+
+    if (!password && !storedPassword) {
+        state.ok = false;
+        state.message = `Enter the ${type.toUpperCase()} password first.`;
+        return;
+    }
+
+    state.loading = true;
+    state.ok = null;
+    state.message = '';
+
+    try {
+        const response = await axios.post(`/admin/mail-settings/test-${type}`, {
+            account_id: editing.value?.id || null,
+            host: form[`${prefix}_host`],
+            port: form[`${prefix}_port`],
+            encryption: form[`${prefix}_encryption`],
+            username: form[`${prefix}_username`],
+            password: password || null,
+        });
+
+        state.ok = true;
+        state.message = response.data?.message || `${type.toUpperCase()} connection succeeded.`;
+    } catch (error) {
+        state.ok = false;
+        const errors = error.response?.data?.errors || {};
+        state.message = errors.password?.[0]
+            || errors.host?.[0]
+            || error.response?.data?.message
+            || `${type.toUpperCase()} connection test failed.`;
+    } finally {
+        state.loading = false;
+    }
 }
 
 function openAccess(account) {
@@ -162,9 +222,23 @@ function formatDate(value) {
                     <div><label class="label">Status</label><select v-model="form.status" class="input"><option value="active">Active</option><option value="disabled">Disabled</option></select></div>
                 </div>
 
-                <div class="mt-6 border-t border-slate-200 pt-5"><div class="flex items-center justify-between"><div><h3 class="font-semibold">Incoming mail — IMAP</h3><p class="mt-1 text-xs text-slate-500">Used to synchronize Inbox, Sent, Trash and server folders.</p></div><span v-if="editing?.imap_password_set" class="rounded-[6px] bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">Password stored</span></div><div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><div class="lg:col-span-2"><label class="label">IMAP host</label><input v-model="form.imap_host" class="input" placeholder="mail.company.com" required></div><div><label class="label">Port</label><input v-model.number="form.imap_port" type="number" min="1" max="65535" class="input" required></div><div><label class="label">Encryption</label><select v-model="form.imap_encryption" class="input"><option value="ssl">SSL</option><option value="tls">TLS</option><option value="starttls">STARTTLS</option><option value="none">None</option></select></div><div class="lg:col-span-2"><label class="label">Username</label><input v-model="form.imap_username" class="input" autocomplete="off" required></div><div class="lg:col-span-2"><label class="label">Password <span v-if="editing" class="font-normal text-slate-400">— leave blank to keep stored password</span></label><input v-model="form.imap_password" type="password" class="input" autocomplete="new-password" :required="isCreate"></div></div></div>
+                <div class="mt-6 border-t border-slate-200 pt-5">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div><h3 class="font-semibold">Incoming mail — IMAP</h3><p class="mt-1 text-xs text-slate-500">Used to synchronize Inbox, Sent, Trash and server folders.</p></div>
+                        <div class="flex items-center gap-2"><span v-if="editing?.imap_password_set" class="rounded-[6px] bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">Password stored</span><button type="button" class="btn-light px-3 py-2 text-xs" :disabled="connectionTest.imap.loading" @click="testConnection('imap')">{{ connectionTest.imap.loading ? 'Testing…' : 'Test IMAP' }}</button></div>
+                    </div>
+                    <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><div class="lg:col-span-2"><label class="label">IMAP host</label><input v-model="form.imap_host" class="input" placeholder="mail.company.com" required></div><div><label class="label">Port</label><input v-model.number="form.imap_port" type="number" min="1" max="65535" class="input" required></div><div><label class="label">Encryption</label><select v-model="form.imap_encryption" class="input"><option value="ssl">SSL</option><option value="tls">TLS</option><option value="starttls">STARTTLS</option><option value="none">None</option></select></div><div class="lg:col-span-2"><label class="label">Username</label><input v-model="form.imap_username" class="input" autocomplete="off" required></div><div class="lg:col-span-2"><label class="label">Password <span v-if="editing" class="font-normal text-slate-400">— leave blank to keep stored password</span></label><input v-model="form.imap_password" type="password" class="input" autocomplete="new-password" :required="isCreate"></div></div>
+                    <p v-if="connectionTest.imap.message" :class="['mt-3 rounded-[7px] border px-3 py-2 text-xs font-medium', connectionTest.imap.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-red-200 bg-red-50 text-red-700']">{{ connectionTest.imap.message }}</p>
+                </div>
 
-                <div class="mt-6 border-t border-slate-200 pt-5"><div class="flex items-center justify-between"><div><h3 class="font-semibold">Outgoing mail — SMTP</h3><p class="mt-1 text-xs text-slate-500">Used for new messages, replies, forwards and attachments.</p></div><span v-if="editing?.smtp_password_set" class="rounded-[6px] bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">Password stored</span></div><div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><div class="lg:col-span-2"><label class="label">SMTP host</label><input v-model="form.smtp_host" class="input" placeholder="mail.company.com" required></div><div><label class="label">Port</label><input v-model.number="form.smtp_port" type="number" min="1" max="65535" class="input" required></div><div><label class="label">Encryption</label><select v-model="form.smtp_encryption" class="input"><option value="ssl">SSL</option><option value="tls">TLS</option><option value="starttls">STARTTLS</option><option value="none">None</option></select></div><div class="lg:col-span-2"><label class="label">Username</label><input v-model="form.smtp_username" class="input" autocomplete="off" required></div><div class="lg:col-span-2"><label class="label">Password <span v-if="editing" class="font-normal text-slate-400">— leave blank to keep stored password</span></label><input v-model="form.smtp_password" type="password" class="input" autocomplete="new-password" :required="isCreate"></div></div></div>
+                <div class="mt-6 border-t border-slate-200 pt-5">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div><h3 class="font-semibold">Outgoing mail — SMTP</h3><p class="mt-1 text-xs text-slate-500">Used for new messages, replies, forwards and attachments.</p></div>
+                        <div class="flex items-center gap-2"><span v-if="editing?.smtp_password_set" class="rounded-[6px] bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">Password stored</span><button type="button" class="btn-light px-3 py-2 text-xs" :disabled="connectionTest.smtp.loading" @click="testConnection('smtp')">{{ connectionTest.smtp.loading ? 'Testing…' : 'Test SMTP' }}</button></div>
+                    </div>
+                    <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><div class="lg:col-span-2"><label class="label">SMTP host</label><input v-model="form.smtp_host" class="input" placeholder="mail.company.com" required></div><div><label class="label">Port</label><input v-model.number="form.smtp_port" type="number" min="1" max="65535" class="input" required></div><div><label class="label">Encryption</label><select v-model="form.smtp_encryption" class="input"><option value="ssl">SSL</option><option value="tls">TLS</option><option value="starttls">STARTTLS</option><option value="none">None</option></select></div><div class="lg:col-span-2"><label class="label">Username</label><input v-model="form.smtp_username" class="input" autocomplete="off" required></div><div class="lg:col-span-2"><label class="label">Password <span v-if="editing" class="font-normal text-slate-400">— leave blank to keep stored password</span></label><input v-model="form.smtp_password" type="password" class="input" autocomplete="new-password" :required="isCreate"></div></div>
+                    <p v-if="connectionTest.smtp.message" :class="['mt-3 rounded-[7px] border px-3 py-2 text-xs font-medium', connectionTest.smtp.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-red-200 bg-red-50 text-red-700']">{{ connectionTest.smtp.message }}</p>
+                </div>
 
                 <div class="mt-6 border-t border-slate-200 pt-5"><h3 class="font-semibold">Sending identity</h3><div class="mt-3"><label class="label">Default HTML signature</label><textarea v-model="form.signature_html" rows="5" class="input font-mono text-xs" placeholder="<strong>Company Name</strong>..."></textarea><p class="mt-1 text-xs text-slate-400">Signature sanitization and rich signature editing will be added in the dedicated signature step.</p></div><div class="mt-4 flex flex-wrap gap-5"><label class="flex items-center gap-2 text-sm font-medium"><input v-model="form.sync_enabled" type="checkbox" :disabled="form.status === 'disabled'"> Enable synchronization</label><label class="flex items-center gap-2 text-sm font-medium"><input v-model="form.send_enabled" type="checkbox" :disabled="form.status === 'disabled'"> Enable sending</label></div></div>
 
