@@ -9,6 +9,8 @@ Route::prefix('admin/mail-settings')
     ->group(function (): void {
         Route::get('/', [MailSettingsController::class, 'index'])->name('index');
         Route::post('/', [MailSettingsController::class, 'store'])->name('store');
+        Route::post('/test-imap', [MailSettingsController::class, 'testImap'])->name('test-imap');
+        Route::post('/test-smtp', [MailSettingsController::class, 'testSmtp'])->name('test-smtp');
         Route::put('/{mailAccount}', [MailSettingsController::class, 'update'])->whereNumber('mailAccount')->name('update');
         Route::put('/{mailAccount}/staff', [MailSettingsController::class, 'assignUsers'])->whereNumber('mailAccount')->name('staff.update');
         Route::delete('/{mailAccount}', [MailSettingsController::class, 'destroy'])->whereNumber('mailAccount')->name('destroy');
