@@ -27,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('web')->group(base_path('routes/access.php'));
             Route::middleware('web')->group(base_path('routes/barcodes.php'));
             Route::middleware('web')->group(base_path('routes/business-settings.php'));
+            Route::middleware('web')->group(base_path('routes/mail-settings.php'));
             Route::middleware('web')->group(base_path('routes/software.php'));
             Route::middleware('web')->group(base_path('routes/historical.php'));
             Route::middleware('web')->group(base_path('routes/installments.php'));

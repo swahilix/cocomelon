@@ -57,6 +57,7 @@ const sections = computed(() => [
             ['My account', '/admin/account', 'user-1', []],
             ['Business settings', '/admin/business-settings', 'setting-2', ['manage_storefront']],
             ['Map settings', '/admin/business-settings/maps', 'location', ['manage_storefront']],
+            ['Mail settings', '/admin/mail-settings', 'setting-2', ['mail.manage_mailboxes', 'mail.manage_settings']],
             ['Staff access', '/admin/access', 'shield-user', ['manage_staff']],
             ['Audit trail', '/admin/audit', 'hierarchy-2', ['manage_staff']],
             ['System monitoring', '/admin/system-monitor', 'monitor', ['view_system_monitor']],
