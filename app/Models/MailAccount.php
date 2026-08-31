@@ -80,6 +80,16 @@ class MailAccount extends Model
         return $this->hasMany(MailAuditLog::class);
     }
 
+    public function hasStoredImapPassword(): bool
+    {
+        return filled($this->getRawOriginal('imap_password_encrypted'));
+    }
+
+    public function hasStoredSmtpPassword(): bool
+    {
+        return filled($this->getRawOriginal('smtp_password_encrypted'));
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', 'active');
