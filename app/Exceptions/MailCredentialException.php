@@ -2,10 +2,9 @@
 
 namespace App\Exceptions;
 
-use RuntimeException;
 use Throwable;
 
-class MailCredentialException extends RuntimeException
+class MailCredentialException extends MailConnectionException
 {
     public static function missing(string $transport): self
     {
