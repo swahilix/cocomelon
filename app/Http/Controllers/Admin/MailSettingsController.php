@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exceptions\MailConnectionException;
 use App\Http\Controllers\Controller;
 use App\Models\MailAccount;
 use App\Models\User;
+use App\Services\Mail\MailConnectionTester;
 use App\Services\Mail\MailCredentialVault;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,8 +20,10 @@ use Inertia\Response;
 
 class MailSettingsController extends Controller
 {
-    public function __construct(private readonly MailCredentialVault $credentials)
-    {
+    public function __construct(
+        private readonly MailCredentialVault $credentials,
+        private readonly MailConnectionTester $connections,
+    ) {
     }
 
     public function index(Request $request): Response
@@ -123,6 +128,36 @@ class MailSettingsController extends Controller
         return back()->with('success', 'Mailbox settings updated.');
     }
 
+    public function testImap(Request $request): JsonResponse
+    {
+        [$validated, $account] = $this->validateConnectionTest($request, 'imap');
+
+        return $this->runConnectionTest($account, function () use ($validated, $account): array {
+            return $this->connections->testImap([
+                'host' => $validated['host'],
+                'port' => $validated['port'],
+                'encryption' => $validated['encryption'],
+                'username' => $validated['username'],
+                'password' => $this->resolveTestPassword($validated, $account, 'imap'),
+            ]);
+        });
+    }
+
+    public function testSmtp(Request $request): JsonResponse
+    {
+        [$validated, $account] = $this->validateConnectionTest($request, 'smtp');
+
+        return $this->runConnectionTest($account, function () use ($validated, $account): array {
+            return $this->connections->testSmtp([
+                'host' => $validated['host'],
+                'port' => $validated['port'],
+                'encryption' => $validated['encryption'],
+                'username' => $validated['username'],
+                'password' => $this->resolveTestPassword($validated, $account, 'smtp'),
+            ]);
+        });
+    }
+
     public function assignUsers(Request $request, MailAccount $mailAccount): RedirectResponse
     {
         Gate::authorize('assignUsers', $mailAccount);
@@ -214,6 +249,84 @@ class MailSettingsController extends Controller
             'send_enabled' => ['required', 'boolean'],
             'status' => ['required', Rule::in(['active', 'disabled'])],
         ]);
+    }
+
+    private function validateConnectionTest(Request $request, string $transport): array
+    {
+        $validated = $request->validate([
+            'account_id' => ['nullable', 'integer', 'exists:mail_accounts,id'],
+            'host' => ['required', 'string', 'max:253'],
+            'port' => ['required', 'integer', 'between:1,65535'],
+            'encryption' => ['required', Rule::in(['ssl', 'tls', 'starttls', 'none'])],
+            'username' => ['required', 'string', 'max:191'],
+            'password' => ['nullable', 'string', 'max:4096'],
+        ]);
+
+        $account = null;
+        if (! empty($validated['account_id'])) {
+            $account = MailAccount::query()->findOrFail((int) $validated['account_id']);
+            $user = $request->user();
+            abort_unless(
+                Gate::forUser($user)->allows('manageSettings', $account)
+                    || Gate::forUser($user)->allows('update', $account),
+                403,
+            );
+        } else {
+            abort_unless(
+                $request->user()?->hasAnyPermission(['mail.manage_mailboxes', 'mail.manage_settings']),
+                403,
+            );
+        }
+
+        if (blank($validated['password'] ?? null) && ! $account) {
+            throw ValidationException::withMessages([
+                'password' => strtoupper($transport).' password is required for a new mailbox connection test.',
+            ]);
+        }
+
+        return [$validated, $account];
+    }
+
+    private function resolveTestPassword(array $validated, ?MailAccount $account, string $transport): string
+    {
+        if (filled($validated['password'] ?? null)) {
+            return (string) $validated['password'];
+        }
+
+        if (! $account) {
+            throw ValidationException::withMessages([
+                'password' => strtoupper($transport).' password is required.',
+            ]);
+        }
+
+        return $transport === 'imap'
+            ? $this->credentials->imapPassword($account)
+            : $this->credentials->smtpPassword($account);
+    }
+
+    private function runConnectionTest(?MailAccount $account, callable $test): JsonResponse
+    {
+        try {
+            $result = $test();
+
+            if ($account) {
+                $account->forceFill([
+                    'last_connection_at' => now(),
+                    'last_error' => null,
+                ])->save();
+            }
+
+            return response()->json($result);
+        } catch (MailConnectionException $exception) {
+            if ($account) {
+                $account->forceFill(['last_error' => $exception->getMessage()])->save();
+            }
+
+            return response()->json([
+                'ok' => false,
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
     }
 
     private function mailboxPayload(array $validated, Request $request, bool $creating): array
