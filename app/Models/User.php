@@ -110,6 +110,52 @@ class User extends Authenticatable
         return (bool) array_intersect($permissions, $granted);
     }
 
+    public function hasMailAccountAccess(MailAccount $account, string $capability = 'read'): bool
+    {
+        if (! $this->is_admin) {
+            return false;
+        }
+
+        // Scope permission only: the calling policy must still check the
+        // action permission such as mail.send or mail.delete separately.
+        if ($this->hasPermission('mail.view_all_mailboxes')) {
+            return true;
+        }
+
+        $column = match ($capability) {
+            'send' => 'can_send',
+            'delete' => 'can_delete',
+            'manage' => 'can_manage',
+            default => 'can_read',
+        };
+
+        $assignedAccount = $this->relationLoaded('mailAccounts')
+            ? $this->mailAccounts->firstWhere('id', $account->getKey())
+            : $this->mailAccounts()->whereKey($account->getKey())->first();
+
+        return (bool) ($assignedAccount?->pivot?->{$column} ?? false);
+    }
+
+    public function canReadMailAccount(MailAccount $account): bool
+    {
+        return $this->hasPermission('mail.view') && $this->hasMailAccountAccess($account, 'read');
+    }
+
+    public function canSendFromMailAccount(MailAccount $account): bool
+    {
+        return $this->hasPermission('mail.send') && $this->hasMailAccountAccess($account, 'send');
+    }
+
+    public function canDeleteFromMailAccount(MailAccount $account): bool
+    {
+        return $this->hasPermission('mail.delete') && $this->hasMailAccountAccess($account, 'delete');
+    }
+
+    public function canManageMailAccount(MailAccount $account): bool
+    {
+        return $this->hasPermission('mail.manage_mailboxes') && $this->hasMailAccountAccess($account, 'manage');
+    }
+
     public function orders()
     {
         return $this->hasMany(Order::class);
