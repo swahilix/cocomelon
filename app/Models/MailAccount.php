@@ -15,8 +15,8 @@ class MailAccount extends Model
 
     protected $fillable = [
         'name', 'email', 'provider',
-        'imap_host', 'imap_port', 'imap_encryption', 'imap_username', 'imap_password_encrypted',
-        'smtp_host', 'smtp_port', 'smtp_encryption', 'smtp_username', 'smtp_password_encrypted',
+        'imap_host', 'imap_port', 'imap_encryption', 'imap_username',
+        'smtp_host', 'smtp_port', 'smtp_encryption', 'smtp_username',
         'from_name', 'reply_to', 'signature_html', 'sync_enabled', 'send_enabled',
         'last_synced_at', 'last_connection_at', 'last_error', 'status',
     ];
