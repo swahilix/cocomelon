@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -22,6 +24,38 @@ class User extends Authenticatable
     public function role(): BelongsTo
     {
         return $this->belongsTo(Role::class);
+    }
+
+    public function mailAccounts(): BelongsToMany
+    {
+        return $this->belongsToMany(MailAccount::class, 'mail_account_user')
+            ->withPivot(['can_read', 'can_send', 'can_delete', 'can_manage'])
+            ->withTimestamps();
+    }
+
+    public function mailDrafts(): HasMany
+    {
+        return $this->hasMany(MailDraft::class);
+    }
+
+    public function mailOutboxItems(): HasMany
+    {
+        return $this->hasMany(MailOutbox::class);
+    }
+
+    public function mailContacts(): HasMany
+    {
+        return $this->hasMany(MailContact::class, 'owner_user_id');
+    }
+
+    public function mailContactGroups(): HasMany
+    {
+        return $this->hasMany(MailContactGroup::class, 'owner_user_id');
+    }
+
+    public function mailAuditLogs(): HasMany
+    {
+        return $this->hasMany(MailAuditLog::class);
     }
 
     public function permissionSlugs(): array
