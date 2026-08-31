@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\MailAccount;
+use App\Models\MailAttachment;
 use App\Models\MailContact;
 use App\Models\MailContactGroup;
 use App\Models\MailDraft;
@@ -12,6 +13,7 @@ use App\Models\MailOutbox;
 use App\Models\Product;
 use App\Observers\ProductObserver;
 use App\Policies\MailAccountPolicy;
+use App\Policies\MailAttachmentPolicy;
 use App\Policies\MailContactGroupPolicy;
 use App\Policies\MailContactPolicy;
 use App\Policies\MailDraftPolicy;
@@ -37,6 +39,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(MailAccount::class, MailAccountPolicy::class);
         Gate::policy(MailFolder::class, MailFolderPolicy::class);
         Gate::policy(MailMessage::class, MailMessagePolicy::class);
+        Gate::policy(MailAttachment::class, MailAttachmentPolicy::class);
         Gate::policy(MailDraft::class, MailDraftPolicy::class);
         Gate::policy(MailOutbox::class, MailOutboxPolicy::class);
         Gate::policy(MailContact::class, MailContactPolicy::class);
