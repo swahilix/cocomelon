@@ -100,43 +100,50 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                 </div>
             </div>
 
-            <div class="hidden border-b border-slate-100 lg:block">
-                <div class="container-shell flex h-[66px] items-center justify-between gap-6">
-                    <nav class="flex h-full items-stretch gap-1 text-[12px] font-medium text-slate-700">
-                        <Link href="/" :class="['relative flex items-center gap-2 px-2.5 transition hover:text-amber-600', active('/') ? 'text-amber-600' : '']">
-                            <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m4 10 8-7 8 7v10h-6v-6h-4v6H4V10Z"/></svg>Home
-                            <span v-if="active('/')" class="absolute inset-x-2 bottom-0 h-[2px] bg-[#f7b900]"></span>
+            <div class="hidden border-b border-slate-100 bg-white lg:block">
+                <div class="container-shell flex h-[56px] items-center justify-between gap-6">
+                    <nav class="flex h-full min-w-0 items-stretch gap-7 whitespace-nowrap text-[13px] font-semibold text-slate-700" aria-label="Main navigation">
+                        <Link href="/" :class="['relative flex items-center transition-colors hover:text-amber-600', active('/') ? 'text-amber-600' : '']">
+                            Home
+                            <span v-if="active('/')" class="absolute inset-x-0 bottom-0 h-[2px] bg-[#f7b900]"></span>
                         </Link>
-                        <Link href="/shop" :class="['flex items-center gap-2 px-3 transition hover:text-amber-600', active('/shop') || active('/products') ? 'text-amber-600' : '']">
-                            <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14l-1 12H6L5 8Zm3 0a4 4 0 0 1 8 0"/></svg>Shop
+                        <Link href="/shop" :class="['relative flex items-center transition-colors hover:text-amber-600', active('/shop') || active('/products') ? 'text-amber-600' : '']">
+                            Shop
+                            <span v-if="active('/shop') || active('/products')" class="absolute inset-x-0 bottom-0 h-[2px] bg-[#f7b900]"></span>
                         </Link>
-                        <Link href="/compare" :class="['flex items-center gap-2 px-3 transition hover:text-amber-600', active('/compare') ? 'text-amber-600' : '']">
-                            <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 7h14M5 17h14M8 4v6M16 14v6"/></svg>Compare
+                        <Link href="/compare" :class="['relative flex items-center transition-colors hover:text-amber-600', active('/compare') ? 'text-amber-600' : '']">
+                            Compare
+                            <span v-if="active('/compare')" class="absolute inset-x-0 bottom-0 h-[2px] bg-[#f7b900]"></span>
                         </Link>
-                        <Link href="/software" :class="['relative flex items-center gap-2 px-3 transition hover:text-amber-600', active('/software') ? 'text-amber-600' : '']">
-                            <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>Software
-                            <span v-if="active('/software')" class="absolute inset-x-2 bottom-0 h-[2px] bg-[#f7b900]"></span>
+                        <Link href="/software" :class="['relative flex items-center transition-colors hover:text-amber-600', active('/software') ? 'text-amber-600' : '']">
+                            Software
+                            <span v-if="active('/software')" class="absolute inset-x-0 bottom-0 h-[2px] bg-[#f7b900]"></span>
                         </Link>
-                        <Link href="/services" :class="['flex items-center gap-2 px-3 transition hover:text-amber-600', active('/services') ? 'text-amber-600' : '']">
-                            <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3 5 7v5c0 4.3 2.5 7.3 7 9 4.5-1.7 7-4.7 7-9V7l-7-4Z"/><path stroke-linecap="round" d="m9 12 2 2 4-4"/></svg>Services
+                        <Link href="/services" :class="['relative flex items-center transition-colors hover:text-amber-600', active('/services') ? 'text-amber-600' : '']">
+                            Services
+                            <span v-if="active('/services')" class="absolute inset-x-0 bottom-0 h-[2px] bg-[#f7b900]"></span>
                         </Link>
-                        <Link href="/shop" class="flex items-center gap-2 px-3 transition hover:text-amber-600">
-                            <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m4 12 8-8 8 8-8 8-8-8Z"/><path stroke-linecap="round" d="M9 12h6"/></svg>Offers
+                        <Link href="/shop" class="relative flex items-center transition-colors hover:text-amber-600">
+                            Offers
                         </Link>
-                        <Link href="/guides" :class="['flex items-center gap-2 px-3 transition hover:text-amber-600', active('/guides') ? 'text-amber-600' : '']">
-                            <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 4h14v16H5V4Zm3 4h8M8 12h8M8 16h5"/></svg>Guides
+                        <Link href="/guides" :class="['relative flex items-center transition-colors hover:text-amber-600', active('/guides') ? 'text-amber-600' : '']">
+                            Guides
+                            <span v-if="active('/guides')" class="absolute inset-x-0 bottom-0 h-[2px] bg-[#f7b900]"></span>
                         </Link>
-                        <Link href="/pages/about" class="flex items-center gap-2 px-3 transition hover:text-amber-600">
-                            <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 11v5M12 8h.01"/></svg>About Us
+                        <Link href="/pages/about" :class="['relative flex items-center transition-colors hover:text-amber-600', active('/pages/about') ? 'text-amber-600' : '']">
+                            About Us
+                            <span v-if="active('/pages/about')" class="absolute inset-x-0 bottom-0 h-[2px] bg-[#f7b900]"></span>
                         </Link>
-                        <Link href="/pages/contact" class="flex items-center gap-2 px-3 transition hover:text-amber-600">
-                            <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16v12H4V6Zm1 1 7 6 7-6"/></svg>Contact Us
+                        <Link href="/pages/contact" :class="['relative flex items-center transition-colors hover:text-amber-600', active('/pages/contact') ? 'text-amber-600' : '']">
+                            Contact Us
+                            <span v-if="active('/pages/contact')" class="absolute inset-x-0 bottom-0 h-[2px] bg-[#f7b900]"></span>
                         </Link>
                     </nav>
 
-                    <div class="inline-flex h-[40px] shrink-0 items-center gap-2.5 rounded-[9px] border border-slate-200 bg-white px-4 text-[11px] font-semibold text-slate-700 shadow-sm">
-                        <svg viewBox="0 0 24 24" class="h-[19px] w-[19px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h11v9H3V7Zm11 3h4l3 3v3h-7v-6ZM6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm11 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/></svg>
-                        <span v-if="store.delivery_enabled">Delivery <strong class="text-amber-500">{{ store.delivery_eta || 'available' }}</strong></span><span v-else-if="store.pickup_enabled"><strong class="text-amber-500">Store pickup available</strong></span><span v-else>Order assistance available</span>
+                    <div class="shrink-0 border-l border-slate-200 pl-5 text-[11px] font-medium text-slate-500">
+                        <span v-if="store.delivery_enabled">Delivery: <strong class="font-semibold text-slate-800">{{ store.delivery_eta || 'available' }}</strong></span>
+                        <span v-else-if="store.pickup_enabled"><strong class="font-semibold text-slate-800">Store pickup available</strong></span>
+                        <span v-else>Order assistance available</span>
                     </div>
                 </div>
             </div>
