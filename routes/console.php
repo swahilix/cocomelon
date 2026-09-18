@@ -9,7 +9,6 @@ use App\Services\ImageOptimizationService;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schedule;
-use Throwable;
 
 Schedule::call(function (): void {
     Cache::put('system-monitor.scheduler-heartbeat', now()->toIso8601String(), now()->addHours(2));
@@ -32,7 +31,7 @@ Artisan::command('media:optimize-storefront-images', function (): void {
 
         try {
             $generated += count($images->ensureResponsiveWebpVariants($path, $widths));
-        } catch (Throwable $exception) {
+        } catch (\Throwable $exception) {
             $failed++;
             $this->warn('Skipped '.$path.': '.$exception->getMessage());
         }
