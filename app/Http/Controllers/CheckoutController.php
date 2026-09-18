@@ -31,13 +31,33 @@ class CheckoutController extends Controller
             'customer_name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email', 'max:190'],
             'phone' => ['required', 'string', 'max:30'],
-            'address_line_1' => ['required', 'string', 'max:190'],
+            'fulfillment_method' => ['required', 'in:delivery,pickup'],
+            'address_line_1' => ['nullable', 'required_if:fulfillment_method,delivery', 'string', 'max:190'],
             'address_line_2' => ['nullable', 'string', 'max:190'],
-            'city' => ['required', 'string', 'max:100'],
+            'city' => ['nullable', 'required_if:fulfillment_method,delivery', 'string', 'max:100'],
             'region' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'payment_method' => ['required', 'in:cash_on_delivery,mobile_money,bank_transfer'],
         ]);
+
+        $business = DB::table('business_settings')->where('id', 1)->first();
+        $deliveryEnabled = (bool) ($business?->delivery_enabled ?? true);
+        $pickupEnabled = (bool) ($business?->pickup_enabled ?? false);
+
+        if ($data['fulfillment_method'] === 'delivery' && ! $deliveryEnabled) {
+            return back()->withErrors(['fulfillment_method' => 'Delivery is currently unavailable.'])->withInput();
+        }
+
+        if ($data['fulfillment_method'] === 'pickup' && ! $pickupEnabled) {
+            return back()->withErrors(['fulfillment_method' => 'Store pickup is currently unavailable.'])->withInput();
+        }
+
+        if ($data['fulfillment_method'] === 'pickup') {
+            $data['address_line_1'] = $business?->pickup_location ?: $business?->address ?: 'Prinx Tech store pickup';
+            $data['address_line_2'] = null;
+            $data['city'] = $business?->city ?: $business?->region ?: 'Store pickup';
+            $data['region'] = $business?->region;
+        }
 
         $expectedCouponCode = $request->session()->get('cart_coupon_code');
         $summary = $cart->summary();
@@ -50,7 +70,10 @@ class CheckoutController extends Controller
         }
 
         try {
-            $order = DB::transaction(function () use ($data, $summary, $request, $inventory): Order {
+            $shippingTotal = $data['fulfillment_method'] === 'pickup' ? 0 : (float) $summary['shipping'];
+            $grandTotal = max(0, (float) $summary['subtotal'] + $shippingTotal - (float) $summary['discount']);
+
+            $order = DB::transaction(function () use ($data, $summary, $shippingTotal, $grandTotal, $request, $inventory): Order {
                 $order = Order::create([
                     ...$data,
                     'order_number' => 'PX-'.now()->format('ymd').'-'.strtoupper(Str::random(8)),
@@ -59,9 +82,9 @@ class CheckoutController extends Controller
                     'coupon_code' => $summary['coupon']['code'] ?? null,
                     'country' => config('store.country'),
                     'subtotal' => $summary['subtotal'],
-                    'shipping_total' => $summary['shipping'],
+                    'shipping_total' => $shippingTotal,
                     'discount_total' => $summary['discount'],
-                    'grand_total' => $summary['total'],
+                    'grand_total' => $grandTotal,
                     'currency' => config('store.currency'),
                     // Keep the in-memory model aligned with the database defaults.
                     // The initial history entry below reads these values before any
@@ -112,7 +135,9 @@ class CheckoutController extends Controller
                     'user_id' => $request->user()?->id,
                     'status' => $order->status,
                     'payment_status' => $order->payment_status,
-                    'note' => 'Order placed and inventory reserved at checkout.',
+                    'note' => $data['fulfillment_method'] === 'pickup'
+                        ? 'Store pickup order placed and inventory reserved at checkout.'
+                        : 'Delivery order placed and inventory reserved at checkout.',
                 ]);
 
                 return $order;

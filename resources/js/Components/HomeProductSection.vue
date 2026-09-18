@@ -79,6 +79,7 @@ function addToCart(product) {
                         <p v-if="metricKey && Number(product[metricKey] || 0) > 0" class="mt-1 text-[9px] font-medium text-slate-500">
                             {{ Number(product[metricKey]).toLocaleString() }} {{ metricLabel }}
                         </p>
+                        <p v-if="product.low_stock" class="mt-1 text-[9px] font-semibold text-amber-700">{{ product.stock_message }}</p>
 
                         <div class="mt-2 flex min-h-[30px] flex-wrap items-baseline gap-x-2 gap-y-0.5">
                             <strong class="text-[10px] font-semibold text-slate-900">{{ money(product.current_price) }}</strong>

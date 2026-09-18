@@ -12,7 +12,7 @@ const props = defineProps({
 
 const form = useForm({
     _method: 'put',
-    business_name: props.settings?.business_name || 'Prinx Electronics',
+    business_name: props.settings?.business_name || 'Prinx Tech',
     legal_name: props.settings?.legal_name || '',
     email: props.settings?.email || '',
     phone: props.settings?.phone || '',
@@ -23,6 +23,12 @@ const form = useForm({
     region: props.settings?.region || '',
     country: props.settings?.country || '',
     working_hours: props.settings?.working_hours || '',
+    delivery_enabled: props.settings?.delivery_enabled !== false,
+    delivery_area: props.settings?.delivery_area || '',
+    delivery_eta: props.settings?.delivery_eta || '',
+    pickup_enabled: Boolean(props.settings?.pickup_enabled),
+    pickup_location: props.settings?.pickup_location || '',
+    pickup_instructions: props.settings?.pickup_instructions || '',
     description: props.settings?.description || '',
     facebook_url: props.settings?.facebook_url || '',
     instagram_url: props.settings?.instagram_url || '',
@@ -73,7 +79,7 @@ const save = () => form.post('/admin/business-settings', {
                         <div><h2 class="font-semibold text-slate-900">Business identity</h2><p class="text-[11px] text-slate-500">Main company details used on the website.</p></div>
                     </div>
                     <div class="grid gap-3 sm:grid-cols-2">
-                        <div><label class="label">Business name</label><input v-model="form.business_name" class="input" placeholder="Prinx Electronics"><p v-if="form.errors.business_name" class="error">{{ form.errors.business_name }}</p></div>
+                        <div><label class="label">Business name</label><input v-model="form.business_name" class="input" placeholder="Prinx Tech"><p v-if="form.errors.business_name" class="error">{{ form.errors.business_name }}</p></div>
                         <div><label class="label">Legal / registered name</label><input v-model="form.legal_name" class="input" placeholder="Registered company name"><p v-if="form.errors.legal_name" class="error">{{ form.errors.legal_name }}</p></div>
                         <div class="sm:col-span-2"><label class="label">Business description</label><textarea v-model="form.description" class="input min-h-24 resize-y" placeholder="Short description of the business"></textarea><p v-if="form.errors.description" class="error">{{ form.errors.description }}</p></div>
                     </div>
@@ -157,6 +163,37 @@ const save = () => form.post('/admin/business-settings', {
                         <div><label class="label">Region</label><input v-model="form.region" class="input" placeholder="Dodoma"><p v-if="form.errors.region" class="error">{{ form.errors.region }}</p></div>
                         <div><label class="label">Country</label><input v-model="form.country" class="input" placeholder="Tanzania"><p v-if="form.errors.country" class="error">{{ form.errors.country }}</p></div>
                         <div><label class="label">Google Maps link</label><input v-model="form.maps_url" class="input" placeholder="https://maps.google.com/..."><p v-if="form.errors.maps_url" class="error">{{ form.errors.maps_url }}</p></div>
+                    </div>
+                </section>
+
+                <section class="form-section">
+                    <div class="mb-3 flex items-start gap-2">
+                        <span class="flex h-8 w-8 items-center justify-center rounded-[8px] bg-prinx-50 text-prinx-600"><Icon name="truck-fast" :size="17" /></span>
+                        <div><h2 class="font-semibold text-slate-900">Delivery & pickup</h2><p class="text-[11px] text-slate-500">Control the fulfillment promises shown beside products and at checkout.</p></div>
+                    </div>
+
+                    <div class="grid gap-4 lg:grid-cols-2">
+                        <div class="rounded-[8px] border border-slate-200 bg-slate-50 p-3">
+                            <label class="flex cursor-pointer items-center justify-between gap-3">
+                                <span><strong class="block text-xs font-semibold text-slate-900">Local delivery</strong><span class="mt-1 block text-[10px] text-slate-500">Customers can choose delivery at checkout.</span></span>
+                                <input v-model="form.delivery_enabled" type="checkbox" class="h-4 w-4 accent-prinx-500">
+                            </label>
+                            <div class="mt-3 space-y-3" :class="{ 'opacity-50': !form.delivery_enabled }">
+                                <div><label class="label">Delivery area</label><input v-model="form.delivery_area" class="input" :disabled="!form.delivery_enabled" placeholder="e.g. Dodoma City and nearby areas"><p v-if="form.errors.delivery_area" class="error">{{ form.errors.delivery_area }}</p></div>
+                                <div><label class="label">Estimated delivery time</label><input v-model="form.delivery_eta" class="input" :disabled="!form.delivery_enabled" placeholder="e.g. 20–40 minutes for selected local orders"><p v-if="form.errors.delivery_eta" class="error">{{ form.errors.delivery_eta }}</p></div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-[8px] border border-slate-200 bg-slate-50 p-3">
+                            <label class="flex cursor-pointer items-center justify-between gap-3">
+                                <span><strong class="block text-xs font-semibold text-slate-900">Store pickup</strong><span class="mt-1 block text-[10px] text-slate-500">Customers can collect confirmed orders from the store.</span></span>
+                                <input v-model="form.pickup_enabled" type="checkbox" class="h-4 w-4 accent-prinx-500">
+                            </label>
+                            <div class="mt-3 space-y-3" :class="{ 'opacity-50': !form.pickup_enabled }">
+                                <div><label class="label">Pickup location</label><input v-model="form.pickup_location" class="input" :disabled="!form.pickup_enabled" placeholder="Store address or pickup counter"><p v-if="form.errors.pickup_location" class="error">{{ form.errors.pickup_location }}</p></div>
+                                <div><label class="label">Pickup instructions</label><input v-model="form.pickup_instructions" class="input" :disabled="!form.pickup_enabled" placeholder="e.g. Available after confirmation during business hours"><p v-if="form.errors.pickup_instructions" class="error">{{ form.errors.pickup_instructions }}</p></div>
+                            </div>
+                        </div>
                     </div>
                 </section>
 

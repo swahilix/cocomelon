@@ -131,7 +131,7 @@ function subscribe() {
                     <div class="grid min-w-[820px] grid-cols-5 px-5 py-4 lg:min-w-0">
                         <div class="flex items-center gap-3 border-r border-slate-200 px-4 first:pl-2">
                             <svg viewBox="0 0 24 24" class="h-8 w-8 shrink-0 fill-none stroke-prinx-500" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h11v9H3V7Zm11 3h4l3 3v3h-7v-6ZM6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm11 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/></svg>
-                            <div><strong class="block text-[12px] font-semibold text-slate-800">Fast Delivery</strong><span class="mt-1 block text-[10px] text-slate-500">20 – 40 mins in main areas</span></div>
+                            <div><strong class="block text-[12px] font-semibold text-slate-800">Fast Delivery</strong><span class="mt-1 block text-[10px] text-slate-500">{{ store.delivery_enabled ? (store.delivery_eta || 'Delivery available') : 'Contact us for delivery options' }}</span></div>
                         </div>
                         <div class="flex items-center gap-3 border-r border-slate-200 px-5">
                             <svg viewBox="0 0 24 24" class="h-8 w-8 shrink-0 fill-none stroke-prinx-500" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3 5 6v6c0 4.4 2.4 7.2 7 9 4.6-1.8 7-4.6 7-9V6l-7-3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="m9 12 2 2 4-4"/></svg>

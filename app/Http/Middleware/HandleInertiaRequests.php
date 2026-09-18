@@ -118,6 +118,24 @@ class HandleInertiaRequests extends Middleware
                 'region' => $value('region'),
                 'working_hours' => $value('working_hours'),
                 'maps_url' => $value('maps_url'),
+                'delivery_enabled' => Schema::hasColumn('business_settings', 'delivery_enabled')
+                    ? (bool) ($business?->delivery_enabled ?? true)
+                    : true,
+                'delivery_area' => Schema::hasColumn('business_settings', 'delivery_area')
+                    ? $value('delivery_area', $value('city', $value('region')))
+                    : $value('city', $value('region')),
+                'delivery_eta' => Schema::hasColumn('business_settings', 'delivery_eta')
+                    ? $value('delivery_eta')
+                    : null,
+                'pickup_enabled' => Schema::hasColumn('business_settings', 'pickup_enabled')
+                    ? (bool) ($business?->pickup_enabled ?? false)
+                    : false,
+                'pickup_location' => Schema::hasColumn('business_settings', 'pickup_location')
+                    ? $value('pickup_location', $value('address'))
+                    : $value('address'),
+                'pickup_instructions' => Schema::hasColumn('business_settings', 'pickup_instructions')
+                    ? $value('pickup_instructions')
+                    : null,
                 'legal_name' => $value('legal_name', config('store.legal_name')),
                 'payment_strip_url' => $paymentStripUrl,
                 'social' => $social,

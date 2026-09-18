@@ -53,6 +53,13 @@ const discount = computed(() => {
     return regular > current && regular > 0 ? Math.max(1, Math.round(((regular - current) / regular) * 100)) : 0;
 });
 const maxQty = computed(() => props.product.track_stock ? Math.max(1, Number(props.product.stock_quantity || 1)) : 99);
+const stockTone = computed(() => props.product.in_stock
+    ? (props.product.low_stock ? 'text-amber-700' : 'text-emerald-600')
+    : 'text-red-600');
+const stockDot = computed(() => props.product.in_stock
+    ? (props.product.low_stock ? 'bg-amber-500' : 'bg-emerald-500')
+    : 'bg-red-500');
+const hasFulfillment = computed(() => Boolean(page.props.store?.delivery_enabled || page.props.store?.pickup_enabled));
 
 const specificationRows = computed(() => [
     props.product.brand?.name ? ['Brand', props.product.brand.name] : null,
@@ -266,9 +273,9 @@ function submitReview() {
                         <span v-if="discount" class="mb-0.5 rounded-[5px] bg-prinx-50 px-2 py-1 text-[9px] font-semibold text-prinx-700">-{{ discount }}%</span>
                     </div>
 
-                    <div class="mt-2 flex items-center gap-2 text-[11px] font-medium" :class="product.in_stock ? 'text-emerald-600' : 'text-red-600'">
-                        <span class="h-2 w-2 rounded-full" :class="product.in_stock ? 'bg-emerald-500' : 'bg-red-500'"></span>
-                        {{ product.in_stock ? 'In Stock' : 'Out of Stock' }}
+                    <div class="mt-2 flex items-center gap-2 text-[11px] font-semibold" :class="stockTone">
+                        <span class="h-2 w-2 rounded-full" :class="stockDot"></span>
+                        {{ product.stock_message || (product.in_stock ? 'In Stock' : 'Out of Stock') }}
                     </div>
 
                     <p v-if="product.short_description" class="mt-4 max-w-3xl text-[11px] leading-5 text-slate-600">{{ product.short_description }}</p>
@@ -313,6 +320,21 @@ function submitReview() {
                         </button>
                     </div>
 
+                    <div v-if="hasFulfillment" class="mt-3 grid gap-2 sm:grid-cols-2">
+                        <div v-if="page.props.store.delivery_enabled" class="rounded-[7px] border border-slate-200 bg-slate-50 px-3 py-3">
+                            <div class="flex items-start gap-2">
+                                <svg viewBox="0 0 24 24" class="mt-0.5 h-5 w-5 shrink-0 fill-none stroke-prinx-500" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h11v9H3V7Zm11 3h4l3 3v3h-7v-6ZM6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm11 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/></svg>
+                                <div><strong class="block text-[10px] font-semibold text-slate-800">Delivery available</strong><span class="mt-1 block text-[9px] leading-4 text-slate-500">{{ page.props.store.delivery_eta || 'Delivery time confirmed with your order' }}</span><span v-if="page.props.store.delivery_area" class="mt-0.5 block text-[9px] text-slate-400">{{ page.props.store.delivery_area }}</span></div>
+                            </div>
+                        </div>
+                        <div v-if="page.props.store.pickup_enabled" class="rounded-[7px] border border-slate-200 bg-slate-50 px-3 py-3">
+                            <div class="flex items-start gap-2">
+                                <svg viewBox="0 0 24 24" class="mt-0.5 h-5 w-5 shrink-0 fill-none stroke-prinx-500" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 9h16l-1 11H5L4 9Zm1-5h14l2 5H3l2-5Z"/></svg>
+                                <div><strong class="block text-[10px] font-semibold text-slate-800">Store pickup available</strong><span class="mt-1 block text-[9px] leading-4 text-slate-500">{{ page.props.store.pickup_location || page.props.store.address || 'Prinx Tech store' }}</span><span v-if="page.props.store.pickup_instructions" class="mt-0.5 block text-[9px] text-slate-400">{{ page.props.store.pickup_instructions }}</span></div>
+                            </div>
+                        </div>
+                    </div>
+
                     <a
                         v-if="whatsappHref"
                         :href="whatsappHref"
@@ -328,7 +350,7 @@ function submitReview() {
                     <div class="mt-5 grid overflow-hidden rounded-[7px] border border-slate-200 bg-white sm:grid-cols-2 xl:grid-cols-4">
                         <div class="flex items-center gap-3 border-b border-slate-100 px-4 py-4 sm:border-r xl:border-b-0">
                             <svg viewBox="0 0 24 24" class="h-7 w-7 shrink-0 fill-none stroke-prinx-500" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h11v9H3zM14 10h4l3 3v3h-7zM7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm10 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/></svg>
-                            <div><strong class="block text-[9px] font-semibold text-slate-800">Delivery</strong><span class="mt-1 block text-[8px] text-slate-500">Get it in 20 – 40 mins</span></div>
+                            <div><strong class="block text-[9px] font-semibold text-slate-800">Delivery</strong><span class="mt-1 block text-[8px] text-slate-500">{{ page.props.store.delivery_enabled ? (page.props.store.delivery_eta || 'Available') : 'Contact us for options' }}</span></div>
                         </div>
                         <div class="flex items-center gap-3 border-b border-slate-100 px-4 py-4 xl:border-b-0 xl:border-r">
                             <svg viewBox="0 0 24 24" class="h-7 w-7 shrink-0 fill-none stroke-prinx-500" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3 5 7v5c0 4.3 2.5 7.3 7 9 4.5-1.7 7-4.7 7-9V7l-7-4Z"/><path stroke-linecap="round" d="m9 12 2 2 4-4"/></svg>

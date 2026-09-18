@@ -72,6 +72,12 @@ class BusinessSettingsController extends Controller
             'region' => ['nullable', 'string', 'max:120'],
             'country' => ['nullable', 'string', 'max:120'],
             'working_hours' => ['nullable', 'string', 'max:255'],
+            'delivery_enabled' => ['nullable', 'boolean'],
+            'delivery_area' => ['nullable', 'string', 'max:255'],
+            'delivery_eta' => ['nullable', 'string', 'max:120'],
+            'pickup_enabled' => ['nullable', 'boolean'],
+            'pickup_location' => ['nullable', 'string', 'max:255'],
+            'pickup_instructions' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
             'facebook_url' => ['nullable', 'url:http,https', 'max:255'],
             'instagram_url' => ['nullable', 'url:http,https', 'max:255'],
@@ -92,6 +98,40 @@ class BusinessSettingsController extends Controller
             ? $current?->payment_strip
             : null;
         $smsFieldsSubmitted = $request->hasAny(['sms_enabled', 'sms_provider', 'sms_api_key', 'sms_sender_id', 'sms_bearer_token']);
+        $fulfillmentFields = ['delivery_enabled', 'delivery_area', 'delivery_eta', 'pickup_enabled', 'pickup_location', 'pickup_instructions'];
+
+        if (! Schema::hasColumn('business_settings', 'delivery_enabled')) {
+            foreach ($fulfillmentFields as $field) {
+                unset($validated[$field]);
+            }
+        } else {
+            $deliveryEnabled = (bool) ($validated['delivery_enabled'] ?? false);
+            $pickupEnabled = (bool) ($validated['pickup_enabled'] ?? false);
+
+            if (! $deliveryEnabled && ! $pickupEnabled) {
+                throw ValidationException::withMessages([
+                    'delivery_enabled' => 'Keep at least one fulfillment option enabled: delivery or store pickup.',
+                ]);
+            }
+
+            if ($deliveryEnabled && blank($validated['delivery_area'] ?? null)) {
+                throw ValidationException::withMessages([
+                    'delivery_area' => 'Enter the area where local delivery is available.',
+                ]);
+            }
+
+            if ($deliveryEnabled && blank($validated['delivery_eta'] ?? null)) {
+                throw ValidationException::withMessages([
+                    'delivery_eta' => 'Enter the delivery estimate customers should see.',
+                ]);
+            }
+
+            if ($pickupEnabled && blank($validated['pickup_location'] ?? null)) {
+                throw ValidationException::withMessages([
+                    'pickup_location' => 'Enter the store pickup location.',
+                ]);
+            }
+        }
 
         if ($smsFieldsSubmitted && ! Schema::hasColumn('business_settings', 'sms_enabled')) {
             throw ValidationException::withMessages([

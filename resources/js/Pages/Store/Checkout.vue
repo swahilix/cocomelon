@@ -9,7 +9,6 @@ const store = computed(() => page.props.store || {});
 const termsAccepted = ref(false);
 const saveInformation = ref(false);
 const termsError = ref('');
-const deliveryMethod = ref('standard');
 const couponCode = ref(props.cart?.coupon?.code || '');
 const couponProcessing = ref(false);
 
@@ -22,6 +21,7 @@ const form = useForm({
     city: '',
     region: '',
     notes: '',
+    fulfillment_method: page.props.store?.delivery_enabled !== false ? 'delivery' : 'pickup',
     payment_method: 'mobile_money',
 });
 
@@ -32,6 +32,9 @@ const money = (value) => new Intl.NumberFormat('en-TZ', {
 }).format(value || 0);
 
 const itemLabel = computed(() => `${props.cart.count} ${Number(props.cart.count) === 1 ? 'item' : 'items'}`);
+const isPickup = computed(() => form.fulfillment_method === 'pickup');
+const displayedShipping = computed(() => isPickup.value ? 0 : Number(props.cart.shipping || 0));
+const displayedTotal = computed(() => Math.max(0, Number(props.cart.subtotal || 0) + displayedShipping.value - Number(props.cart.discount || 0)));
 
 const paymentMethods = [
     {
@@ -201,10 +204,10 @@ const submit = () => {
                             <section class="border-b border-slate-200 p-4 sm:p-5">
                                 <div class="flex items-center gap-3">
                                     <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-prinx-500 text-xs font-semibold text-white">2</span>
-                                    <h2 class="text-base font-semibold text-slate-950">Delivery Address</h2>
+                                    <h2 class="text-base font-semibold text-slate-950">{{ isPickup ? 'Pickup Details' : 'Delivery Address' }}</h2>
                                 </div>
 
-                                <div class="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                <div v-if="!isPickup" class="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                     <div>
                                         <label class="mb-2 block text-xs font-medium text-slate-800">Region / City <span class="text-prinx-500">*</span></label>
                                         <input v-model="form.region" class="h-11 w-full rounded-[6px] border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-prinx-400" placeholder="e.g. Dodoma">
@@ -229,6 +232,12 @@ const submit = () => {
                                         <textarea v-model="form.notes" rows="2" class="min-h-11 w-full rounded-[6px] border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-prinx-400" placeholder="Any delivery instructions"></textarea>
                                     </div>
                                 </div>
+                                <div v-else class="mt-4 rounded-[8px] border border-emerald-200 bg-emerald-50 p-4">
+                                    <strong class="block text-sm font-semibold text-emerald-900">Collect from Prinx Tech</strong>
+                                    <p class="mt-1 text-xs leading-5 text-emerald-800">{{ store.pickup_location || store.address || 'Store pickup location' }}</p>
+                                    <p v-if="store.pickup_instructions" class="mt-1 text-xs text-emerald-700">{{ store.pickup_instructions }}</p>
+                                    <p v-if="store.working_hours" class="mt-1 text-xs text-emerald-700">{{ store.working_hours }}</p>
+                                </div>
                             </section>
 
                             <section class="border-b border-slate-200 p-4 sm:p-5">
@@ -237,26 +246,32 @@ const submit = () => {
                                     <h2 class="text-base font-semibold text-slate-950">Delivery Method</h2>
                                 </div>
 
-                                <div class="mt-4 grid gap-3 md:grid-cols-3">
-                                    <button type="button" class="flex min-h-[82px] items-center gap-3 rounded-[8px] border border-prinx-400 bg-prinx-50/35 p-4 text-left" @click="deliveryMethod = 'standard'">
-                                        <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-prinx-500"><span class="h-2.5 w-2.5 rounded-full bg-prinx-500"></span></span>
+                                <div class="mt-4 grid gap-3 md:grid-cols-2">
+                                    <button
+                                        v-if="store.delivery_enabled"
+                                        type="button"
+                                        :class="['flex min-h-[92px] items-center gap-3 rounded-[8px] border p-4 text-left transition', form.fulfillment_method === 'delivery' ? 'border-prinx-400 bg-prinx-50/35' : 'border-slate-200 bg-white hover:border-prinx-200']"
+                                        @click="form.fulfillment_method = 'delivery'"
+                                    >
+                                        <span :class="['flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2', form.fulfillment_method === 'delivery' ? 'border-prinx-500' : 'border-slate-300']"><span v-if="form.fulfillment_method === 'delivery'" class="h-2.5 w-2.5 rounded-full bg-prinx-500"></span></span>
                                         <svg viewBox="0 0 24 24" class="h-7 w-7 shrink-0 fill-none stroke-slate-600" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h11v9H3V7Zm11 3h4l3 3v3h-7v-6ZM6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm11 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/></svg>
-                                        <span class="min-w-0 flex-1"><strong class="block text-xs font-semibold text-slate-900">Standard Delivery</strong><span class="mt-1 block text-xs text-slate-500">Standard store delivery</span></span>
+                                        <span class="min-w-0 flex-1"><strong class="block text-xs font-semibold text-slate-900">Delivery</strong><span class="mt-1 block text-xs leading-5 text-slate-500">{{ store.delivery_eta || 'Delivery time confirmed with your order' }}<template v-if="store.delivery_area"> · {{ store.delivery_area }}</template></span></span>
                                         <strong class="text-xs font-semibold text-prinx-600">{{ cart.shipping ? money(cart.shipping) : 'Included' }}</strong>
                                     </button>
 
-                                    <div class="flex min-h-[82px] items-center gap-3 rounded-[8px] border border-slate-200 bg-slate-50/60 p-4 text-left opacity-75">
-                                        <span class="h-5 w-5 shrink-0 rounded-full border border-slate-300"></span>
-                                        <svg viewBox="0 0 24 24" class="h-7 w-7 shrink-0 fill-none stroke-slate-500" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="m13 2-8 12h6l-1 8 9-13h-6V2Z"/></svg>
-                                        <span class="min-w-0"><strong class="block text-xs font-semibold text-slate-800">Express Delivery</strong><span class="mt-1 block text-xs text-slate-500">Available by arrangement</span></span>
-                                    </div>
-
-                                    <div class="flex min-h-[82px] items-center gap-3 rounded-[8px] border border-slate-200 bg-slate-50/60 p-4 text-left opacity-75">
-                                        <span class="h-5 w-5 shrink-0 rounded-full border border-slate-300"></span>
-                                        <svg viewBox="0 0 24 24" class="h-7 w-7 shrink-0 fill-none stroke-slate-500" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M4 9h16l-1 11H5L4 9Zm1-5h14l2 5H3l2-5ZM9 13v7m6-7v7"/></svg>
-                                        <span class="min-w-0"><strong class="block text-xs font-semibold text-slate-800">Store Pickup</strong><span class="mt-1 block text-xs text-slate-500">Contact us to arrange pickup</span></span>
-                                    </div>
+                                    <button
+                                        v-if="store.pickup_enabled"
+                                        type="button"
+                                        :class="['flex min-h-[92px] items-center gap-3 rounded-[8px] border p-4 text-left transition', form.fulfillment_method === 'pickup' ? 'border-emerald-400 bg-emerald-50/60' : 'border-slate-200 bg-white hover:border-emerald-200']"
+                                        @click="form.fulfillment_method = 'pickup'"
+                                    >
+                                        <span :class="['flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2', form.fulfillment_method === 'pickup' ? 'border-emerald-500' : 'border-slate-300']"><span v-if="form.fulfillment_method === 'pickup'" class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span></span>
+                                        <svg viewBox="0 0 24 24" class="h-7 w-7 shrink-0 fill-none stroke-slate-600" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M4 9h16l-1 11H5L4 9Zm1-5h14l2 5H3l2-5Z"/></svg>
+                                        <span class="min-w-0 flex-1"><strong class="block text-xs font-semibold text-slate-900">Store Pickup</strong><span class="mt-1 block text-xs leading-5 text-slate-500">{{ store.pickup_location || store.address || 'Prinx Tech store' }}</span></span>
+                                        <strong class="text-xs font-semibold text-emerald-700">Free</strong>
+                                    </button>
                                 </div>
+                                <p v-if="form.errors.fulfillment_method" class="mt-2 text-xs text-red-600">{{ form.errors.fulfillment_method }}</p>
                             </section>
 
                             <section class="border-b border-slate-200 p-4 sm:p-5">
@@ -317,13 +332,13 @@ const submit = () => {
 
                         <div class="mt-2 space-y-3 border-t border-slate-200 pt-4 text-xs">
                             <div class="flex items-center justify-between"><span class="text-slate-600">Subtotal ({{ itemLabel }})</span><strong class="text-slate-900">{{ money(cart.subtotal) }}</strong></div>
-                            <div class="flex items-center justify-between"><span class="text-slate-600">Estimated Shipping</span><strong class="text-slate-900">{{ cart.shipping ? money(cart.shipping) : 'Included' }}</strong></div>
+                            <div class="flex items-center justify-between"><span class="text-slate-600">{{ isPickup ? 'Store Pickup' : 'Estimated Shipping' }}</span><strong class="text-slate-900">{{ isPickup ? 'Free' : (displayedShipping ? money(displayedShipping) : 'Included') }}</strong></div>
                             <div v-if="cart.discount" class="flex items-center justify-between text-emerald-700"><span>Coupon discount <strong v-if="cart.coupon">({{ cart.coupon.code }})</strong></span><strong>-{{ money(cart.discount) }}</strong></div>
                         </div>
 
                         <div class="mt-4 flex items-end justify-between border-t border-slate-200 pt-4">
                             <div><p class="text-base font-semibold text-slate-950">Grand Total</p><p class="mt-1 text-xs text-slate-400">Taxes confirmed where applicable</p></div>
-                            <strong class="text-xl font-semibold text-prinx-600">{{ money(cart.total) }}</strong>
+                            <strong class="text-xl font-semibold text-prinx-600">{{ money(displayedTotal) }}</strong>
                         </div>
 
                         <div v-if="cart.coupon" class="mt-4 flex items-center justify-between gap-3 rounded-[6px] border border-emerald-200 bg-emerald-50 px-3 py-2.5">
@@ -339,7 +354,7 @@ const submit = () => {
                             <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[6px] bg-white text-prinx-600">
                                 <svg viewBox="0 0 24 24" class="h-6 w-6 fill-none stroke-current" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h11v9H3V7Zm11 3h4l3 3v3h-7v-6ZM6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm11 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/></svg>
                             </span>
-                            <div><strong class="block text-xs font-semibold text-prinx-700">Estimated Delivery</strong><span class="mt-1 block text-xs font-medium text-slate-800">20 – 40 mins for selected local orders</span><span class="mt-1 block text-xs text-slate-500">{{ store.address || 'Tanzania' }}</span></div>
+                            <div v-if="!isPickup"><strong class="block text-xs font-semibold text-prinx-700">Estimated Delivery</strong><span class="mt-1 block text-xs font-medium text-slate-800">{{ store.delivery_eta || 'Delivery time confirmed with your order' }}</span><span class="mt-1 block text-xs text-slate-500">{{ store.delivery_area || store.address || 'Tanzania' }}</span></div><div v-else><strong class="block text-xs font-semibold text-prinx-700">Store Pickup</strong><span class="mt-1 block text-xs font-medium text-slate-800">{{ store.pickup_location || store.address || 'Prinx Tech store' }}</span><span v-if="store.pickup_instructions" class="mt-1 block text-xs text-slate-500">{{ store.pickup_instructions }}</span></div>
                         </div>
 
                         <button type="button" class="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-[6px] bg-prinx-500 px-5 text-sm font-semibold text-white transition hover:bg-prinx-600 disabled:cursor-not-allowed disabled:opacity-60" :disabled="form.processing" @click="submit">

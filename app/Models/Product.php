@@ -35,7 +35,7 @@ class Product extends Model
         ];
     }
 
-    protected $appends = ['current_price', 'image_url', 'gallery_urls', 'image_metadata', 'gallery_metadata', 'in_stock', 'merchant_ready', 'plain_description'];
+    protected $appends = ['current_price', 'image_url', 'gallery_urls', 'image_metadata', 'gallery_metadata', 'in_stock', 'low_stock', 'stock_message', 'merchant_ready', 'plain_description'];
 
     protected static function booted(): void
     {
@@ -154,6 +154,29 @@ class Product extends Model
     public function getInStockAttribute(): bool
     {
         return !$this->track_stock || $this->stock_quantity > 0;
+    }
+
+    public function getLowStockAttribute(): bool
+    {
+        $threshold = (int) ($this->low_stock_threshold ?? 0);
+
+        return $this->track_stock
+            && $this->in_stock
+            && $threshold > 0
+            && (int) $this->stock_quantity <= $threshold;
+    }
+
+    public function getStockMessageAttribute(): string
+    {
+        if (! $this->in_stock) {
+            return 'Out of Stock';
+        }
+
+        if ($this->low_stock) {
+            return 'Only '.(int) $this->stock_quantity.' left in stock';
+        }
+
+        return 'In Stock';
     }
 
     public static function descriptionToPlainText(string $description): string

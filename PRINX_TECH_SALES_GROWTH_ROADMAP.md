@@ -29,7 +29,7 @@ Status: implemented and deployed
 - Track WhatsApp product enquiries as conversion events.
 
 ## Phase 3 — Stronger Homepage Merchandising
-Status: implemented; pending deployment verification
+Status: implemented and deployed
 
 - New Arrivals section.
 - Best Sellers section based on real sales.
@@ -38,6 +38,8 @@ Status: implemented; pending deployment verification
 - Remove duplicated or low-value homepage content.
 
 ## Phase 4 — Stock & Delivery Urgency
+Status: implemented; pending deployment verification
+
 - Show exact low-stock messaging only from real inventory.
 - "Only X left" when quantity is genuinely low.
 - Clear delivery estimate by location.
