@@ -131,35 +131,6 @@ function subscribe() {
 
         <HeroShowcase :slides="heroSlides" />
 
-        <section class="bg-[#fbfbfb] pt-5 sm:pt-6">
-            <div class="container-shell">
-                <div class="overflow-x-auto rounded-[12px] border border-slate-200 bg-white shadow-[0_7px_26px_rgba(15,23,42,.04)]">
-                    <div class="grid min-w-[820px] grid-cols-5 px-5 py-4 lg:min-w-0">
-                        <div class="flex items-center gap-3 border-r border-slate-200 px-4 first:pl-2">
-                            <svg viewBox="0 0 24 24" class="h-8 w-8 shrink-0 fill-none stroke-prinx-500" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h11v9H3V7Zm11 3h4l3 3v3h-7v-6ZM6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm11 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/></svg>
-                            <div><strong class="block text-[12px] font-semibold text-slate-800">Fast Delivery</strong><span class="mt-1 block text-[10px] text-slate-500">{{ store.delivery_enabled ? (store.delivery_eta || 'Delivery available') : 'Contact us for delivery options' }}</span></div>
-                        </div>
-                        <div class="flex items-center gap-3 border-r border-slate-200 px-5">
-                            <svg viewBox="0 0 24 24" class="h-8 w-8 shrink-0 fill-none stroke-prinx-500" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3 5 6v6c0 4.4 2.4 7.2 7 9 4.6-1.8 7-4.6 7-9V6l-7-3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="m9 12 2 2 4-4"/></svg>
-                            <div><strong class="block text-[12px] font-semibold text-slate-800">100% Original</strong><span class="mt-1 block text-[10px] text-slate-500">Genuine products only</span></div>
-                        </div>
-                        <div class="flex items-center gap-3 border-r border-slate-200 px-5">
-                            <svg viewBox="0 0 24 24" class="h-8 w-8 shrink-0 fill-none stroke-prinx-500" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12 12 20 4 12l8-8h6l2 2v6Z"/><circle cx="15.5" cy="8.5" r="1"/></svg>
-                            <div><strong class="block text-[12px] font-semibold text-slate-800">Best Prices</strong><span class="mt-1 block text-[10px] text-slate-500">Competitive local pricing</span></div>
-                        </div>
-                        <div class="flex items-center gap-3 border-r border-slate-200 px-5">
-                            <svg viewBox="0 0 24 24" class="h-8 w-8 shrink-0 fill-none stroke-prinx-500" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7v5h-5M4 17v-5h5"/><path stroke-linecap="round" d="M6.4 8.2A7 7 0 0 1 18.6 6L20 8m-16 8 1.4 2A7 7 0 0 0 17.6 15.8"/></svg>
-                            <div><strong class="block text-[12px] font-semibold text-slate-800">Easy Returns</strong><span class="mt-1 block text-[10px] text-slate-500">Clear return support</span></div>
-                        </div>
-                        <div class="flex items-center gap-3 px-5 pr-2">
-                            <svg viewBox="0 0 24 24" class="h-8 w-8 shrink-0 fill-none stroke-prinx-500" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15v-3a7 7 0 0 1 14 0v3M5 14H4a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2v-6Zm13 0h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2v-6Z"/></svg>
-                            <div><strong class="block text-[12px] font-semibold text-slate-800">24/7 Support</strong><span class="mt-1 block text-[10px] text-slate-500">We are here to help</span></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
         <section class="bg-[#fbfbfb] pt-8 sm:pt-9">
             <div class="container-shell">
                 <div class="flex items-center justify-between gap-4">
