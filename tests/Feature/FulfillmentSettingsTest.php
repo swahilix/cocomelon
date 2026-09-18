@@ -13,7 +13,7 @@ class FulfillmentSettingsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_product_exposes_truthful_low_stock_message(): void
+    public function test_product_keeps_low_stock_state_without_quantity_urgency_copy(): void
     {
         $category = Category::create(['name' => 'Accessories', 'type' => 'product', 'is_active' => true]);
         $brand = Brand::create(['name' => 'Prinx', 'is_active' => true]);
@@ -35,7 +35,7 @@ class FulfillmentSettingsTest extends TestCase
         ]);
 
         $this->assertTrue($product->fresh()->low_stock);
-        $this->assertSame('Only 2 left in stock', $product->fresh()->stock_message);
+        $this->assertSame('In Stock', $product->fresh()->stock_message);
     }
 
     public function test_fulfillment_settings_columns_are_available(): void
