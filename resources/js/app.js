@@ -1,8 +1,3 @@
-import '../css/app.css';
-import '../css/shop-orange.css';
-import '../css/prinx-orange-storefront.css';
-import '../css/store-footer.css';
-import '../css/frontsite-typography.css';
 import { createSSRApp, h } from 'vue';
 import { createInertiaApp, router } from '@inertiajs/vue3';
 

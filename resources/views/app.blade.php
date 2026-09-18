@@ -37,7 +37,23 @@
         <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
     @endif
-    @vite('resources/js/app.js')
+    @if (!empty($heroPreload['url']))
+        <link
+            rel="preload"
+            as="image"
+            href="{{ $heroPreload['url'] }}"
+            @if (!empty($heroPreload['srcset'])) imagesrcset="{{ $heroPreload['srcset'] }}" @endif
+            imagesizes="(max-width: 640px) calc(100vw - 16px), (max-width: 1280px) calc(100vw - 48px), 1280px"
+            fetchpriority="high"
+        >
+    @endif
+
+    @if (app()->environment('production') && request()->path() === '/')
+        <style>{!! \Illuminate\Support\Facades\Vite::content('resources/css/storefront-bundle.css') !!}</style>
+        @vite('resources/js/app.js')
+    @else
+        @vite(['resources/css/storefront-bundle.css', 'resources/js/app.js'])
+    @endif
     @inertiaHead
 </head>
 <body class="font-sans antialiased bg-slate-50 text-slate-950">

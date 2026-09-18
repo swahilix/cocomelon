@@ -11,6 +11,8 @@ use App\Models\MailFolder;
 use App\Models\MailMessage;
 use App\Models\MailOutbox;
 use App\Models\Product;
+use App\Models\HeroSlide;
+use App\Services\ImageOptimizationService;
 use App\Observers\ProductObserver;
 use App\Policies\MailAccountPolicy;
 use App\Policies\MailAttachmentPolicy;
@@ -23,6 +25,7 @@ use App\Policies\MailOutboxPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -35,6 +38,34 @@ class AppServiceProvider extends ServiceProvider
     {
         Schema::defaultStringLength(191);
         Product::observe(ProductObserver::class);
+
+        View::composer('app', function ($view): void {
+            if (request()->path() !== '/') {
+                return;
+            }
+
+            try {
+                $slide = HeroSlide::query()
+                    ->active()
+                    ->where('item_type', 'image')
+                    ->whereNotNull('image_path')
+                    ->orderBy('sort_order')
+                    ->orderBy('id')
+                    ->first();
+
+                if (! $slide) {
+                    return;
+                }
+
+                $view->with('heroPreload', [
+                    'url' => $slide->image_url,
+                    'srcset' => app(ImageOptimizationService::class)
+                        ->responsiveWebpSrcset($slide->image_path, [720, 960, 1280, 1600]),
+                ]);
+            } catch (\Throwable) {
+                // Never let a preload optimization block the storefront.
+            }
+        });
 
         Gate::policy(MailAccount::class, MailAccountPolicy::class);
         Gate::policy(MailFolder::class, MailFolderPolicy::class);

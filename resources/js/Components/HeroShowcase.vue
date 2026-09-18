@@ -1,5 +1,4 @@
 <script setup>
-import { Head } from '@inertiajs/vue3';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const props = defineProps({
@@ -12,7 +11,6 @@ let timer = null;
 
 const carouselSlides = computed(() => props.slides.filter((slide) => Boolean(slide?.image_url)));
 const activeSlide = computed(() => carouselSlides.value[activeIndex.value] || null);
-const firstSlide = computed(() => carouselSlides.value[0] || null);
 
 function clearTimer() {
     if (timer) {
@@ -53,18 +51,6 @@ onBeforeUnmount(clearTimer);
 </script>
 
 <template>
-    <Head v-if="firstSlide?.image_url">
-        <link
-            head-key="homepage-hero-preload"
-            rel="preload"
-            as="image"
-            :href="firstSlide.image_url"
-            :imagesrcset="firstSlide.image_srcset || undefined"
-            imagesizes="(max-width: 640px) calc(100vw - 16px), (max-width: 1280px) calc(100vw - 48px), 1280px"
-            fetchpriority="high"
-        >
-    </Head>
-
     <section v-if="activeSlide" class="bg-[#fbfbfb] pt-7 sm:pt-8" aria-label="Homepage banners">
         <div class="container-shell">
             <div
