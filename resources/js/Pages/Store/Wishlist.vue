@@ -78,7 +78,7 @@ const remove = (product) => router.delete(`/wishlist/${product.slug}`, {
                             </div>
 
                             <div class="mt-auto grid grid-cols-[1fr_38px] gap-2 pt-3">
-                                <button type="button" class="flex h-9 min-w-0 items-center justify-center rounded-[6px] bg-prinx-500 px-2 text-xs font-semibold text-white transition hover:bg-prinx-600 disabled:cursor-not-allowed disabled:bg-slate-300" :disabled="!product.in_stock" @click="addToCart(product)">{{ Number(product.active_variants_count || 0) > 0 ? 'Select options' : 'Add to Cart' }}</button>
+                                <button type="button" class="flex h-8 max-h-8 min-w-0 items-center justify-center rounded-[6px] bg-prinx-500 px-2 text-[10px] font-semibold leading-none text-white transition hover:bg-prinx-600 disabled:cursor-not-allowed disabled:bg-slate-300" :disabled="!product.in_stock" @click="addToCart(product)">{{ Number(product.active_variants_count || 0) > 0 ? 'Select options' : 'Add to Cart' }}</button>
                                 <button type="button" class="flex h-9 w-[38px] items-center justify-center rounded-[6px] border border-slate-200 bg-white text-slate-500 transition hover:border-red-200 hover:text-red-600" :aria-label="`Remove ${product.name}`" @click="remove(product)">
                                     <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5M14 11v5"/></svg>
                                 </button>

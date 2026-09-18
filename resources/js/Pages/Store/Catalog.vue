@@ -271,7 +271,7 @@ const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label 
                                 <div class="mt-2 flex items-center gap-3"><strong class="text-[12px]">{{ money(product.current_price) }}</strong><span v-if="Number(product.current_price) < Number(product.price)" class="text-[10px] text-slate-400 line-through">{{ money(product.price) }}</span></div>
                             </div>
                             <div class="my-auto flex flex-col gap-2">
-                                <button type="button" class="h-[34px] rounded-[6px] border border-prinx-300 px-4 text-[10px] font-semibold text-prinx-600 hover:bg-prinx-500 hover:text-white" :disabled="!product.in_stock" @click="addToCart(product)">{{ Number(product.active_variants_count || 0) > 0 ? 'Select options' : 'Add to Cart' }}</button>
+                                <button type="button" class="h-8 max-h-8 rounded-[6px] border border-prinx-300 px-4 text-[10px] font-semibold leading-none text-prinx-600 hover:bg-prinx-500 hover:text-white" :disabled="!product.in_stock" @click="addToCart(product)">{{ Number(product.active_variants_count || 0) > 0 ? 'Select options' : 'Add to Cart' }}</button>
                             </div>
                         </article>
                     </div>
