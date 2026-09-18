@@ -24,7 +24,7 @@ class StorefrontController extends Controller
                 ->where('featured', true)
                 ->orderBy('sort_order')
                 ->latest()
-                ->take(8)
+                ->take(9)
                 ->get(),
             'productCategories' => Category::productType()
                 ->active()
