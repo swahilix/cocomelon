@@ -14,6 +14,10 @@ use Inertia\Response;
 
 class StorefrontController extends Controller
 {
+    public function __construct(private readonly \App\Services\ImageOptimizationService $images)
+    {
+    }
+
     public function home(): Response
     {
         return Inertia::render('Store/Home', [
@@ -25,14 +29,26 @@ class StorefrontController extends Controller
                 ->orderBy('sort_order')
                 ->latest()
                 ->take(9)
-                ->get(),
+                ->get()
+                ->map(fn (Product $product): array => [
+                    ...$product->toArray(),
+                    'image_srcset' => $this->images->responsiveWebpSrcset($product->primary_image, [240, 360, 480]),
+                ])
+                ->values()
+                ->all(),
             'productCategories' => Category::productType()
                 ->active()
                 ->withCount(['products' => fn ($query) => $query->active()])
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->take(8)
-                ->get(),
+                ->get()
+                ->map(fn (Category $category): array => [
+                    ...$category->toArray(),
+                    'image_srcset' => $this->images->responsiveWebpSrcset($category->image, [160, 240]),
+                ])
+                ->values()
+                ->all(),
             'serviceCategories' => Category::serviceType()
                 ->active()
                 ->withCount(['services' => fn ($query) => $query->active()])
@@ -40,7 +56,16 @@ class StorefrontController extends Controller
                 ->orderBy('name')
                 ->take(6)
                 ->get(),
-            'brands' => Brand::where('is_active', true)->orderBy('name')->take(12)->get(),
+            'brands' => Brand::where('is_active', true)
+                ->orderBy('name')
+                ->take(12)
+                ->get()
+                ->map(fn (Brand $brand): array => [
+                    ...$brand->toArray(),
+                    'logo_srcset' => $this->images->responsiveWebpSrcset($brand->logo, [160, 240]),
+                ])
+                ->values()
+                ->all(),
         ]);
     }
 
@@ -161,6 +186,7 @@ class StorefrontController extends Controller
                 'id' => $slide->id,
                 'headline' => $slide->headline,
                 'image_url' => $slide->image_url,
+                'image_srcset' => $this->images->responsiveWebpSrcset($slide->image_path, [720, 960, 1280, 1600]),
                 'image_alt' => $slide->image_alt,
                 'link_url' => $slide->link_url,
             ])

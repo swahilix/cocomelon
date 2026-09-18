@@ -42,6 +42,89 @@ class ImageOptimizationService
         return $path;
     }
 
+    /**
+     * Generate width-constrained WebP derivatives for responsive storefront images.
+     *
+     * @return array<int, string>
+     */
+    public function ensureResponsiveWebpVariants(?string $path, array $widths): array
+    {
+        if (! $path || Str::startsWith($path, ['http://', 'https://', '/'])) {
+            return [];
+        }
+
+        $disk = Storage::disk(config('media.disk', 'public'));
+        if (! $disk->exists($path)) {
+            return [];
+        }
+
+        $source = $disk->path($path);
+        $dimensions = @getimagesize($source);
+        $sourceWidth = (int) ($dimensions[0] ?? 0);
+        $sourceHeight = (int) ($dimensions[1] ?? 0);
+        $sourceModified = $disk->lastModified($path);
+        $quality = max(65, min(92, (int) config('media.responsive_webp_quality', 80)));
+        $metadata = $this->metadata([]);
+        $variants = [];
+
+        $widths = array_values(array_unique(array_filter(
+            array_map('intval', $widths),
+            static fn (int $width): bool => $width >= 96
+        )));
+        sort($widths);
+
+        foreach ($widths as $width) {
+            if ($sourceWidth > 0 && $width > $sourceWidth) {
+                continue;
+            }
+
+            $variant = $this->responsiveVariantPath($path, $width);
+            $needsWrite = ! $disk->exists($variant)
+                || $disk->lastModified($variant) < $sourceModified;
+
+            if ($needsWrite) {
+                $targetHeight = ($sourceWidth > 0 && $sourceHeight > 0)
+                    ? max(1, (int) ceil($sourceHeight * ($width / $sourceWidth)))
+                    : 10000;
+
+                if ($this->imagickSupports('WEBP')) {
+                    $this->encodeWithImagick($source, $disk->path($variant), 'webp', $quality, $width, $targetHeight, $metadata);
+                } elseif (extension_loaded('gd') && function_exists('imagewebp')) {
+                    $this->encodeWithGd($source, $disk->path($variant), 'webp', $quality, $width, $targetHeight);
+                } else {
+                    throw new RuntimeException('Responsive WebP generation requires Imagick or GD WebP support.');
+                }
+            }
+
+            $variants[$width] = $variant;
+        }
+
+        return $variants;
+    }
+
+    public function responsiveWebpSrcset(?string $path, array $widths): ?string
+    {
+        if (! $path || Str::startsWith($path, ['http://', 'https://', '/'])) {
+            return null;
+        }
+
+        $disk = Storage::disk(config('media.disk', 'public'));
+        $sources = [];
+
+        foreach (array_values(array_unique(array_map('intval', $widths))) as $width) {
+            if ($width < 96) {
+                continue;
+            }
+
+            $variant = $this->responsiveVariantPath($path, $width);
+            if ($disk->exists($variant)) {
+                $sources[] = $disk->url($variant).' '.$width.'w';
+            }
+        }
+
+        return $sources === [] ? null : implode(', ', $sources);
+    }
+
     public function optimizeStored(string $path, string $directory, string $baseName, array $metadata = []): string
     {
         $disk = Storage::disk(config('media.disk', 'public'));
@@ -92,6 +175,15 @@ class ImageOptimizationService
     public function merchantCompanionPath(string $path): string
     {
         return preg_replace('/\.avif$/i', '.merchant.webp', $path) ?: $path.'.merchant.webp';
+    }
+
+    private function responsiveVariantPath(string $path, int $width): string
+    {
+        $directory = trim((string) pathinfo($path, PATHINFO_DIRNAME), '.');
+        $filename = pathinfo($path, PATHINFO_FILENAME);
+        $variant = $filename.'-'.$width.'w.webp';
+
+        return $directory === '' ? $variant : trim($directory, '/').'/'.$variant;
     }
 
     private function filename(string $baseName, string $extension): string

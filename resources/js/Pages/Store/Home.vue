@@ -109,6 +109,10 @@ function promoImage(index) {
     return promoProducts.value[index]?.image_url || props.productCategories[index]?.image_url || '/assets/accessory.svg';
 }
 
+function promoSrcset(index) {
+    return promoProducts.value[index]?.image_srcset || props.productCategories[index]?.image_srcset || null;
+}
+
 function promoHref(index) {
     const product = promoProducts.value[index];
     return product?.slug ? `/products/${encodeURIComponent(product.slug)}` : '/shop';
@@ -185,7 +189,7 @@ onBeforeUnmount(() => {
                 <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
                     <Link v-for="category in productCategories.slice(0, 7)" :key="category.id" :href="`/shop?category=${encodeURIComponent(category.slug)}`" class="group flex min-h-[168px] flex-col rounded-[10px] border border-slate-200 bg-white px-3 pb-3 pt-3 text-center shadow-[0_4px_18px_rgba(15,23,42,.03)] transition hover:-translate-y-0.5 hover:border-prinx-200 hover:shadow-[0_8px_24px_rgba(15,23,42,.06)]">
                         <div class="flex h-[96px] items-center justify-center overflow-hidden rounded-[8px] bg-[#fafafa]">
-                            <img :src="category.image_url || '/assets/accessory.svg'" :alt="category.name" width="96" height="96" loading="lazy" decoding="async" class="h-[82px] w-[82px] object-contain transition duration-300 group-hover:scale-105">
+                            <img :src="category.image_url || '/assets/accessory.svg'" :srcset="category.image_srcset || undefined" sizes="82px" :alt="category.name" width="96" height="96" loading="lazy" decoding="async" class="h-[82px] w-[82px] object-contain transition duration-300 group-hover:scale-105">
                         </div>
                         <h3 class="mt-2.5 line-clamp-1 text-[12px] font-semibold text-slate-800">{{ category.name }}</h3>
                         <span class="mt-1.5 text-[10px] font-medium text-prinx-500">View all</span>
@@ -213,7 +217,7 @@ onBeforeUnmount(() => {
                         <p class="mt-3 text-[11px] leading-5 text-slate-600">{{ card.description }}</p>
                         <span class="mt-4 inline-flex h-8 items-center gap-2 rounded-[6px] bg-prinx-500 px-4 text-[10px] font-semibold text-white transition group-hover:bg-prinx-600">Shop Now <span>→</span></span>
                     </div>
-                    <img :src="promoImage(index)" :alt="card.title" width="420" height="260" class="absolute bottom-1 right-2 h-[92%] w-[48%] object-contain drop-shadow-[0_14px_16px_rgba(15,23,42,.14)] transition duration-300 group-hover:scale-105" loading="lazy" decoding="async">
+                    <img :src="promoImage(index)" :srcset="promoSrcset(index) || undefined" sizes="(max-width: 1023px) 48vw, 420px" :alt="card.title" width="420" height="260" class="absolute bottom-1 right-2 h-[92%] w-[48%] object-contain drop-shadow-[0_14px_16px_rgba(15,23,42,.14)] transition duration-300 group-hover:scale-105" loading="lazy" decoding="async">
                 </Link>
             </div>
         </section>
@@ -243,7 +247,7 @@ onBeforeUnmount(() => {
                 <div v-if="dealProducts.length" class="mt-4 grid overflow-hidden rounded-[10px] border border-slate-200 bg-white sm:grid-cols-2 lg:grid-cols-4">
                     <article v-for="(product, index) in dealProducts" :key="product.id" :class="['flex min-h-[146px] gap-3 p-4', index ? 'border-t border-slate-200 sm:border-l sm:border-t-0' : '', index === 2 ? 'sm:border-t lg:border-t-0' : '']">
                         <Link :href="`/products/${product.slug}`" class="flex h-[108px] w-[112px] shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-slate-50">
-                            <img :src="product.image_url" :alt="product.name" width="112" height="112" class="h-[96px] w-[96px] object-contain" loading="lazy" decoding="async">
+                            <img :src="product.image_url" :srcset="product.image_srcset || undefined" sizes="96px" :alt="product.name" width="112" height="112" class="h-[96px] w-[96px] object-contain" loading="lazy" decoding="async">
                         </Link>
                         <div class="flex min-w-0 flex-1 flex-col">
                             <Link :href="`/products/${product.slug}`" class="line-clamp-2 text-[11px] font-semibold leading-4 text-slate-900 transition hover:text-prinx-600">{{ product.name }}</Link>
@@ -275,7 +279,7 @@ onBeforeUnmount(() => {
                 <div class="mt-4 grid grid-cols-2 gap-[10px] sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                     <article v-for="product in shopRowProducts" :key="product.id" class="group min-w-0 overflow-hidden rounded-[8px] border border-slate-200 bg-white transition hover:border-prinx-200 hover:shadow-[0_10px_24px_rgba(15,23,42,.06)]">
                         <Link :href="`/products/${product.slug}`" class="relative block h-[156px] overflow-hidden bg-white p-3">
-                            <img :src="product.image_url" :alt="product.name" width="180" height="180" class="h-full w-full object-contain transition duration-300 group-hover:scale-[1.025]" loading="lazy" decoding="async">
+                            <img :src="product.image_url" :srcset="product.image_srcset || undefined" sizes="180px" :alt="product.name" width="180" height="180" class="h-full w-full object-contain transition duration-300 group-hover:scale-[1.025]" loading="lazy" decoding="async">
                             <span v-if="discountPercent(product)" class="absolute right-2 top-2 rounded-[10px] bg-prinx-50 px-2 py-1 text-[9px] font-semibold text-prinx-700">-{{ discountPercent(product) }}%</span>
                         </Link>
                         <div class="px-3 pb-3">
@@ -305,7 +309,7 @@ onBeforeUnmount(() => {
                 </div>
                 <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
                     <Link v-for="brand in brands.slice(0, 8)" :key="brand.id" :href="`/shop?brand=${encodeURIComponent(brand.slug)}`" class="flex h-[72px] items-center justify-center rounded-[8px] border border-slate-200 bg-white px-4 shadow-[0_3px_14px_rgba(15,23,42,.025)] transition hover:border-prinx-200">
-                        <img v-if="brandLogo(brand)" :src="brandLogo(brand)" :alt="brand.name" width="110" height="36" class="max-h-9 max-w-[110px] object-contain" loading="lazy" decoding="async">
+                        <img v-if="brandLogo(brand)" :src="brandLogo(brand)" :srcset="brand.logo_srcset || undefined" sizes="110px" :alt="brand.name" width="110" height="36" class="max-h-9 max-w-[110px] object-contain" loading="lazy" decoding="async">
                         <span v-else class="truncate text-center text-[17px] font-bold tracking-[-.03em] text-slate-800">{{ brand.name }}</span>
                     </Link>
                 </div>

@@ -131,6 +131,7 @@ class HeroSlideController extends Controller
 
         $this->images->deleteLocal($slide?->image_path);
         $data['image_path'] = $path;
+        $this->images->ensureResponsiveWebpVariants($path, [720, 960, 1280, 1600]);
 
         return $data;
     }

@@ -5,6 +5,7 @@ return [
     'avif_quality' => (int) env('MEDIA_AVIF_QUALITY', 90),
     'avif_effort' => (int) env('MEDIA_AVIF_EFFORT', 6),
     'webp_quality' => (int) env('MEDIA_WEBP_QUALITY', 90),
+    'responsive_webp_quality' => (int) env('MEDIA_RESPONSIVE_WEBP_QUALITY', 80),
     'max_width' => (int) env('MEDIA_MAX_WIDTH', 2000),
     'max_height' => (int) env('MEDIA_MAX_HEIGHT', 2000),
     'creator' => env('MEDIA_IMAGE_CREATOR', env('APP_NAME', 'Prinx Electronics')),

@@ -54,7 +54,15 @@ onBeforeUnmount(clearTimer);
 
 <template>
     <Head v-if="firstSlide?.image_url">
-        <link head-key="homepage-hero-preload" rel="preload" as="image" :href="firstSlide.image_url" fetchpriority="high">
+        <link
+            head-key="homepage-hero-preload"
+            rel="preload"
+            as="image"
+            :href="firstSlide.image_url"
+            :imagesrcset="firstSlide.image_srcset || undefined"
+            imagesizes="(max-width: 640px) calc(100vw - 16px), (max-width: 1280px) calc(100vw - 48px), 1280px"
+            fetchpriority="high"
+        >
     </Head>
 
     <section v-if="activeSlide" class="bg-[#fbfbfb] pt-7 sm:pt-8" aria-label="Homepage banners">
@@ -78,6 +86,8 @@ onBeforeUnmount(clearTimer);
                             <picture class="block h-full w-full overflow-hidden bg-white">
                                 <img
                                     :src="activeSlide.image_url"
+                                    :srcset="activeSlide.image_srcset || undefined"
+                                    sizes="(max-width: 640px) calc(100vw - 16px), (max-width: 1280px) calc(100vw - 48px), 1280px"
                                     :alt="activeSlide.image_alt || activeSlide.headline || 'Prinx Electronics banner'"
                                     class="block h-full w-full object-contain sm:object-cover"
                                     width="1600"
@@ -92,6 +102,8 @@ onBeforeUnmount(clearTimer);
                         <picture v-else :key="`${activeSlide.id}-image`" class="absolute inset-0 block h-full w-full overflow-hidden bg-white">
                             <img
                                 :src="activeSlide.image_url"
+                                :srcset="activeSlide.image_srcset || undefined"
+                                sizes="(max-width: 640px) calc(100vw - 16px), (max-width: 1280px) calc(100vw - 48px), 1280px"
                                 :alt="activeSlide.image_alt || activeSlide.headline || 'Prinx Electronics banner'"
                                 class="block h-full w-full object-contain sm:object-cover"
                                 width="1600"
