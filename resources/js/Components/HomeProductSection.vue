@@ -88,7 +88,7 @@ function addToCart(product) {
 
                         <div class="mt-2 flex gap-2">
                             <button type="button" class="h-8 max-h-8 min-w-0 flex-1 rounded-[5px] border border-prinx-300 bg-white px-2 text-[10px] font-semibold leading-none text-prinx-600 transition hover:bg-prinx-500 hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-500" :disabled="!product.in_stock" @click="addToCart(product)">{{ Number(product.active_variants_count || 0) > 0 ? 'Select options' : 'Add to Cart' }}</button>
-                            <button type="button" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[5px] border border-slate-200 bg-white text-slate-700 transition hover:border-prinx-300 hover:text-prinx-700" :aria-label="`Add ${product.name} to wishlist`">
+                            <button type="button" class="flex h-8 w-8 min-h-8 min-w-8 shrink-0 items-center justify-center rounded-[5px] border border-slate-200 bg-white text-slate-700 transition hover:border-prinx-300 hover:text-prinx-700" :aria-label="`Add ${product.name} to wishlist`">
                                 <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 9.2c0 5.4-8.5 10-8.5 10s-8.5-4.6-8.5-10A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8Z"/></svg>
                             </button>
                         </div>

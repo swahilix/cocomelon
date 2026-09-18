@@ -251,7 +251,7 @@ const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label 
                                 </div>
                                 <div class="mt-2 flex gap-2">
                                     <button type="button" class="h-[30px] min-w-0 flex-1 rounded-[5px] border border-prinx-300 bg-white px-2 text-[9px] font-semibold text-prinx-600 transition hover:bg-prinx-500 hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400" :disabled="!product.in_stock" @click="addToCart(product)">{{ Number(product.active_variants_count || 0) > 0 ? 'Select options' : 'Add to Cart' }}</button>
-                                    <button type="button" class="flex h-[30px] w-[34px] shrink-0 items-center justify-center rounded-[5px] border border-slate-200 bg-white text-slate-600 transition hover:border-prinx-300 hover:text-prinx-600" :aria-label="`Add ${product.name} to wishlist`">
+                                    <button type="button" class="flex h-8 w-8 min-h-8 min-w-8 shrink-0 items-center justify-center rounded-[5px] border border-slate-200 bg-white text-slate-600 transition hover:border-prinx-300 hover:text-prinx-600" :aria-label="`Add ${product.name} to wishlist`">
                                         <svg viewBox="0 0 24 24" class="h-[16px] w-[16px] fill-none stroke-current" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 9.2c0 5.4-8.5 10-8.5 10s-8.5-4.6-8.5-10A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8Z"/></svg>
                                     </button>
                                 </div>
