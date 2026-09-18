@@ -304,12 +304,12 @@ const submit = () => {
                         <h2 class="text-xl font-semibold tracking-[-.02em] text-slate-950">Order Summary</h2>
 
                         <div class="mt-4 divide-y divide-slate-100">
-                            <div v-for="line in cart.items" :key="line.product.id" class="flex items-center gap-3 py-3 first:pt-0">
-                                <img :src="line.product.image_url" :alt="line.product.name" class="h-[62px] w-[62px] shrink-0 rounded-[6px] bg-slate-50 object-contain p-1.5">
+                            <div v-for="line in cart.items" :key="line.cart_key" class="flex items-center gap-3 py-3 first:pt-0">
+                                <img :src="line.image_url || line.product.image_url" :alt="line.product.name" class="h-[62px] w-[62px] shrink-0 rounded-[6px] bg-slate-50 object-contain p-1.5">
                                 <div class="min-w-0 flex-1">
                                     <Link :href="`/products/${line.product.slug}`" class="line-clamp-1 text-sm font-semibold text-slate-900 transition hover:text-prinx-600">{{ line.product.name }}</Link>
-                                    <p class="mt-1 line-clamp-1 text-xs text-slate-500">{{ [line.product.color, line.product.size].filter(Boolean).join(' · ') || line.product.brand?.name || 'Prinx product' }}</p>
-                                    <p class="mt-1 text-xs text-slate-500">Qty: {{ line.quantity }}</p>
+                                    <p v-if="line.variant" class="mt-1 line-clamp-1 text-xs font-medium text-prinx-600">{{ line.variant.display_name }}</p>
+                                    <p class="mt-1 line-clamp-1 text-xs text-slate-500">{{ line.variant?.sku || line.product.sku }} · Qty: {{ line.quantity }}</p>
                                 </div>
                                 <strong class="shrink-0 text-xs font-semibold text-slate-900">{{ money(line.line_total) }}</strong>
                             </div>

@@ -63,7 +63,7 @@ Status: implemented and deployed
 - Remove any payment claim that is not actually available.
 
 ## Phase 7 — Local SEO & Buying Guides
-Status: implemented; pending deployment verification
+Status: implemented; test assertion repair included with Phase 8
 
 - Prinx Tech Dodoma landing page.
 - Category landing pages targeting real local searches.
@@ -72,6 +72,8 @@ Status: implemented; pending deployment verification
 - Product SEO titles/descriptions use Prinx Tech consistently.
 
 ## Phase 8 — Product Comparison & Variants
+Status: implemented; pending deployment verification
+
 - Compare products.
 - Proper color/storage/size variants where products have them.
 - Variant-specific stock and images.

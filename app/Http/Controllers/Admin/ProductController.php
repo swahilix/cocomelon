@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Services\ImageOptimizationService;
 use App\Services\InventoryService;
 use Illuminate\Http\RedirectResponse;
@@ -64,21 +65,28 @@ class ProductController extends Controller
     {
         return Inertia::render('Admin/Products/Form', [
             ...$this->formData(),
-            'product' => $product->load(['brand', 'category']),
+            'product' => $product->load(['brand', 'category', 'variants']),
         ]);
     }
 
     public function store(Request $request, InventoryService $inventory): RedirectResponse
     {
         $validated = $this->validated($request);
+        $variants = $validated['variants'] ?? [];
         $openingStock = (int) ($validated['stock_quantity'] ?? 0);
         $data = $this->prepareProductData($this->handleImages($request, $validated));
         $data['stock_quantity'] = 0;
 
-        DB::transaction(function () use ($data, $openingStock, $request, $inventory): void {
+        DB::transaction(function () use ($data, $variants, $openingStock, $request, $inventory): void {
             $product = Product::create($data);
+            $variantStock = $this->syncVariants($request, $product, $variants);
 
-            if ($product->track_stock && $openingStock > 0) {
+            if ($variantStock !== null) {
+                $product->forceFill(['track_stock' => true])->save();
+                if ($variantStock > 0) {
+                    $inventory->openingBalance($product, $variantStock, 'Opening stock derived from product variants.', $request->user()?->id);
+                }
+            } elseif ($product->track_stock && $openingStock > 0) {
                 $inventory->openingBalance($product, $openingStock, 'Initial stock entered when product was created.', $request->user()?->id);
             }
         });
@@ -86,16 +94,34 @@ class ProductController extends Controller
         return redirect()->route('admin.products.create')->with('success', 'Product created successfully. The form is ready for the next product.');
     }
 
-    public function update(Request $request, Product $product): RedirectResponse
+    public function update(Request $request, Product $product, InventoryService $inventory): RedirectResponse
     {
-        $data = $this->prepareProductData($this->handleImages($request, $this->validated($request, $product), $product));
+        $validated = $this->validated($request, $product);
+        $variants = $validated['variants'] ?? [];
+        $data = $this->prepareProductData($this->handleImages($request, $validated, $product));
 
-        // Inventory is intentionally isolated from product metadata edits. Stock changes must use InventoryService.
         unset($data['stock_quantity']);
 
-        $product->update($data);
+        DB::transaction(function () use ($request, $product, $data, $variants, $inventory): void {
+            $product->update($data);
+            $variantStock = $this->syncVariants($request, $product, $variants);
 
-        return back()->with('success', 'Product updated successfully. Stock quantity is managed separately from Stock Management → Inventory.');
+            if ($variantStock !== null) {
+                if (! $product->track_stock) {
+                    $product->forceFill(['track_stock' => true])->save();
+                }
+
+                $inventory->adjust(
+                    $product,
+                    $variantStock,
+                    'Variant stock sync',
+                    'Parent stock synchronized to the sum of active product variants.',
+                    $request->user()?->id,
+                );
+            }
+        });
+
+        return back()->with('success', 'Product updated successfully. Variant stock is reflected in the product inventory total.');
     }
 
     public function destroy(Product $product): RedirectResponse
@@ -172,7 +198,123 @@ class ProductController extends Controller
             'meta_title' => ['nullable', 'string', 'max:190'],
             'meta_description' => ['nullable', 'string', 'max:180'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            'variants' => ['nullable', 'array', 'max:50'],
+            'variants.*.id' => ['nullable', 'integer'],
+            'variants.*.sku' => ['required_with:variants', 'string', 'max:100', 'distinct'],
+            'variants.*.label' => ['nullable', 'string', 'max:140'],
+            'variants.*.color' => ['nullable', 'string', 'max:100'],
+            'variants.*.storage' => ['nullable', 'string', 'max:100'],
+            'variants.*.size' => ['nullable', 'string', 'max:100'],
+            'variants.*.price' => ['nullable', 'numeric', 'min:0'],
+            'variants.*.sale_price' => ['nullable', 'numeric', 'min:0'],
+            'variants.*.stock_quantity' => ['required_with:variants', 'integer', 'min:0'],
+            'variants.*.image_url' => ['nullable', 'url', 'max:2048'],
+            'variants.*.image_file' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,avif', 'max:8192'],
+            'variants.*.is_active' => ['nullable', 'boolean'],
+            'variants.*.sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
+    }
+
+    private function syncVariants(Request $request, Product $product, array $variants): ?int
+    {
+        $existing = $product->variants()->withTrashed()->get()->keyBy('id');
+
+        if ($variants === []) {
+            if ($existing->isNotEmpty()) {
+                $product->variants()->delete();
+            }
+
+            return null;
+        }
+
+        $kept = [];
+        $activeStock = 0;
+
+        foreach (array_values($variants) as $index => $row) {
+            $variantId = filled($row['id'] ?? null) ? (int) $row['id'] : null;
+            $variant = $variantId ? $existing->get($variantId) : null;
+
+            if ($variantId && (! $variant || (int) $variant->product_id !== (int) $product->id)) {
+                throw ValidationException::withMessages(["variants.$index.id" => 'That variant does not belong to this product.']);
+            }
+
+            $sku = strtoupper(trim((string) ($row['sku'] ?? '')));
+            $duplicate = ProductVariant::withTrashed()
+                ->where('sku', $sku)
+                ->when($variant, fn ($query) => $query->whereKeyNot($variant->id))
+                ->exists();
+
+            if ($duplicate) {
+                throw ValidationException::withMessages(["variants.$index.sku" => 'Variant SKU must be unique.']);
+            }
+
+            if (! collect([$row['label'] ?? null, $row['color'] ?? null, $row['storage'] ?? null, $row['size'] ?? null])->filter(fn ($value) => filled($value))->count()) {
+                throw ValidationException::withMessages(["variants.$index.label" => 'Add at least one variant label, color, storage or size value.']);
+            }
+
+            $payload = [
+                'product_id' => $product->id,
+                'sku' => $sku,
+                'label' => $row['label'] ?? null,
+                'color' => $row['color'] ?? null,
+                'storage' => $row['storage'] ?? null,
+                'size' => $row['size'] ?? null,
+                'price' => filled($row['price'] ?? null) ? (float) $row['price'] : null,
+                'sale_price' => filled($row['sale_price'] ?? null) ? (float) $row['sale_price'] : null,
+                'stock_quantity' => (int) ($row['stock_quantity'] ?? 0),
+                'is_active' => (bool) ($row['is_active'] ?? false),
+                'sort_order' => (int) ($row['sort_order'] ?? $index),
+            ];
+
+            if ($payload['sale_price'] !== null && $payload['price'] !== null && $payload['sale_price'] > $payload['price']) {
+                throw ValidationException::withMessages(["variants.$index.sale_price" => 'Variant sale price cannot be greater than its regular price.']);
+            }
+
+            if ($request->hasFile("variants.$index.image_file")) {
+                $oldImage = $variant?->image;
+                try {
+                    $payload['image'] = $this->images->storeProduct(
+                        $request->file("variants.$index.image_file"),
+                        'products/variants',
+                        $product->name.' '.$sku,
+                        [
+                            'title' => $product->name.' '.$sku.' variant | Prinx Tech',
+                            'description' => $product->meta_description ?: $product->short_description,
+                            'identifier' => $sku,
+                            'source_url' => route('products.show', $product),
+                            'brand' => $product->brand?->name,
+                            'category' => $product->category?->name,
+                        ],
+                    );
+                    $this->images->deleteLocal($oldImage);
+                } catch (Throwable $exception) {
+                    throw ValidationException::withMessages(["variants.$index.image_file" => $exception->getMessage()]);
+                }
+            } elseif (filled($row['image_url'] ?? null)) {
+                $payload['image'] = trim((string) $row['image_url']);
+            } elseif ($variant) {
+                $payload['image'] = $variant->image;
+            }
+
+            if ($variant) {
+                if ($variant->trashed()) $variant->restore();
+                $variant->update($payload);
+            } else {
+                $variant = ProductVariant::create($payload);
+            }
+
+            $kept[] = $variant->id;
+            if ($variant->is_active) {
+                $activeStock += (int) $variant->stock_quantity;
+            }
+        }
+
+        if ($variants !== []) {
+            $product->variants()->whereNotIn('id', $kept)->delete();
+            return $activeStock;
+        }
+
+        return null;
     }
 
     private function generateSku(): string
@@ -187,7 +329,7 @@ class ProductController extends Controller
     private function prepareProductData(array $data): array
     {
         $text = trim((string) ($data['specifications_text'] ?? ''));
-        unset($data['specifications_text']);
+        unset($data['specifications_text'], $data['variants']);
         $specifications = [];
         foreach (preg_split('/\r\n|\r|\n/', $text) ?: [] as $line) {
             if (! str_contains($line, ':')) continue;

@@ -9,7 +9,7 @@ class OrderItem extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['order_id', 'product_id', 'product_name', 'sku', 'quantity', 'unit_price', 'unit_cost', 'line_total'];
+    protected $fillable = ['order_id', 'product_id', 'variant_id', 'product_name', 'variant_name', 'sku', 'variant_sku', 'quantity', 'unit_price', 'unit_cost', 'line_total'];
     protected $hidden = ['unit_cost'];
 
     protected function casts(): array
@@ -24,4 +24,5 @@ class OrderItem extends Model
 
     public function order() { return $this->belongsTo(Order::class); }
     public function product() { return $this->belongsTo(Product::class)->withTrashed(); }
+    public function variant() { return $this->belongsTo(ProductVariant::class, 'variant_id')->withTrashed(); }
 }

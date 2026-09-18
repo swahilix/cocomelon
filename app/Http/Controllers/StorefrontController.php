@@ -158,7 +158,11 @@ class StorefrontController extends Controller
     {
         abort_unless($product->status === 'active', 404);
         $this->activity->record($request, $product, 'view');
-        $product->load(['brand', 'category']);
+        $product->load([
+            'brand',
+            'category',
+            'variants' => fn ($query) => $query->active()->orderBy('sort_order')->orderBy('id'),
+        ]);
 
         $approvedReviews = ProductReview::query()
             ->approved()
@@ -221,12 +225,21 @@ class StorefrontController extends Controller
                 'average' => round((float) ($reviewSummary?->review_average ?? 0), 1),
             ],
             'reviewEligibility' => $reviewEligibility,
+            'variants' => $product->variants->values()->all(),
             'related' => Product::with(['brand', 'category'])
                 ->withCount(['reviews as approved_reviews_count' => fn ($query) => $query->approved()])
                 ->withAvg(['reviews as approved_reviews_average' => fn ($query) => $query->approved()], 'rating')
+                ->withCount(['variants as active_variants_count' => fn ($query) => $query->active()])
                 ->active()
                 ->whereKeyNot($product->id)
-                ->when($product->category_id, fn ($query) => $query->where('category_id', $product->category_id))
+                ->where(function ($query) use ($product): void {
+                    if ($product->category_id) $query->orWhere('category_id', $product->category_id);
+                    if ($product->brand_id) $query->orWhere('brand_id', $product->brand_id);
+                })
+                ->when($product->category_id, fn ($query) => $query->orderByRaw('CASE WHEN category_id = ? THEN 0 ELSE 1 END', [$product->category_id]))
+                ->when($product->brand_id, fn ($query) => $query->orderByRaw('CASE WHEN brand_id = ? THEN 0 ELSE 1 END', [$product->brand_id]))
+                ->orderByRaw('ABS(price - ?)', [(float) $product->price])
+                ->orderByDesc('featured')
                 ->take(4)
                 ->get(),
         ]);
@@ -263,6 +276,7 @@ class StorefrontController extends Controller
             ->with(['brand', 'category'])
             ->withCount(['reviews as approved_reviews_count' => fn ($query) => $query->approved()])
             ->withAvg(['reviews as approved_reviews_average' => fn ($query) => $query->approved()], 'rating')
+            ->withCount(['variants as active_variants_count' => fn ($query) => $query->active()])
             ->active()
             ->where(fn ($query) => $query->where('track_stock', false)->orWhere('stock_quantity', '>', 0));
     }
@@ -400,6 +414,7 @@ class StorefrontController extends Controller
         $products = Product::with(['brand', 'category'])
             ->withCount(['reviews as approved_reviews_count' => fn ($query) => $query->approved()])
             ->withAvg(['reviews as approved_reviews_average' => fn ($query) => $query->approved()], 'rating')
+            ->withCount(['variants as active_variants_count' => fn ($query) => $query->active()])
             ->active()
             ->when($request->filled('search'), fn ($query) => $query->where(fn ($search) => $search
                 ->where('name', 'like', '%'.$request->search.'%')

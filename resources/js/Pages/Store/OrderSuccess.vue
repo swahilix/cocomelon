@@ -41,7 +41,7 @@ const money = (value) => new Intl.NumberFormat('en-TZ', {
 
                     <div class="mt-7 border-t border-slate-200 pt-6">
                         <h2 class="font-black">Products</h2>
-                        <div class="mt-4 space-y-3"><div v-for="item in order.items" :key="item.id" class="flex justify-between gap-4 text-sm"><span>{{ item.product_name }} × {{ item.quantity }}</span><b>{{ money(item.line_total) }}</b></div></div>
+                        <div class="mt-4 space-y-3"><div v-for="item in order.items" :key="item.id" class="flex justify-between gap-4 text-sm"><span><strong>{{ item.product_name }}</strong><template v-if="item.variant_name"> — {{ item.variant_name }}</template> × {{ item.quantity }}<small class="mt-1 block text-xs text-slate-400">{{ item.variant_sku || item.sku }}</small></span><b>{{ money(item.line_total) }}</b></div></div>
                     </div>
                     <div class="mt-8 flex flex-wrap gap-3"><Link href="/shop" class="btn-primary">Continue shopping</Link><Link href="/pages/contact" class="btn-light">Contact support</Link></div>
                 </div>

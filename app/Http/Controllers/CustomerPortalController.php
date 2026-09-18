@@ -35,7 +35,7 @@ class CustomerPortalController extends Controller
     {
         return Inertia::render('Store/Account/Orders', [
             'orders' => $this->ordersQuery($request)
-                ->with(['items:id,order_id,product_name,quantity', 'statusHistory:id,order_id,status,payment_status,note,created_at'])
+                ->with(['items:id,order_id,product_name,variant_name,quantity', 'statusHistory:id,order_id,status,payment_status,note,created_at'])
                 ->get(),
         ]);
     }
@@ -119,8 +119,8 @@ class CustomerPortalController extends Controller
                     'status' => $order->payment_status,
                     'payment_method' => $order->payment_method,
                     'items' => $order->items->map(fn ($item): array => [
-                        'name' => $item->product_name,
-                        'sku' => $item->sku,
+                        'name' => $item->variant_name ? $item->product_name.' — '.$item->variant_name : $item->product_name,
+                        'sku' => $item->variant_sku ?: $item->sku,
                         'quantity' => $item->quantity,
                         'unit_price' => (float) $item->unit_price,
                         'line_total' => (float) $item->line_total,

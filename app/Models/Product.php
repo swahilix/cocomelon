@@ -64,6 +64,7 @@ class Product extends Model
     public function brand() { return $this->belongsTo(Brand::class); }
     public function syncLogs() { return $this->hasMany(MerchantSyncLog::class); }
     public function reviews() { return $this->hasMany(ProductReview::class); }
+    public function variants() { return $this->hasMany(ProductVariant::class)->orderBy('sort_order')->orderBy('id'); }
 
     public function scopeActive(Builder $query): Builder { return $query->where('status', 'active'); }
     public function scopeMerchantEligible(Builder $query): Builder

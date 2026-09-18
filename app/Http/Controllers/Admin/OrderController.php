@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Services\InventoryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -87,6 +88,13 @@ class OrderController extends Controller
                                 ->where('quantity', '<', 0)
                                 ->latest('id')
                                 ->value('unit_cost') ?? 0);
+
+                            if ($item->variant_id) {
+                                $variant = ProductVariant::query()->lockForUpdate()->find($item->variant_id);
+                                if ($variant && (int) $variant->product_id === (int) $product->id) {
+                                    $variant->increment('stock_quantity', (int) $item->quantity);
+                                }
+                            }
 
                             $inventory->increase(
                                 $product,

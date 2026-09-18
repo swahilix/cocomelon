@@ -25,7 +25,7 @@ const statusClass = (status) => ({ completed: 'bg-emerald-50 text-emerald-700', 
                         <span :class="['rounded-[5px] px-2 py-1 text-[10px] font-semibold capitalize', statusClass(order.status)]">{{ order.status }}</span>
                     </div>
                     <div class="grid gap-3 px-4 py-3.5 sm:grid-cols-[1fr_auto_auto] sm:items-center">
-                        <div class="min-w-0"><p class="text-[11px] font-semibold uppercase tracking-[.08em] text-slate-400">Items</p><p class="mt-1 line-clamp-2 text-xs text-slate-700">{{ order.items?.map(item => `${item.product_name} × ${item.quantity}`).join(', ') || 'Order items' }}</p></div>
+                        <div class="min-w-0"><p class="text-[11px] font-semibold uppercase tracking-[.08em] text-slate-400">Items</p><p class="mt-1 line-clamp-2 text-xs text-slate-700">{{ order.items?.map(item => `${item.product_name}${item.variant_name ? ' — ' + item.variant_name : ''} × ${item.quantity}`).join(', ') || 'Order items' }}</p></div>
                         <div class="sm:text-right"><p class="text-[11px] text-slate-400">Total</p><strong class="mt-1 block text-sm font-semibold text-slate-950">{{ money(order.grand_total) }}</strong></div>
                         <Link :href="`/account/orders/${order.order_number}`" class="inline-flex h-9 items-center justify-center rounded-[6px] border border-prinx-300 bg-white px-4 text-xs font-semibold text-prinx-600 transition hover:bg-prinx-50">View tracking</Link>
                     </div>

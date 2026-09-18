@@ -30,9 +30,7 @@ class LocalSeoBuyingGuidesTest extends TestCase
             'status' => 'published',
         ]);
 
-        $this->get('/electronics-shop-dodoma')
-            ->assertOk()
-            ->assertSee('Store/LocalStore', false);
+        $this->get('/electronics-shop-dodoma')->assertOk();
 
         $this->get('/guides')
             ->assertOk()

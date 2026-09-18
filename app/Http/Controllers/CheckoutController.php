@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Services\CartService;
 use App\Services\InventoryService;
 use Illuminate\Http\RedirectResponse;
@@ -119,9 +120,20 @@ class CheckoutController extends Controller
                 ]);
 
                 foreach ($summary['items'] as $line) {
-                    $product = Product::query()->find($line['product']->id);
+                    $product = Product::query()->lockForUpdate()->find($line['product']->id);
+                    $variant = ! empty($line['variant']?->id)
+                        ? ProductVariant::query()->lockForUpdate()->find($line['variant']->id)
+                        : null;
 
-                    if (! $product || $product->status !== 'active' || ! $product->in_stock) {
+                    if (! $product || $product->status !== 'active') {
+                        abort(422, "{$line['product']->name} is no longer available.");
+                    }
+
+                    if ($variant) {
+                        if ((int) $variant->product_id !== (int) $product->id || ! $variant->is_active || $variant->stock_quantity < (int) $line['quantity']) {
+                            abort(422, "{$line['display_name']} no longer has enough stock.");
+                        }
+                    } elseif (! $product->in_stock) {
                         abort(422, "{$line['product']->name} is no longer available.");
                     }
 
@@ -129,13 +141,20 @@ class CheckoutController extends Controller
 
                     $order->items()->create([
                         'product_id' => $product->id,
+                        'variant_id' => $variant?->id,
                         'product_name' => $product->name,
-                        'sku' => $product->sku,
+                        'variant_name' => $variant?->display_name,
+                        'sku' => $variant?->sku ?: $product->sku,
+                        'variant_sku' => $variant?->sku,
                         'quantity' => $line['quantity'],
                         'unit_price' => $line['unit_price'],
                         'unit_cost' => $unitCost,
                         'line_total' => $line['line_total'],
                     ]);
+
+                    if ($variant) {
+                        $variant->decrement('stock_quantity', (int) $line['quantity']);
+                    }
 
                     $inventory->decrease(
                         $product,

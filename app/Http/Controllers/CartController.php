@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Services\CartService;
 use App\Services\ProductActivityService;
 use Illuminate\Http\RedirectResponse;
@@ -21,6 +22,7 @@ class CartController extends Controller
             'cart' => $summary,
             'recommended' => Product::query()
                 ->with(['brand', 'category'])
+                ->withCount(['variants as active_variants_count' => fn ($query) => $query->active()])
                 ->active()
                 ->when($cartProductIds->isNotEmpty(), fn ($query) => $query->whereNotIn('id', $cartProductIds))
                 ->where(fn ($query) => $query->where('track_stock', false)->orWhere('stock_quantity', '>', 0))
@@ -34,8 +36,19 @@ class CartController extends Controller
 
     public function store(Request $request, Product $product, CartService $cart, ProductActivityService $activity): RedirectResponse
     {
-        $data = $request->validate(['quantity' => ['nullable', 'integer', 'min:1', 'max:99']]);
-        $cart->add($product, (int) ($data['quantity'] ?? 1));
+        $data = $request->validate([
+            'quantity' => ['nullable', 'integer', 'min:1', 'max:99'],
+            'variant_id' => ['nullable', 'integer'],
+        ]);
+        $variant = filled($data['variant_id'] ?? null)
+            ? ProductVariant::query()->active()->where('product_id', $product->id)->findOrFail((int) $data['variant_id'])
+            : null;
+
+        if ($product->variants()->active()->exists() && ! $variant) {
+            return back()->withErrors(['variant_id' => 'Choose a product option before adding this item to the cart.']);
+        }
+
+        $cart->add($product, (int) ($data['quantity'] ?? 1), $variant);
         $activity->record($request, $product, 'cart_add');
 
         return back()->with('success', 'Product added to cart.');
@@ -43,15 +56,25 @@ class CartController extends Controller
 
     public function update(Request $request, Product $product, CartService $cart): RedirectResponse
     {
-        $data = $request->validate(['quantity' => ['required', 'integer', 'min:0', 'max:99']]);
-        $cart->update($product, (int) $data['quantity']);
+        $data = $request->validate([
+            'quantity' => ['required', 'integer', 'min:0', 'max:99'],
+            'variant_id' => ['nullable', 'integer'],
+        ]);
+        $variant = filled($data['variant_id'] ?? null)
+            ? ProductVariant::query()->where('product_id', $product->id)->findOrFail((int) $data['variant_id'])
+            : null;
+        $cart->update($product, (int) $data['quantity'], $variant);
 
         return back()->with('success', 'Cart updated.');
     }
 
-    public function destroy(Product $product, CartService $cart): RedirectResponse
+    public function destroy(Request $request, Product $product, CartService $cart): RedirectResponse
     {
-        $cart->remove($product);
+        $variantId = $request->integer('variant_id');
+        $variant = $variantId
+            ? ProductVariant::query()->where('product_id', $product->id)->findOrFail($variantId)
+            : null;
+        $cart->remove($product, $variant);
 
         return back()->with('success', 'Product removed.');
     }

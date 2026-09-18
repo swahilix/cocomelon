@@ -19,6 +19,7 @@ const city = computed(() => store.value.city || store.value.region || 'Dodoma');
 const filtersVisible = ref(true);
 const viewMode = ref('grid');
 const brandSearch = ref('');
+const compareSelection = ref([]);
 
 const form = reactive({
     search: props.filters.search || '',
@@ -110,7 +111,24 @@ const discount = (product) => {
 };
 const reviewCount = (product) => Number(product?.approved_reviews_count || 0);
 const reviewAverage = (product) => Number(product?.approved_reviews_average || 0);
-const addToCart = (product) => router.post(`/cart/${product.slug}`, { quantity: 1 }, { preserveScroll: true });
+const addToCart = (product) => {
+    if (Number(product.active_variants_count || 0) > 0) {
+        router.visit(`/products/${product.slug}`);
+        return;
+    }
+    router.post(`/cart/${product.slug}`, { quantity: 1 }, { preserveScroll: true });
+};
+const toggleCompare = (product) => {
+    const slug = product.slug;
+    if (compareSelection.value.includes(slug)) {
+        compareSelection.value = compareSelection.value.filter((item) => item !== slug);
+        return;
+    }
+    if (compareSelection.value.length >= 4) return;
+    compareSelection.value = [...compareSelection.value, slug];
+};
+const compareHref = computed(() => `/compare?products=${compareSelection.value.join(',')}`);
+const isCompared = (product) => compareSelection.value.includes(product.slug);
 const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label === String(pageNumber))?.url || null;
 </script>
 
@@ -195,10 +213,8 @@ const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label 
                         </div>
 
                         <button type="button" class="flex w-full items-center justify-between border-b border-slate-100 px-4 py-3 text-[10px] font-semibold text-slate-700" @click="form.in_stock = !form.in_stock; apply()"><span>Availability</span><span :class="form.in_stock ? 'text-prinx-600' : 'text-slate-400'">{{ form.in_stock ? 'In stock' : '⌄' }}</span></button>
-                        <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3 text-[10px] font-semibold text-slate-700"><span>Rating</span><span class="text-[11px] font-normal text-amber-500">★★★★★ <i class="ml-1 not-italic text-slate-400">& Up</i></span></div>
-                        <div class="px-4 py-3">
-                            <div class="flex items-center justify-between text-[10px] font-semibold text-slate-700"><span>Color</span><span class="flex items-center gap-2"><i class="h-[11px] w-[11px] rounded-full bg-black"></i><i class="h-[11px] w-[11px] rounded-full border border-slate-200 bg-white"></i><i class="h-[11px] w-[11px] rounded-full bg-blue-600"></i><i class="h-[11px] w-[11px] rounded-full bg-red-500"></i><i class="h-[11px] w-[11px] rounded-full bg-orange-500"></i><i class="h-[11px] w-[11px] rounded-full bg-violet-600"></i><em class="not-italic text-[9px] font-normal text-slate-400">+2</em></span></div>
-                        </div>
+
+                        <div class="px-4 py-3 text-[10px] leading-4 text-slate-500">Color, storage and size options are shown on each product page when available.</div>
                     </div>
                 </aside>
 
@@ -244,7 +260,8 @@ const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label 
                                     <span v-if="Number(product.current_price) < Number(product.price)" class="text-[9px] text-slate-400 line-through">{{ money(product.price) }}</span>
                                 </div>
                                 <div class="mt-2 flex gap-2">
-                                    <button type="button" class="h-[30px] min-w-0 flex-1 rounded-[5px] border border-prinx-300 bg-white px-2 text-[9px] font-semibold text-prinx-600 transition hover:bg-prinx-500 hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400" :disabled="!product.in_stock" @click="addToCart(product)">Add to Cart</button>
+                                    <button type="button" class="h-[30px] min-w-0 flex-1 rounded-[5px] border border-prinx-300 bg-white px-2 text-[9px] font-semibold text-prinx-600 transition hover:bg-prinx-500 hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400" :disabled="!product.in_stock" @click="addToCart(product)">{{ Number(product.active_variants_count || 0) > 0 ? 'Select options' : 'Add to Cart' }}</button>
+                                    <button type="button" :class="['flex h-[30px] shrink-0 items-center justify-center rounded-[5px] border px-2 text-[8px] font-semibold transition', isCompared(product) ? 'border-prinx-500 bg-prinx-50 text-prinx-700' : 'border-slate-200 bg-white text-slate-600 hover:border-prinx-300 hover:text-prinx-600']" :disabled="!isCompared(product) && compareSelection.length >= 4" @click="toggleCompare(product)">{{ isCompared(product) ? 'Added' : 'Compare' }}</button>
                                     <button type="button" class="flex h-[30px] w-[34px] shrink-0 items-center justify-center rounded-[5px] border border-slate-200 bg-white text-slate-600 transition hover:border-prinx-300 hover:text-prinx-600" :aria-label="`Add ${product.name} to wishlist`">
                                         <svg viewBox="0 0 24 24" class="h-[16px] w-[16px] fill-none stroke-current" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 9.2c0 5.4-8.5 10-8.5 10s-8.5-4.6-8.5-10A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8Z"/></svg>
                                     </button>
@@ -261,7 +278,10 @@ const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label 
                                 <div class="mt-2 text-[10px] text-slate-500"><span class="text-amber-500">★</span> {{ reviewCount(product) ? reviewAverage(product).toFixed(1) : 'No reviews' }} <span v-if="reviewCount(product)" class="ml-1 text-slate-400">({{ reviewCount(product) }})</span></div>
                                 <div class="mt-2 flex items-center gap-3"><strong class="text-[12px]">{{ money(product.current_price) }}</strong><span v-if="Number(product.current_price) < Number(product.price)" class="text-[10px] text-slate-400 line-through">{{ money(product.price) }}</span></div>
                             </div>
-                            <button type="button" class="my-auto h-[34px] rounded-[6px] border border-prinx-300 px-4 text-[10px] font-semibold text-prinx-600 hover:bg-prinx-500 hover:text-white" :disabled="!product.in_stock" @click="addToCart(product)">Add to Cart</button>
+                            <div class="my-auto flex flex-col gap-2">
+                                <button type="button" class="h-[34px] rounded-[6px] border border-prinx-300 px-4 text-[10px] font-semibold text-prinx-600 hover:bg-prinx-500 hover:text-white" :disabled="!product.in_stock" @click="addToCart(product)">{{ Number(product.active_variants_count || 0) > 0 ? 'Select options' : 'Add to Cart' }}</button>
+                                <button type="button" :class="['h-[32px] rounded-[6px] border px-4 text-[9px] font-semibold', isCompared(product) ? 'border-prinx-500 bg-prinx-50 text-prinx-700' : 'border-slate-200 bg-white text-slate-600']" :disabled="!isCompared(product) && compareSelection.length >= 4" @click="toggleCompare(product)">{{ isCompared(product) ? 'Remove compare' : 'Compare' }}</button>
+                            </div>
                         </article>
                     </div>
 
@@ -284,5 +304,11 @@ const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label 
                 </div>
             </div>
         </section>
+        <div v-if="compareSelection.length" class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 pb-[max(.7rem,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-8px_28px_rgba(15,23,42,.10)] backdrop-blur">
+            <div class="container-shell flex flex-wrap items-center justify-between gap-3">
+                <div><strong class="text-[11px] text-slate-900">{{ compareSelection.length }} selected for comparison</strong><p class="mt-0.5 text-[9px] text-slate-500">Choose 2–4 products.</p></div>
+                <div class="flex gap-2"><button type="button" class="h-10 rounded-[6px] border border-slate-200 px-4 text-[10px] font-semibold text-slate-600" @click="compareSelection = []">Clear</button><Link :href="compareHref" :class="['flex h-10 items-center rounded-[6px] px-5 text-[10px] font-semibold text-white', compareSelection.length >= 2 ? 'bg-prinx-500' : 'pointer-events-none bg-slate-300']">Compare now</Link></div>
+            </div>
+        </div>
     </AppLayout>
 </template>

@@ -37,7 +37,7 @@ const reached = (stage) => props.order.status !== 'cancelled' && stages.indexOf(
                         <div class="border-b border-slate-100 px-4 py-3"><h2 class="text-sm font-semibold text-slate-950">Order items</h2></div>
                         <div class="divide-y divide-slate-100">
                             <div v-for="item in order.items" :key="item.id" class="grid grid-cols-[1fr_auto] gap-4 px-4 py-3.5">
-                                <div><p class="text-xs font-semibold text-slate-900">{{ item.product_name }}</p><p class="mt-1 text-[11px] text-slate-500">{{ item.sku }} · Qty {{ item.quantity }} × {{ money(item.unit_price) }}</p></div><strong class="text-xs font-semibold text-slate-900">{{ money(item.line_total) }}</strong>
+                                <div><p class="text-xs font-semibold text-slate-900">{{ item.product_name }}</p><p v-if="item.variant_name" class="mt-1 text-[11px] font-medium text-prinx-600">{{ item.variant_name }}</p><p class="mt-1 text-[11px] text-slate-500">{{ item.variant_sku || item.sku }} · Qty {{ item.quantity }} × {{ money(item.unit_price) }}</p></div><strong class="text-xs font-semibold text-slate-900">{{ money(item.line_total) }}</strong>
                             </div>
                         </div>
                     </section>

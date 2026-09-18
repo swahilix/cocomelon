@@ -21,6 +21,7 @@ class WishlistController extends Controller
         $products = Product::query()
             ->active()
             ->with(['category', 'brand'])
+            ->withCount(['variants as active_variants_count' => fn ($query) => $query->active()])
             ->whereIn('id', $rows->pluck('product_id'))
             ->get()
             ->keyBy('id');
@@ -42,6 +43,7 @@ class WishlistController extends Controller
                 'in_stock' => (bool) $product->in_stock,
                 'stock_quantity' => (int) $product->stock_quantity,
                 'track_stock' => (bool) $product->track_stock,
+                'active_variants_count' => (int) $product->active_variants_count,
                 'image_url' => $product->image_url,
                 'category' => $product->category ? [
                     'id' => (int) $product->category->id,

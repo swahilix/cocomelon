@@ -29,7 +29,7 @@ const money = (value) => `TZS ${Number(value || 0).toLocaleString()}`;
                         <Icon name="shopping-cart" :size="21" class="text-prinx-600" />
                     </div>
                     <div v-for="item in order.items" :key="item.id" class="flex justify-between gap-4 border-b border-slate-100 py-3 last:border-0">
-                        <div><p class="font-medium">{{ item.product_name }} × {{ item.quantity }}</p><p class="text-xs text-slate-500">{{ item.sku }}</p></div>
+                        <div><p class="font-medium">{{ item.product_name }}<span v-if="item.variant_name"> — {{ item.variant_name }}</span> × {{ item.quantity }}</p><p class="text-xs text-slate-500">{{ item.variant_sku || item.sku }}</p></div>
                         <b>{{ money(item.line_total) }}</b>
                     </div>
                 </section>

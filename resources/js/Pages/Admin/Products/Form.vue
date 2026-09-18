@@ -42,6 +42,22 @@ const form = useForm({
     meta_title: p.meta_title || '',
     meta_description: p.meta_description || '',
     sort_order: p.sort_order || 0,
+    variants: (p.variants || []).map((variant) => ({
+        id: variant.id,
+        sku: variant.sku || '',
+        label: variant.label || '',
+        color: variant.color || '',
+        storage: variant.storage || '',
+        size: variant.size || '',
+        price: variant.price || '',
+        sale_price: variant.sale_price || '',
+        stock_quantity: variant.stock_quantity ?? 0,
+        image_url: variant.image && /^https?:\/\//i.test(variant.image) ? variant.image : '',
+        image_file: null,
+        existing_image_url: variant.image_url || '',
+        is_active: variant.is_active !== false,
+        sort_order: variant.sort_order || 0,
+    })),
 });
 
 const currentImages = computed(() => {
@@ -50,6 +66,35 @@ const currentImages = computed(() => {
     for (const url of p.gallery_urls || []) images.push({ url, label: 'Gallery image', main: false });
     return images;
 });
+
+const hasVariants = computed(() => form.variants.length > 0);
+const variantStockTotal = computed(() => form.variants
+    .filter((variant) => variant.is_active)
+    .reduce((sum, variant) => sum + Number(variant.stock_quantity || 0), 0));
+
+const addVariant = () => {
+    const suffix = String(form.variants.length + 1).padStart(2, '0');
+    form.variants.push({
+        id: null,
+        sku: form.sku ? `${String(form.sku).toUpperCase()}-${suffix}` : '',
+        label: '',
+        color: '',
+        storage: '',
+        size: '',
+        price: '',
+        sale_price: '',
+        stock_quantity: 0,
+        image_url: '',
+        image_file: null,
+        existing_image_url: '',
+        is_active: true,
+        sort_order: form.variants.length,
+    });
+};
+
+const removeVariant = (index) => {
+    form.variants.splice(index, 1);
+};
 
 const merchantIssues = computed(() => {
     const issues = [];
@@ -82,6 +127,7 @@ const resetCreateForm = () => {
     form.track_stock = true;
     form.featured = false;
     form.merchant_sync_enabled = true;
+    form.variants = [];
 
     form.clearErrors();
     clearImagePreviews();
@@ -206,11 +252,60 @@ onBeforeUnmount(clearImagePreviews);
                             <p class="mt-1 text-[11px] text-slate-500">Same as Price = no discount. Lower than Price = discounted product.</p>
                             <p v-if="form.errors.sale_price" class="error">{{ form.errors.sale_price }}</p>
                         </div>
-                        <div><label class="label">Stock</label><input v-model="form.stock_quantity" name="stock_quantity" type="number" class="input"></div>
+                        <div><label class="label">Stock</label><input v-model="form.stock_quantity" name="stock_quantity" type="number" class="input" :disabled="hasVariants"><p v-if="hasVariants" class="mt-1 text-[11px] text-slate-500">Derived from active variants: {{ variantStockTotal }}</p></div>
                         <div><label class="label">Low stock alert</label><input v-model="form.low_stock_threshold" name="low_stock_threshold" type="number" class="input"></div>
                         <div class="sm:col-span-2"><label class="label">Short description</label><textarea v-model="form.short_description" name="short_description" class="input" rows="3"></textarea></div>
                         <div class="sm:col-span-2"><label class="label">Description</label><textarea v-model="form.description" name="description" class="input" rows="10"></textarea><p v-if="form.errors.description" class="error">{{ form.errors.description }}</p></div>
                         <div class="sm:col-span-2"><label class="label">Specifications <span class="text-xs text-slate-400">one per line: Label: Value</span></label><textarea v-model="form.specifications_text" class="input font-mono" rows="7"></textarea></div>
+                    </div>
+                </section>
+
+                <section class="card p-5">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <h2 class="font-semibold">Product variants</h2>
+                            <p class="mt-1 text-sm text-slate-500">Use variants when color, storage or size changes the exact SKU, price, stock or image.</p>
+                        </div>
+                        <button type="button" class="btn-light shrink-0" @click="addVariant">Add variant</button>
+                    </div>
+
+                    <div v-if="!form.variants.length" class="mt-4 rounded-[8px] border border-dashed border-slate-300 bg-slate-50 px-4 py-7 text-center">
+                        <p class="text-sm font-semibold text-slate-700">No variants</p>
+                        <p class="mt-1 text-xs text-slate-500">Keep this empty for a simple product, or add variants for options such as Black / 256 GB.</p>
+                    </div>
+
+                    <div v-else class="mt-4 space-y-4">
+                        <article v-for="(variant, index) in form.variants" :key="variant.id || `new-${index}`" class="rounded-[8px] border border-slate-200 bg-slate-50 p-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <div><strong class="text-sm text-slate-900">Variant {{ index + 1 }}</strong><p class="mt-0.5 text-[11px] text-slate-500">{{ variant.sku || 'Add a unique SKU' }}</p></div>
+                                <div class="flex items-center gap-3">
+                                    <label class="flex items-center gap-2 text-xs font-semibold text-slate-600"><input v-model="variant.is_active" type="checkbox" class="h-4 w-4 accent-prinx-500"> Active</label>
+                                    <button type="button" class="text-xs font-semibold text-red-600" @click="removeVariant(index)">Remove</button>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                                <div><label class="label">Variant SKU *</label><input v-model.trim="variant.sku" class="input" placeholder="PHONE-256-BLUE"><p v-if="form.errors[`variants.${index}.sku`]" class="error">{{ form.errors[`variants.${index}.sku`] }}</p></div>
+                                <div><label class="label">Label</label><input v-model="variant.label" class="input" placeholder="Optional label"><p v-if="form.errors[`variants.${index}.label`]" class="error">{{ form.errors[`variants.${index}.label`] }}</p></div>
+                                <div><label class="label">Color</label><input v-model="variant.color" class="input" placeholder="Black"></div>
+                                <div><label class="label">Storage</label><input v-model="variant.storage" class="input" placeholder="256 GB"></div>
+                                <div><label class="label">Size</label><input v-model="variant.size" class="input" placeholder="Large / 15 inch"></div>
+                                <div><label class="label">Regular price</label><input v-model="variant.price" type="number" min="0" class="input" :placeholder="`Uses base: ${form.price || 0}`"></div>
+                                <div><label class="label">Sale price</label><input v-model="variant.sale_price" type="number" min="0" class="input"><p v-if="form.errors[`variants.${index}.sale_price`]" class="error">{{ form.errors[`variants.${index}.sale_price`] }}</p></div>
+                                <div><label class="label">Stock *</label><input v-model.number="variant.stock_quantity" type="number" min="0" class="input"></div>
+                                <div class="sm:col-span-2"><label class="label">Variant image URL</label><input v-model="variant.image_url" type="url" class="input" placeholder="https://..."></div>
+                                <div class="sm:col-span-2"><label class="label">Or upload variant image</label><input type="file" accept="image/jpeg,image/png,image/webp,image/avif" class="input" @change="variant.image_file = $event.target.files[0] || null"><p v-if="form.errors[`variants.${index}.image_file`]" class="error">{{ form.errors[`variants.${index}.image_file`] }}</p></div>
+                            </div>
+
+                            <div v-if="variant.existing_image_url || variant.image_url" class="mt-3 flex items-center gap-3 rounded-[7px] border border-slate-200 bg-white p-2">
+                                <img :src="variant.image_url || variant.existing_image_url" alt="Variant preview" class="h-14 w-14 rounded-[6px] object-contain">
+                                <p class="text-[11px] text-slate-500">Current variant image. Uploaded replacement takes priority when saved.</p>
+                            </div>
+                        </article>
+                    </div>
+
+                    <div v-if="form.variants.length" class="mt-4 rounded-[7px] border border-prinx-100 bg-prinx-50 px-4 py-3 text-xs text-prinx-800">
+                        Active variant stock total: <strong>{{ variantStockTotal }}</strong>. Product stock is synchronized to this total when saved.
                     </div>
                 </section>
 
