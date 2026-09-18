@@ -29,6 +29,7 @@ const sections = computed(() => [
             ['Services', '/admin/services', 'setting-2', ['manage_services']],
             ['Homepage carousel', '/admin/carousel', 'monitor', ['manage_storefront']],
             ['Product reels', '/admin/reels', 'mobile', ['manage_storefront']],
+            ['Buying guides', '/admin/guides', 'document-text-2', ['manage_storefront']],
             ['Categories & brands', '/admin/catalog', 'shop', ['manage_storefront']],
             ['Coupons', '/admin/coupons', 'percentage-circle', ['manage_storefront']],
         ].filter((item) => canAny(item[3])),

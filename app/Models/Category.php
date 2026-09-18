@@ -14,7 +14,7 @@ class Category extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'name', 'slug', 'type', 'description', 'image', 'is_active', 'sort_order',
+        'name', 'slug', 'type', 'description', 'image', 'meta_title', 'meta_description', 'is_active', 'sort_order',
     ];
 
     protected $appends = ['image_url', 'image_metadata'];
@@ -78,7 +78,7 @@ class Category extends Model
     }
     public function getImageMetadataAttribute(): array
     {
-        $description = trim((string) ($this->description ?: 'Browse '.$this->name.' at Prinx Electronics.'));
+        $description = trim((string) ($this->description ?: 'Browse '.$this->name.' at Prinx Tech.'));
 
         return [
             '@type' => 'ImageObject',

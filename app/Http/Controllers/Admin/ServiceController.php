@@ -133,13 +133,13 @@ class ServiceController extends Controller
                     'services',
                     $data['name'],
                     [
-                        'title' => $data['name'].' service | Prinx Electronics',
+                        'title' => $data['name'].' service | Prinx Tech',
                         'description' => trim((string) ($data['meta_description'] ?? $data['short_description'] ?? $data['description'] ?? '')),
                         'keywords' => array_values(array_filter([
                             $data['name'] ?? null,
                             $category?->name,
                             'technical services',
-                            'Prinx Electronics',
+                            'Prinx Tech',
                             'Tanzania',
                         ])),
                     ]

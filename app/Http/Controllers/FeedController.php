@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BuyingGuide;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Service;
@@ -33,6 +34,8 @@ class FeedController extends Controller
             ['loc' => route('home'), 'lastmod' => now(), 'images' => []],
             ['loc' => route('catalog'), 'lastmod' => now(), 'images' => []],
             ['loc' => route('services'), 'lastmod' => now(), 'images' => []],
+            ['loc' => route('local.store'), 'lastmod' => now(), 'images' => []],
+            ['loc' => route('guides.index'), 'lastmod' => now(), 'images' => []],
             ...collect(['about', 'contact', 'faq', 'shipping', 'returns', 'warranty', 'privacy', 'terms'])
                 ->map(fn (string $page) => ['loc' => route('pages.show', $page), 'lastmod' => now(), 'images' => []])
                 ->all(),
@@ -72,6 +75,15 @@ class FeedController extends Controller
                     'title' => $service->name.' service',
                     'caption' => $service->meta_description ?: $service->short_description ?: Str::limit(strip_tags((string) $service->description), 180, ''),
                 ]],
+            ]))
+            ->merge(BuyingGuide::published()->get()->map(fn (BuyingGuide $guide) => [
+                'loc' => route('guides.show', $guide),
+                'lastmod' => $guide->updated_at,
+                'images' => $guide->cover_image_url ? [[
+                    'loc' => $guide->cover_image_url,
+                    'title' => $guide->title,
+                    'caption' => $guide->meta_description ?: $guide->excerpt ?: Str::limit($guide->body, 180, ''),
+                ]] : [],
             ]));
 
         $body = $urls->map(function (array $entry) use ($escape): string {

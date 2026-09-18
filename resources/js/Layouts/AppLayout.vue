@@ -120,6 +120,9 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                         <Link href="/shop" class="flex items-center gap-2 px-3 transition hover:text-amber-600">
                             <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m4 12 8-8 8 8-8 8-8-8Z"/><path stroke-linecap="round" d="M9 12h6"/></svg>Offers
                         </Link>
+                        <Link href="/guides" :class="['flex items-center gap-2 px-3 transition hover:text-amber-600', active('/guides') ? 'text-amber-600' : '']">
+                            <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 4h14v16H5V4Zm3 4h8M8 12h8M8 16h5"/></svg>Guides
+                        </Link>
                         <Link href="/pages/about" class="flex items-center gap-2 px-3 transition hover:text-amber-600">
                             <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 11v5M12 8h.01"/></svg>About Us
                         </Link>
@@ -166,6 +169,7 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                             <Link href="/shop" class="rounded-[8px] border border-slate-200 px-3 py-3">Shop</Link>
                             <Link href="/software" class="rounded-[8px] border border-slate-200 px-3 py-3">Software</Link>
                             <Link href="/services" class="rounded-[8px] border border-slate-200 px-3 py-3">Services</Link>
+                            <Link href="/guides" class="rounded-[8px] border border-slate-200 px-3 py-3">Buying Guides</Link>
                             <Link href="/pages/about" class="rounded-[8px] border border-slate-200 px-3 py-3">About</Link>
                             <Link href="/pages/contact" class="rounded-[8px] border border-slate-200 px-3 py-3">Contact</Link>
                             <Link v-if="!user" href="/login" class="rounded-[8px] border border-slate-200 px-3 py-3">Account</Link>
@@ -222,6 +226,8 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                         <h3 class="text-[12px] font-semibold text-slate-900">About Prinx</h3>
                         <nav class="mt-3 space-y-2 text-[10px] text-slate-600">
                             <Link href="/pages/about" class="block hover:text-prinx-600">About Us</Link>
+                            <Link href="/electronics-shop-dodoma" class="block hover:text-prinx-600">Prinx Tech Dodoma</Link>
+                            <Link href="/guides" class="block hover:text-prinx-600">Buying Guides</Link>
                             <Link href="/services" class="block hover:text-prinx-600">Our Services</Link>
                             <Link href="/pages/terms" class="block hover:text-prinx-600">Terms & Conditions</Link>
                             <Link href="/pages/privacy" class="block hover:text-prinx-600">Privacy Policy</Link>

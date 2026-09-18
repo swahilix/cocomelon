@@ -129,6 +129,8 @@ class CatalogController extends Controller
             'slug' => ['nullable', 'string', 'max:180', Rule::unique('categories', 'slug')->ignore($category)],
             'type' => ['required', Rule::in(['product', 'service'])],
             'description' => ['nullable', 'string', 'max:1000'],
+            'meta_title' => ['nullable', 'string', 'max:190'],
+            'meta_description' => ['nullable', 'string', 'max:180'],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:6144'],
             'image_url' => ['nullable', 'url', 'max:2048'],
             'is_active' => ['boolean'],
@@ -150,12 +152,12 @@ class CatalogController extends Controller
                     'categories',
                     $data['name'].' '.$data['type'].' category',
                     [
-                        'title' => $data['name'].' '.$data['type'].' category | Prinx Electronics',
-                        'description' => trim((string) ($data['description'] ?? 'Browse '.$data['name'].' at Prinx Electronics.')),
+                        'title' => $data['name'].' '.$data['type'].' category | Prinx Tech',
+                        'description' => trim((string) ($data['description'] ?? 'Browse '.$data['name'].' at Prinx Tech.')),
                         'keywords' => [
                             $data['name'],
                             $data['type'].' category',
-                            'Prinx Electronics',
+                            'Prinx Tech',
                             'Tanzania',
                         ],
                     ]
@@ -194,9 +196,9 @@ class CatalogController extends Controller
                 'brands',
                 $data['name'].' brand logo',
                 [
-                    'title' => $data['name'].' logo | Prinx Electronics',
-                    'description' => $data['name'].' brand logo used in the Prinx Electronics catalogue.',
-                    'keywords' => [$data['name'], 'brand logo', 'Prinx Electronics'],
+                    'title' => $data['name'].' logo | Prinx Tech',
+                    'description' => $data['name'].' brand logo used in the Prinx Tech catalogue.',
+                    'keywords' => [$data['name'], 'brand logo', 'Prinx Tech'],
                 ]
             );
         } catch (Throwable $exception) {

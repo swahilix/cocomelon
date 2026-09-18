@@ -1,5 +1,5 @@
 <script setup>
-import { Link, router } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import SeoHead from '../../Components/SeoHead.vue';
@@ -11,6 +11,10 @@ const props = defineProps({
     filters: Object,
     selectedCategory: { type: Object, default: null },
 });
+
+const page = usePage();
+const store = computed(() => page.props.store || {});
+const city = computed(() => store.value.city || store.value.region || 'Dodoma');
 
 const filtersVisible = ref(true);
 const viewMode = ref('grid');
@@ -27,9 +31,30 @@ const form = reactive({
 });
 
 const hasSecondaryFilters = computed(() => !!(form.search || form.category || form.brand || form.in_stock || form.min_price || form.max_price || form.sort));
-const title = computed(() => props.selectedCategory ? `${props.selectedCategory.name} | Shop` : 'Shop');
-const description = computed(() => props.selectedCategory?.description || 'Browse original gadgets, accessories and tech essentials from Prinx.');
+const title = computed(() => props.selectedCategory
+    ? (props.selectedCategory.meta_title || `${props.selectedCategory.name} in ${city.value} | Prinx Tech`)
+    : `Electronics & Tech in ${city.value} | Prinx Tech`);
+const description = computed(() => props.selectedCategory?.meta_description
+    || props.selectedCategory?.description
+    || `Shop electronics, gadgets and accessories in ${city.value} from Prinx Tech. Browse current prices and availability.`);
 const canonical = computed(() => props.selectedCategory ? `/shop/category/${props.selectedCategory.slug}` : '/shop');
+const catalogSchema = computed(() => ({
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: title.value,
+    description: description.value,
+    url: `${String(store.value.url || '').replace(/\/$/, '')}${canonical.value}`,
+    isPartOf: { '@type': 'WebSite', name: store.value.name, url: store.value.url },
+    mainEntity: {
+        '@type': 'ItemList',
+        itemListElement: (props.products.data || []).map((product, index) => ({
+            '@type': 'ListItem',
+            position: index + 1,
+            url: `${String(store.value.url || '').replace(/\/$/, '')}/products/${product.slug}`,
+            name: product.name,
+        })),
+    },
+}));
 const filteredBrands = computed(() => {
     const needle = brandSearch.value.trim().toLowerCase();
     return needle ? props.brands.filter((brand) => brand.name.toLowerCase().includes(needle)) : props.brands;
@@ -83,14 +108,15 @@ const discount = (product) => {
     if (!regular || current >= regular) return 0;
     return Math.max(1, Math.round(((regular - current) / regular) * 100));
 };
-const reviews = (product) => 38 + ((Number(product.id || 1) * 17) % 96);
+const reviewCount = (product) => Number(product?.approved_reviews_count || 0);
+const reviewAverage = (product) => Number(product?.approved_reviews_average || 0);
 const addToCart = (product) => router.post(`/cart/${product.slug}`, { quantity: 1 }, { preserveScroll: true });
 const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label === String(pageNumber))?.url || null;
 </script>
 
 <template>
     <AppLayout>
-        <SeoHead :title="title" :description="description" :canonical="canonical" :robots="hasSecondaryFilters ? 'noindex,follow' : 'index,follow,max-image-preview:large'" />
+        <SeoHead :title="title" :description="description" :canonical="canonical" :schema="catalogSchema" :robots="hasSecondaryFilters ? 'noindex,follow' : 'index,follow,max-image-preview:large'" />
 
         <section class="container-shell pt-5">
             <div class="flex items-center gap-2 text-[11px] text-slate-500">
@@ -101,16 +127,16 @@ const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label 
 
             <div class="mt-3 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                    <h1 class="text-[30px] font-semibold leading-none tracking-[-.025em] text-slate-950">{{ selectedCategory?.name || 'Shop' }}</h1>
-                    <p class="mt-2 text-[12px] text-slate-500">Browse original gadgets, accessories and tech essentials</p>
+                    <h1 class="text-[30px] font-semibold leading-none tracking-[-.025em] text-slate-950">{{ selectedCategory ? `${selectedCategory.name} in ${city}` : `Electronics & Tech in ${city}` }}</h1>
+                    <p class="mt-2 max-w-3xl text-[12px] leading-5 text-slate-500">{{ description }}</p>
                 </div>
                 <div class="flex min-h-[64px] w-full items-center gap-3 rounded-[8px] bg-prinx-50 px-5 lg:w-[370px]">
                     <span class="flex h-8 w-8 shrink-0 items-center justify-center text-prinx-500">
                         <svg viewBox="0 0 24 24" class="h-7 w-7 fill-none stroke-current" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M4 9h16v11H4zM12 9v11M3 9h18M12 9H8.5a3 3 0 1 1 3.5-3v3Zm0 0h3.5A3 3 0 1 0 12 6v3Z"/></svg>
                     </span>
                     <div>
-                        <p class="text-[12px] font-semibold text-prinx-700">Free delivery for orders above TZS 50,000</p>
-                        <p class="mt-1 text-[10px] text-slate-600">Shop more, save more with Prinx.</p>
+                        <p class="text-[12px] font-semibold text-prinx-700">{{ store.delivery_enabled ? 'Local delivery available' : (store.pickup_enabled ? 'Store pickup available' : 'Order assistance available') }}</p>
+                        <p class="mt-1 text-[10px] text-slate-600">{{ store.delivery_enabled ? (store.delivery_eta || store.delivery_area || 'Delivery confirmed with your order') : (store.pickup_location || store.address || 'Contact Prinx Tech for fulfillment options') }}</p>
                     </div>
                 </div>
             </div>
@@ -212,7 +238,7 @@ const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label 
                             </Link>
                             <div class="px-3 pb-3">
                                 <Link :href="`/products/${product.slug}`" class="line-clamp-1 block min-h-[16px] text-[10px] font-semibold text-slate-800 transition group-hover:text-prinx-600">{{ product.name }}</Link>
-                                <div class="mt-2 flex items-center gap-1 text-[9px]"><span class="tracking-[-1px] text-amber-500">★★★★★</span><span class="text-slate-400">({{ reviews(product) }})</span></div>
+                                <div class="mt-2 flex items-center gap-1 text-[9px]"><span class="text-amber-500">★</span><span class="text-slate-500">{{ reviewCount(product) ? reviewAverage(product).toFixed(1) : 'No reviews' }}</span><span v-if="reviewCount(product)" class="text-slate-400">({{ reviewCount(product) }})</span></div>
                                 <div class="mt-2 flex min-h-[28px] flex-wrap items-baseline gap-x-2 gap-y-0.5">
                                     <strong class="text-[10px] font-semibold text-slate-800">{{ money(product.current_price) }}</strong>
                                     <span v-if="Number(product.current_price) < Number(product.price)" class="text-[9px] text-slate-400 line-through">{{ money(product.price) }}</span>
@@ -232,7 +258,7 @@ const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label 
                             <Link :href="`/products/${product.slug}`" class="flex h-[110px] w-[120px] shrink-0 items-center justify-center"><img :src="product.image_url" :alt="product.name" class="h-full w-full object-contain"></Link>
                             <div class="flex min-w-0 flex-1 flex-col justify-center">
                                 <Link :href="`/products/${product.slug}`" class="text-[13px] font-semibold text-slate-800 hover:text-prinx-600">{{ product.name }}</Link>
-                                <div class="mt-2 text-[10px] text-amber-500">★★★★★ <span class="ml-1 text-slate-400">({{ reviews(product) }})</span></div>
+                                <div class="mt-2 text-[10px] text-slate-500"><span class="text-amber-500">★</span> {{ reviewCount(product) ? reviewAverage(product).toFixed(1) : 'No reviews' }} <span v-if="reviewCount(product)" class="ml-1 text-slate-400">({{ reviewCount(product) }})</span></div>
                                 <div class="mt-2 flex items-center gap-3"><strong class="text-[12px]">{{ money(product.current_price) }}</strong><span v-if="Number(product.current_price) < Number(product.price)" class="text-[10px] text-slate-400 line-through">{{ money(product.price) }}</span></div>
                             </div>
                             <button type="button" class="my-auto h-[34px] rounded-[6px] border border-prinx-300 px-4 text-[10px] font-semibold text-prinx-600 hover:bg-prinx-500 hover:text-white" :disabled="!product.in_stock" @click="addToCart(product)">Add to Cart</button>

@@ -67,7 +67,13 @@ const homeSchema = computed(() => ({
             description: store.value.description,
             telephone: store.value.phone,
             email: store.value.email,
-            address: { '@type': 'PostalAddress', addressLocality: store.value.address, addressCountry: store.value.country },
+            address: {
+                '@type': 'PostalAddress',
+                streetAddress: store.value.address || undefined,
+                addressLocality: store.value.city || store.value.region || 'Dodoma',
+                addressRegion: store.value.region || undefined,
+                addressCountry: store.value.country,
+            },
         },
         {
             '@type': 'WebSite',
@@ -288,10 +294,10 @@ function subscribe() {
                     <div>
                         <h3 class="text-[12px] font-semibold text-slate-900">Customer Service</h3>
                         <nav class="mt-3 space-y-2 text-[10px] text-slate-600">
-                            <Link href="/pages/contact" class="block hover:text-prinx-600">Help Center</Link>
+                            <Link href="/pages/faq" class="block hover:text-prinx-600">FAQ</Link>
+                            <Link href="/pages/warranty" class="block hover:text-prinx-600">Warranty Information</Link>
                             <Link href="/pages/returns" class="block hover:text-prinx-600">Returns & Refunds</Link>
-                            <Link href="/pages/shipping" class="block hover:text-prinx-600">Shipping & Delivery</Link>
-                            <Link href="/services" class="block hover:text-prinx-600">Technical Services</Link>
+                            <Link href="/pages/shipping" class="block hover:text-prinx-600">Delivery & Store Pickup</Link>
                             <Link href="/pages/contact" class="block hover:text-prinx-600">Contact Us</Link>
                         </nav>
                     </div>
@@ -300,6 +306,8 @@ function subscribe() {
                         <h3 class="text-[12px] font-semibold text-slate-900">About Prinx</h3>
                         <nav class="mt-3 space-y-2 text-[10px] text-slate-600">
                             <Link href="/pages/about" class="block hover:text-prinx-600">About Us</Link>
+                            <Link href="/electronics-shop-dodoma" class="block hover:text-prinx-600">Prinx Tech Dodoma</Link>
+                            <Link href="/guides" class="block hover:text-prinx-600">Buying Guides</Link>
                             <Link href="/services" class="block hover:text-prinx-600">Our Services</Link>
                             <Link href="/pages/terms" class="block hover:text-prinx-600">Terms & Conditions</Link>
                             <Link href="/pages/privacy" class="block hover:text-prinx-600">Privacy Policy</Link>
@@ -316,14 +324,12 @@ function subscribe() {
                     </div>
                 </div>
 
-                <div class="mt-6 flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-end">
-                    <span class="text-[9px] text-slate-500">We accept</span>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <span class="rounded-[4px] border border-slate-200 bg-white px-2.5 py-1 text-[9px] font-bold text-blue-700">VISA</span>
-                        <span class="rounded-[4px] border border-slate-200 bg-white px-2.5 py-1 text-[9px] font-bold text-red-600">Mastercard</span>
-                        <span class="rounded-[4px] border border-slate-200 bg-white px-2.5 py-1 text-[9px] font-bold text-blue-600">Tigo Pesa</span>
-                        <span class="rounded-[4px] border border-slate-200 bg-white px-2.5 py-1 text-[9px] font-bold text-emerald-600">M-Pesa</span>
+                <div v-if="store.payment_methods?.length" class="mt-6 flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-end">
+                    <div class="flex flex-wrap items-center gap-2 text-[9px] text-slate-600">
+                        <span class="font-semibold text-slate-800">Payment options:</span>
+                        <span v-for="method in store.payment_methods" :key="method.value" class="rounded-[4px] border border-slate-200 bg-white px-2.5 py-1">{{ method.title }}</span>
                     </div>
+                    <img v-if="store.payment_strip_url" :src="store.payment_strip_url" alt="Configured payment method logos" class="h-auto max-h-[32px] w-auto max-w-full object-contain">
                 </div>
             </div>
         </div>

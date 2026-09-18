@@ -61,6 +61,8 @@ const stockDot = computed(() => props.product.in_stock
     : 'bg-red-500');
 const hasFulfillment = computed(() => Boolean(page.props.store?.delivery_enabled || page.props.store?.pickup_enabled));
 const paymentMethods = computed(() => page.props.store?.payment_methods || []);
+const seoTitle = computed(() => String(props.product.meta_title || `${props.product.name} | Prinx Tech`).replaceAll('Prinx Electronics', 'Prinx Tech'));
+const seoDescription = computed(() => String(props.product.meta_description || props.product.short_description || props.product.plain_description || '').replaceAll('Prinx Electronics', 'Prinx Tech'));
 
 const specificationRows = computed(() => [
     props.product.brand?.name ? ['Brand', props.product.brand.name] : null,
@@ -215,8 +217,8 @@ function submitReview() {
 <template>
     <AppLayout>
         <SeoHead
-            :title="product.meta_title || product.name"
-            :description="product.meta_description || product.short_description"
+            :title="seoTitle"
+            :description="seoDescription"
             :canonical="canonical"
             :image="product.image_url"
             :image-alt="`${product.name} product image from Prinx Tech`"

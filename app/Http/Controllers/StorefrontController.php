@@ -397,7 +397,10 @@ class StorefrontController extends Controller
     private function renderCatalog(Request $request, ?Category $selectedCategory = null): Response
     {
         $categorySlug = $selectedCategory?->slug ?: $request->string('category')->toString();
-        $products = Product::with(['brand', 'category'])->active()
+        $products = Product::with(['brand', 'category'])
+            ->withCount(['reviews as approved_reviews_count' => fn ($query) => $query->approved()])
+            ->withAvg(['reviews as approved_reviews_average' => fn ($query) => $query->approved()], 'rating')
+            ->active()
             ->when($request->filled('search'), fn ($query) => $query->where(fn ($search) => $search
                 ->where('name', 'like', '%'.$request->search.'%')
                 ->orWhere('sku', 'like', '%'.$request->search.'%')

@@ -241,7 +241,7 @@ class ProductController extends Controller
                         $data['name'].' gallery '.($index + 1),
                         [
                             ...$metadata,
-                            'title' => $data['name'].' product gallery image '.($index + 1).' | Prinx Electronics',
+                            'title' => $data['name'].' product gallery image '.($index + 1).' | Prinx Tech',
                         ]
                     );
                 } catch (Throwable $exception) {
@@ -268,7 +268,7 @@ class ProductController extends Controller
         $productUrl = rtrim((string) config('app.url'), '/').'/products/'.$slug;
 
         return [
-            'title' => $data['name'].' | Prinx Electronics Tanzania',
+            'title' => $data['name'].' | Prinx Tech Tanzania',
             'description' => Str::limit($description, 300, ''),
             'identifier' => (string) ($data['sku'] ?? ''),
             'source_url' => $productUrl,
@@ -281,7 +281,7 @@ class ProductController extends Controller
                 $data['sku'] ?? null,
                 ($data['name'] ?? null) ? 'buy '.$data['name'].' Tanzania' : null,
                 $category?->name ? $category->name.' Tanzania' : null,
-                'Prinx Electronics',
+                'Prinx Tech',
                 'electronics Tanzania',
                 'Dodoma Tanzania',
             ])),

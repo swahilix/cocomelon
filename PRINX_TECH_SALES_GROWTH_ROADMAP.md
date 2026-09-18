@@ -55,7 +55,7 @@ Status: implemented and deployed
 - Make these pages visible near purchase controls and footer.
 
 ## Phase 6 — Payment Confidence
-Status: implemented; pending deployment verification
+Status: implemented and deployed
 
 - Show accepted payment methods beside Buy Now/checkout.
 - Mobile money, card and bank/payment options from actual configured methods.
@@ -63,6 +63,8 @@ Status: implemented; pending deployment verification
 - Remove any payment claim that is not actually available.
 
 ## Phase 7 — Local SEO & Buying Guides
+Status: implemented; pending deployment verification
+
 - Prinx Tech Dodoma landing page.
 - Category landing pages targeting real local searches.
 - Blog/buying-guide module.

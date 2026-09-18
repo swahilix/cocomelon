@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\AiProductDescriptionController;
+use App\Http\Controllers\Admin\BuyingGuideController as AdminBuyingGuideController;
 use App\Http\Controllers\Admin\CatalogController as AdminCatalogController;
 use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -21,9 +22,11 @@ use App\Http\Controllers\Admin\StockMovementController;
 use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\SystemMonitorController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BuyingGuideController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\FeedController;
+use App\Http\Controllers\LocalStoreController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProductContactEventController;
 use App\Http\Controllers\ServiceInquiryController;
@@ -33,6 +36,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [StorefrontController::class, 'home'])->name('home');
 Route::get('/shop', [StorefrontController::class, 'catalog'])->name('catalog');
 Route::get('/shop/category/{category}', [StorefrontController::class, 'productCategory'])->name('categories.products');
+Route::get('/electronics-shop-dodoma', LocalStoreController::class)->name('local.store');
+Route::get('/guides', [BuyingGuideController::class, 'index'])->name('guides.index');
+Route::get('/guides/{buyingGuide}', [BuyingGuideController::class, 'show'])->name('guides.show');
 Route::get('/products/{product}', [StorefrontController::class, 'product'])->name('products.show');
 Route::post('/products/{product}/contact-events', [ProductContactEventController::class, 'store'])
     ->middleware('throttle:30,1')
@@ -93,6 +99,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         Route::patch('reviews/{productReview}', [AdminProductReviewController::class, 'update'])->name('reviews.update');
         Route::get('gtin', [GtinController::class, 'index'])->name('gtin.index');
         Route::patch('gtin/{product}', [GtinController::class, 'update'])->name('gtin.update');
+
+        Route::resource('guides', AdminBuyingGuideController::class)->except('show');
 
         Route::get('catalog', [AdminCatalogController::class, 'index'])->name('catalog.index');
         Route::post('catalog/categories', [AdminCatalogController::class, 'category'])->name('catalog.categories.store');
