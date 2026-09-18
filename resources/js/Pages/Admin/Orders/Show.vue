@@ -53,6 +53,16 @@ const money = (value) => `TZS ${Number(value || 0).toLocaleString()}`;
                 </section>
 
                 <section class="card p-5">
+                    <h2 class="font-semibold">Acquisition source</h2>
+                    <p class="mt-1 text-xs text-slate-500">First-touch source captured before this online order was placed.</p>
+                    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                        <div class="rounded-[8px] border border-slate-200 p-3"><p class="text-[10px] font-semibold uppercase tracking-[.12em] text-slate-400">Source</p><p class="mt-1 text-sm font-semibold capitalize">{{ order.acquisition_source || 'Unknown' }}</p></div>
+                        <div class="rounded-[8px] border border-slate-200 p-3"><p class="text-[10px] font-semibold uppercase tracking-[.12em] text-slate-400">Campaign</p><p class="mt-1 text-sm font-semibold">{{ order.utm_campaign || '—' }}</p></div>
+                    </div>
+                    <p v-if="order.acquisition_detail" class="mt-3 text-xs text-slate-500">Detail: {{ order.acquisition_detail }}</p>
+                </section>
+
+                <section class="card p-5">
                     <div class="flex items-center justify-between gap-3">
                         <div><h2 class="font-semibold">Inventory ledger</h2><p class="mt-1 text-xs text-slate-500">Stock activity linked directly to this online order.</p></div>
                         <Icon name="box" :size="21" class="text-prinx-600" />

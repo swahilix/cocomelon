@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Services\CartService;
+use App\Services\ConversionTrackingService;
 use App\Services\ProductActivityService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,11 +35,12 @@ class CartController extends Controller
         ]);
     }
 
-    public function store(Request $request, Product $product, CartService $cart, ProductActivityService $activity): RedirectResponse
+    public function store(Request $request, Product $product, CartService $cart, ProductActivityService $activity, ConversionTrackingService $conversions): RedirectResponse
     {
         $data = $request->validate([
             'quantity' => ['nullable', 'integer', 'min:1', 'max:99'],
             'variant_id' => ['nullable', 'integer'],
+            'intent' => ['nullable', 'in:add_to_cart,buy_now'],
         ]);
         $variant = filled($data['variant_id'] ?? null)
             ? ProductVariant::query()->active()->where('product_id', $product->id)->findOrFail((int) $data['variant_id'])
@@ -48,8 +50,36 @@ class CartController extends Controller
             return back()->withErrors(['variant_id' => 'Choose a product option before adding this item to the cart.']);
         }
 
-        $cart->add($product, (int) ($data['quantity'] ?? 1), $variant);
+        $quantity = (int) ($data['quantity'] ?? 1);
+        $cart->add($product, $quantity, $variant);
         $activity->record($request, $product, 'cart_add');
+
+        $unitPrice = $variant ? $variant->current_price : $product->current_price;
+        $conversions->record(
+            $request,
+            'add_to_cart',
+            $product,
+            [
+                'variant_id' => $variant?->id,
+                'variant_sku' => $variant?->sku,
+            ],
+            $unitPrice * $quantity,
+            $quantity,
+        );
+
+        if (($data['intent'] ?? null) === 'buy_now') {
+            $conversions->record(
+                $request,
+                'buy_now',
+                $product,
+                [
+                    'variant_id' => $variant?->id,
+                    'variant_sku' => $variant?->sku,
+                ],
+                $unitPrice * $quantity,
+                $quantity,
+            );
+        }
 
         return back()->with('success', 'Product added to cart.');
     }

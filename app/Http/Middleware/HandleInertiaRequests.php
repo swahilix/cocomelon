@@ -141,7 +141,7 @@ class HandleInertiaRequests extends Middleware
                 'role' => $role,
                 'permissions' => $permissions,
             ],
-            'cartCount' => collect($cart)->sum(),
+            'cartCount' => collect($cart)->sum(fn ($line) => is_array($line) ? (int) ($line['quantity'] ?? 0) : (int) $line),
             'wishlistCount' => $wishlistProducts->count(),
             'wishlistProductIds' => $wishlistProducts->pluck('product_id')->map(fn ($id) => (int) $id)->values()->all(),
             'wishlistProductSlugs' => $wishlistProducts->pluck('slug')->filter()->values()->all(),

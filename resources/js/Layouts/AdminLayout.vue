@@ -45,6 +45,7 @@ const sections = computed(() => [
             ['Expenses', '/admin/expenses', 'bulb', ['manage_expenses']],
             ['Profit & costing', '/admin/profit', 'percentage-circle', ['view_profit_reports']],
             ['Reports', '/admin/reports', 'document-text-2', ['view_reports']],
+            ['Conversion report', '/admin/conversions', 'chart', ['manage_storefront']],
             ['Orders', '/admin/orders', 'shopping-cart', ['manage_orders']],
             ['Service requests', '/admin/inquiries', 'box-square', ['manage_inquiries']],
         ].filter((item) => canAny(item[3])),

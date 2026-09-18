@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\AiProductDescriptionController;
 use App\Http\Controllers\Admin\BuyingGuideController as AdminBuyingGuideController;
 use App\Http\Controllers\Admin\CatalogController as AdminCatalogController;
+use App\Http\Controllers\Admin\ConversionReportController;
 use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GtinController;
@@ -83,6 +84,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::post('ai/format-product-description', AiProductDescriptionController::class)->middleware(['permission:manage_storefront', 'throttle:6,1'])->name('ai.format-product-description');
 
     Route::middleware('permission:manage_storefront')->group(function (): void {
+        Route::get('conversions', ConversionReportController::class)->name('conversions');
         Route::get('carousel', [HeroSlideController::class, 'index'])->name('carousel.index');
         Route::post('carousel', [HeroSlideController::class, 'store'])->name('carousel.store');
         Route::match(['post', 'patch'], 'carousel/{heroSlide}', [HeroSlideController::class, 'update'])->name('carousel.update');

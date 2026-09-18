@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CaptureStorefrontAttribution;
 use App\Http\Middleware\EnforcePosPricingPermissions;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsurePermission;
@@ -34,7 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->web(append: [HandleInertiaRequests::class]);
+        $middleware->web(append: [CaptureStorefrontAttribution::class, HandleInertiaRequests::class]);
         $middleware->redirectGuestsTo(fn ($request) => $request->is('admin', 'admin/*') ? '/admin/login' : '/login');
         $middleware->alias([
             'admin' => EnsureAdmin::class,

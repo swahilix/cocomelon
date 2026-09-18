@@ -205,12 +205,12 @@ function trackWhatsApp(placement) {
 
 function add() {
     if (!displayInStock.value || (variants.value.length && !selectedVariant.value)) return;
-    router.post(`/cart/${props.product.slug}`, { quantity: qty.value, variant_id: selectedVariant.value?.id || null }, { preserveScroll: true });
+    router.post(`/cart/${props.product.slug}`, { quantity: qty.value, variant_id: selectedVariant.value?.id || null, intent: 'add_to_cart' }, { preserveScroll: true });
 }
 
 function buyNow() {
     if (!displayInStock.value || (variants.value.length && !selectedVariant.value)) return;
-    router.post(`/cart/${props.product.slug}`, { quantity: qty.value, variant_id: selectedVariant.value?.id || null }, {
+    router.post(`/cart/${props.product.slug}`, { quantity: qty.value, variant_id: selectedVariant.value?.id || null, intent: 'buy_now' }, {
         preserveScroll: false,
         onSuccess: () => router.visit('/checkout'),
     });

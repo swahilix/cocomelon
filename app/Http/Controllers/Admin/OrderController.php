@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Services\ConversionTrackingService;
 use App\Services\InventoryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -47,7 +48,7 @@ class OrderController extends Controller
         ]);
     }
 
-    public function update(Request $request, Order $order, InventoryService $inventory): RedirectResponse
+    public function update(Request $request, Order $order, InventoryService $inventory, ConversionTrackingService $conversions): RedirectResponse
     {
         $data = $request->validate([
             'status' => ['required', 'in:pending,confirmed,processing,ready,shipped,completed,cancelled'],
@@ -56,7 +57,7 @@ class OrderController extends Controller
         ]);
 
         try {
-            DB::transaction(function () use ($request, $order, $data, $inventory): void {
+            DB::transaction(function () use ($request, $order, $data, $inventory, $conversions): void {
                 $lockedOrder = Order::query()->lockForUpdate()->with('items')->findOrFail($order->id);
                 $oldStatus = $lockedOrder->status;
                 $oldPaymentStatus = $lockedOrder->payment_status;
@@ -118,6 +119,10 @@ class OrderController extends Controller
                 $lockedOrder->status = $data['status'];
                 $lockedOrder->payment_status = $data['payment_status'];
                 $lockedOrder->save();
+
+                if ($oldStatus !== 'completed' && $lockedOrder->status === 'completed') {
+                    $conversions->recordCompletedOrder($lockedOrder);
+                }
 
                 if ($changed || filled($data['note'] ?? null)) {
                     $lockedOrder->statusHistory()->create([

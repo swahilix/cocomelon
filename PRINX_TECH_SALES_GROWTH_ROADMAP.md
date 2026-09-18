@@ -72,7 +72,7 @@ Status: implemented; test assertion repair included with Phase 8
 - Product SEO titles/descriptions use Prinx Tech consistently.
 
 ## Phase 8 — Product Comparison & Variants
-Status: implemented; pending deployment verification
+Status: implemented; CI compatibility repair included with Phase 9
 
 - Compare products.
 - Proper color/storage/size variants where products have them.
@@ -80,6 +80,8 @@ Status: implemented; pending deployment verification
 - Better related-product logic.
 
 ## Phase 9 — Conversion Measurement
+Status: implemented; pending deployment verification
+
 - Track source: Google, Instagram, TikTok, WhatsApp, direct/referral.
 - Track product views, add-to-cart, Buy Now, checkout and completed orders.
 - Simple admin conversion report.

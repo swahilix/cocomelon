@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\ProductReel;
 use App\Models\ProductReview;
 use App\Models\Service;
+use App\Services\ConversionTrackingService;
 use App\Services\ImageOptimizationService;
 use App\Services\ProductActivityService;
 use Illuminate\Http\Request;
@@ -25,6 +26,7 @@ class StorefrontController extends Controller
     public function __construct(
         private readonly ImageOptimizationService $images,
         private readonly ProductActivityService $activity,
+        private readonly ConversionTrackingService $conversions,
     ) {
     }
 
@@ -158,6 +160,7 @@ class StorefrontController extends Controller
     {
         abort_unless($product->status === 'active', 404);
         $this->activity->record($request, $product, 'view');
+        $this->conversions->record($request, 'view_product', $product);
         $product->load([
             'brand',
             'category',

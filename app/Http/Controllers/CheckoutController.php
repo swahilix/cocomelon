@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Services\CartService;
+use App\Services\ConversionTrackingService;
 use App\Services\InventoryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,15 +20,24 @@ use Throwable;
 
 class CheckoutController extends Controller
 {
-    public function create(CartService $cart): Response
+    public function create(Request $request, CartService $cart, ConversionTrackingService $conversions): Response
     {
         $summary = $cart->summary();
         abort_if($summary['items']->isEmpty(), 404);
 
+        $conversions->record(
+            $request,
+            'checkout_start',
+            null,
+            ['item_count' => (int) $summary['count']],
+            (float) $summary['total'],
+            (int) $summary['count'],
+        );
+
         return Inertia::render('Store/Checkout', ['cart' => $summary]);
     }
 
-    public function store(Request $request, CartService $cart, InventoryService $inventory): RedirectResponse
+    public function store(Request $request, CartService $cart, InventoryService $inventory, ConversionTrackingService $conversions): RedirectResponse
     {
         $business = DB::table('business_settings')->where('id', 1)->first();
         $paymentSettingsReady = Schema::hasColumn('business_settings', 'payment_mobile_money_enabled');
@@ -88,6 +98,7 @@ class CheckoutController extends Controller
         $expectedCouponCode = $request->session()->get('cart_coupon_code');
         $summary = $cart->summary();
         abort_if($summary['items']->isEmpty(), 422, 'Your cart is empty.');
+        $attribution = $conversions->attributionForOrder($request);
 
         if ($expectedCouponCode && ! $summary['coupon']) {
             return back()->withErrors([
@@ -99,11 +110,12 @@ class CheckoutController extends Controller
             $shippingTotal = $data['fulfillment_method'] === 'pickup' ? 0 : (float) $summary['shipping'];
             $grandTotal = max(0, (float) $summary['subtotal'] + $shippingTotal - (float) $summary['discount']);
 
-            $order = DB::transaction(function () use ($data, $summary, $shippingTotal, $grandTotal, $request, $inventory): Order {
+            $order = DB::transaction(function () use ($data, $summary, $shippingTotal, $grandTotal, $request, $inventory, $attribution): Order {
                 $order = Order::create([
                     ...$data,
                     'order_number' => 'PX-'.now()->format('ymd').'-'.strtoupper(Str::random(8)),
                     'user_id' => $request->user()?->id,
+                    ...$attribution,
                     'coupon_id' => $summary['coupon']['id'] ?? null,
                     'coupon_code' => $summary['coupon']['code'] ?? null,
                     'country' => config('store.country'),

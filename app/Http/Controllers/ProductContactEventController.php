@@ -4,13 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\ProductContactEvent;
+use App\Services\ConversionTrackingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class ProductContactEventController extends Controller
 {
-    public function store(Request $request, Product $product): JsonResponse
+    public function store(Request $request, Product $product, ConversionTrackingService $conversions): JsonResponse
     {
         abort_unless($product->status === 'active', 404);
 
@@ -39,6 +40,13 @@ class ProductContactEventController extends Controller
             'referrer_path' => Str::limit((string) parse_url((string) $request->headers->get('referer'), PHP_URL_PATH), 500, ''),
             'user_agent_family' => $family,
         ]);
+
+        $conversions->record(
+            $request,
+            'whatsapp_enquiry',
+            $product,
+            ['placement' => $validated['placement'] ?? null],
+        );
 
         return response()->json(['ok' => true], 201);
     }
