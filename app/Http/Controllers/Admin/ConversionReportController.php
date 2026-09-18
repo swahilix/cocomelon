@@ -9,23 +9,112 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ConversionReportController extends Controller
 {
+    private const SOURCES = ['google', 'instagram', 'tiktok', 'whatsapp', 'direct', 'referral', 'unknown'];
+
     public function __invoke(Request $request): Response
     {
-        $days = in_array($request->integer('days'), [7, 30, 90], true) ? $request->integer('days') : 30;
+        return Inertia::render('Admin/ConversionReport', [
+            'days' => $this->days($request),
+            ...$this->reportData($this->days($request)),
+        ]);
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $days = $this->days($request);
+        $report = $this->reportData($days);
+        $filename = 'prinx-conversions-'.$days.'d-'.now()->format('Ymd-His').'.csv';
+
+        return response()->streamDownload(function () use ($days, $report): void {
+            $out = fopen('php://output', 'w');
+
+            fputcsv($out, ['Prinx Tech Conversion Report']);
+            fputcsv($out, ['Period', $days.' days']);
+            fputcsv($out, ['Generated', now()->toIso8601String()]);
+            fputcsv($out, []);
+
+            fputcsv($out, ['Funnel']);
+            fputcsv($out, ['Product views', 'Add to cart', 'Buy Now', 'Checkout starts', 'WhatsApp enquiries', 'Completed orders', 'Completed revenue', 'Checkout conversion %']);
+            fputcsv($out, [
+                $report['summary']['product_views'],
+                $report['summary']['cart_adds'],
+                $report['summary']['buy_now'],
+                $report['summary']['checkout_starts'],
+                $report['summary']['whatsapp_enquiries'],
+                $report['summary']['completed_orders'],
+                $report['summary']['completed_revenue'],
+                $report['summary']['checkout_conversion_rate'],
+            ]);
+            fputcsv($out, []);
+
+            fputcsv($out, ['Source performance']);
+            fputcsv($out, ['Source', 'Views', 'Cart adds', 'Buy Now', 'Checkout starts', 'WhatsApp enquiries', 'Completed orders', 'Checkout conversion %', 'Revenue']);
+            foreach ($report['sources'] as $source) {
+                fputcsv($out, [
+                    $source['source'],
+                    $source['product_views'],
+                    $source['cart_adds'],
+                    $source['buy_now'],
+                    $source['checkout_starts'],
+                    $source['whatsapp_enquiries'],
+                    $source['completed_orders'],
+                    $source['checkout_conversion_rate'],
+                    $source['revenue'],
+                ]);
+            }
+
+            fputcsv($out, []);
+            fputcsv($out, ['Product interest']);
+            fputcsv($out, ['Product', 'Slug', 'Views', 'Cart adds', 'Buy Now', 'WhatsApp enquiries']);
+            foreach ($report['topProducts'] as $product) {
+                fputcsv($out, [
+                    $product->name,
+                    $product->slug,
+                    $product->product_views,
+                    $product->cart_adds,
+                    $product->buy_now,
+                    $product->whatsapp_enquiries,
+                ]);
+            }
+
+            fputcsv($out, []);
+            fputcsv($out, ['UTM campaigns']);
+            fputcsv($out, ['Campaign', 'Source', 'Events', 'Checkout starts', 'Completed orders', 'Revenue']);
+            foreach ($report['campaigns'] as $campaign) {
+                fputcsv($out, [
+                    $campaign->utm_campaign,
+                    $campaign->source,
+                    $campaign->events,
+                    $campaign->checkout_starts,
+                    $campaign->completed_orders,
+                    $campaign->revenue,
+                ]);
+            }
+
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    private function days(Request $request): int
+    {
+        return in_array($request->integer('days'), [7, 30, 90], true) ? $request->integer('days') : 30;
+    }
+
+    private function reportData(int $days): array
+    {
         $start = now()->subDays($days - 1)->startOfDay();
-        $sources = ['google', 'instagram', 'tiktok', 'whatsapp', 'direct', 'referral', 'unknown'];
 
         if (! Schema::hasTable('conversion_events')) {
-            return Inertia::render('Admin/ConversionReport', [
-                'days' => $days,
+            return [
                 'summary' => $this->emptySummary(),
-                'sources' => collect($sources)->map(fn (string $source) => $this->sourceRow($source))->all(),
+                'sources' => collect(self::SOURCES)->map(fn (string $source) => $this->sourceRow($source))->all(),
                 'topProducts' => [],
                 'campaigns' => [],
-            ]);
+            ];
         }
 
         $events = ConversionEvent::query()->where('created_at', '>=', $start);
@@ -49,7 +138,7 @@ class ConversionReportController extends Controller
             'checkout_conversion_rate' => $this->rate($completedOrders, (int) ($counts['checkout_start'] ?? 0)),
         ];
 
-        $sourceRows = collect($sources)->map(function (string $source) use ($start): array {
+        $sourceRows = collect(self::SOURCES)->map(function (string $source) use ($start): array {
             $base = ConversionEvent::query()->where('created_at', '>=', $start)->where('source', $source);
             $counts = (clone $base)
                 ->select('event_type')
@@ -102,13 +191,12 @@ class ConversionReportController extends Controller
             ->limit(20)
             ->get();
 
-        return Inertia::render('Admin/ConversionReport', [
-            'days' => $days,
+        return [
             'summary' => $summary,
             'sources' => $sourceRows,
             'topProducts' => $topProducts,
             'campaigns' => $campaigns,
-        ]);
+        ];
     }
 
     private function rate(int $completed, int $started): float

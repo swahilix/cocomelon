@@ -80,12 +80,22 @@ Status: implemented; CI compatibility repair included with Phase 9
 - Better related-product logic.
 
 ## Phase 9 — Conversion Measurement
-Status: implemented; pending deployment verification
+Status: implemented and deployed
 
 - Track source: Google, Instagram, TikTok, WhatsApp, direct/referral.
 - Track product views, add-to-cart, Buy Now, checkout and completed orders.
 - Simple admin conversion report.
 - Use real data to decide where marketing time and ad budget go.
+
+## Phase 10 — Launch & Growth Hardening
+Status: implemented; pending deployment verification
+
+- Campaign-link builder for Google, Instagram, TikTok, WhatsApp and referrals.
+- CSV export for conversion data.
+- Acquisition-source filters and labels in online orders.
+- 30-day conversion snapshot on the Admin dashboard.
+- Launch-readiness checks in System Monitoring.
+- Regression tests for growth operations and source attribution.
 
 ## Implementation rule
 Complete, test and deploy one phase before starting the next. Do not add fake scarcity, fake viewer counts or fabricated reviews.

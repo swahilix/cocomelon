@@ -9,10 +9,11 @@ const props = defineProps({
     queueConnection: String,
     counts: Object,
     serverTime: String,
+    launchChecks: { type: Array, default: () => [] },
     commands: Object,
 });
 
-const refresh = () => router.reload({ only: ['scheduler', 'queue', 'counts', 'serverTime'] });
+const refresh = () => router.reload({ only: ['scheduler', 'queue', 'counts', 'serverTime', 'launchChecks'] });
 
 const statusClass = (running) => running
     ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
@@ -80,6 +81,19 @@ const formatAge = (seconds) => seconds === null || seconds === undefined
                 <p class="mt-3 text-xs text-slate-500">Jobs recorded in Laravel's failed queue table.</p>
             </section>
         </div>
+
+        <section class="card mt-6 overflow-hidden">
+            <div class="border-b border-slate-200 p-5">
+                <h2 class="font-semibold text-slate-900">Launch readiness</h2>
+                <p class="mt-1 text-sm text-slate-500">Quick checks for the public sales and discovery stack. These checks do not invent traffic or sales data.</p>
+            </div>
+            <div class="divide-y divide-slate-100">
+                <div v-for="check in launchChecks" :key="check.key" class="flex items-start justify-between gap-4 p-4">
+                    <div><p class="text-sm font-semibold text-slate-900">{{ check.label }}</p><p class="mt-1 text-xs leading-5 text-slate-500">{{ check.detail }}</p></div>
+                    <span :class="['shrink-0 rounded-[6px] px-2.5 py-1 text-[10px] font-semibold', check.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700']">{{ check.ok ? 'Ready' : 'Needs attention' }}</span>
+                </div>
+            </div>
+        </section>
 
         <div class="mt-6 grid gap-5 xl:grid-cols-[1fr_380px]">
             <section class="card overflow-hidden">

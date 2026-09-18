@@ -3,7 +3,7 @@ import { Head, Link, usePage } from '@inertiajs/vue3';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 import Icon from '../../Components/Icon.vue';
 
-const props = defineProps({ stats: Object, recentOrders: Array, recentSyncs: Array });
+const props = defineProps({ stats: Object, growth: Object, recentOrders: Array, recentSyncs: Array });
 const page = usePage();
 const money = (value) => new Intl.NumberFormat('en-TZ', { style: 'currency', currency: page.props.store.currency, maximumFractionDigits: 0 }).format(Number(value || 0));
 const badge = (status) => status === 'success' || status === 'synced' ? 'bg-emerald-100 text-emerald-700' : status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700';
@@ -33,6 +33,20 @@ const badge = (status) => status === 'success' || status === 'synced' ? 'bg-emer
             <Link href="/admin/stock" class="card p-4"><p class="text-xs text-slate-500">Purchases today</p><b class="mt-1 block text-lg">{{ money(stats.today_purchases) }}</b></Link>
             <Link href="/admin/suppliers" class="card p-4"><p class="text-xs text-slate-500">Supplier balance</p><b class="mt-1 block text-lg">{{ money(stats.supplier_balance) }}</b></Link>
         </div>
+
+        <section class="card mt-6 overflow-hidden">
+            <div class="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div><h2 class="font-semibold">Online growth · last 30 days</h2><p class="mt-1 text-xs text-slate-500">First-party product, checkout and completed-order activity.</p></div>
+                <Link href="/admin/conversions" class="text-sm font-semibold text-prinx-600">Open conversion report</Link>
+            </div>
+            <div class="grid gap-px bg-slate-200 sm:grid-cols-2 xl:grid-cols-5">
+                <div class="bg-white p-4"><p class="text-[10px] font-semibold uppercase tracking-[.12em] text-slate-400">Product views</p><b class="mt-2 block text-xl">{{ Number(growth?.product_views || 0).toLocaleString() }}</b></div>
+                <div class="bg-white p-4"><p class="text-[10px] font-semibold uppercase tracking-[.12em] text-slate-400">Checkout starts</p><b class="mt-2 block text-xl">{{ Number(growth?.checkout_starts || 0).toLocaleString() }}</b></div>
+                <div class="bg-white p-4"><p class="text-[10px] font-semibold uppercase tracking-[.12em] text-slate-400">Completed</p><b class="mt-2 block text-xl">{{ Number(growth?.completed_orders || 0).toLocaleString() }}</b></div>
+                <div class="bg-white p-4"><p class="text-[10px] font-semibold uppercase tracking-[.12em] text-slate-400">Conversion</p><b class="mt-2 block text-xl">{{ Number(growth?.checkout_conversion_rate || 0).toFixed(1) }}%</b></div>
+                <div class="bg-white p-4"><p class="text-[10px] font-semibold uppercase tracking-[.12em] text-emerald-600">Completed revenue</p><b class="mt-2 block text-xl text-emerald-700">{{ money(growth?.completed_revenue) }}</b><p v-if="growth?.strongest_source" class="mt-1 text-[10px] capitalize text-slate-500">Top source: {{ growth.strongest_source.source }}</p></div>
+            </div>
+        </section>
 
         <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Link href="/admin/products" class="metric-card"><p class="text-[10px] font-semibold uppercase tracking-[.14em] text-prinx-600">Active products</p><b class="mt-2 block text-3xl">{{ stats.active_products }}</b><p class="mt-1 text-xs text-slate-500">{{ stats.products }} current · {{ stats.deleted_products }} trash</p></Link>

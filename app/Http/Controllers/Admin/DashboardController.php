@@ -11,6 +11,7 @@ use App\Models\Service;
 use App\Models\ServiceInquiry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -71,6 +72,43 @@ class DashboardController extends Controller
         $inventoryValue = Product::query()->where('track_stock', true)->get(['stock_quantity', 'average_cost'])
             ->sum(fn (Product $product) => max(0, (int) $product->stock_quantity) * (float) $product->average_cost);
 
+        $growth = [
+            'product_views' => 0,
+            'checkout_starts' => 0,
+            'completed_orders' => 0,
+            'completed_revenue' => 0,
+            'checkout_conversion_rate' => 0,
+            'strongest_source' => null,
+        ];
+
+        if (Schema::hasTable('conversion_events')) {
+            $growthStart = now()->subDays(29)->startOfDay();
+            $conversionBase = DB::table('conversion_events')->where('created_at', '>=', $growthStart);
+
+            $growth['product_views'] = (int) (clone $conversionBase)->where('event_type', 'view_product')->count();
+            $growth['checkout_starts'] = (int) (clone $conversionBase)->where('event_type', 'checkout_start')->count();
+            $growth['completed_orders'] = (int) (clone $conversionBase)->where('event_type', 'order_completed')->count();
+            $growth['completed_revenue'] = (float) (clone $conversionBase)->where('event_type', 'order_completed')->sum('value');
+            $growth['checkout_conversion_rate'] = $growth['checkout_starts'] > 0
+                ? round(($growth['completed_orders'] / $growth['checkout_starts']) * 100, 1)
+                : 0;
+
+            $strongestSource = (clone $conversionBase)
+                ->where('event_type', 'order_completed')
+                ->where('source', '!=', 'unknown')
+                ->select('source')
+                ->selectRaw('COUNT(*) as completed_orders, COALESCE(SUM(value), 0) as revenue')
+                ->groupBy('source')
+                ->orderByDesc('revenue')
+                ->first();
+
+            $growth['strongest_source'] = $strongestSource ? [
+                'source' => $strongestSource->source,
+                'completed_orders' => (int) $strongestSource->completed_orders,
+                'revenue' => (float) $strongestSource->revenue,
+            ] : null;
+        }
+
         return Inertia::render('Admin/Dashboard', [
             'stats' => [
                 'products' => Product::count(),
@@ -95,6 +133,7 @@ class DashboardController extends Controller
                 'inventory_value' => $inventoryValue,
                 'supplier_balance' => $supplierBalance,
             ],
+            'growth' => $growth,
             'recentOrders' => Order::latest()->take(6)->get(),
             'recentSyncs' => MerchantSyncLog::with('product:id,name,slug')->latest()->take(6)->get(),
         ]);

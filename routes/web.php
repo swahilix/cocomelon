@@ -84,6 +84,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::post('ai/format-product-description', AiProductDescriptionController::class)->middleware(['permission:manage_storefront', 'throttle:6,1'])->name('ai.format-product-description');
 
     Route::middleware('permission:manage_storefront')->group(function (): void {
+        Route::get('conversions/export', [ConversionReportController::class, 'export'])->name('conversions.export');
         Route::get('conversions', ConversionReportController::class)->name('conversions');
         Route::get('carousel', [HeroSlideController::class, 'index'])->name('carousel.index');
         Route::post('carousel', [HeroSlideController::class, 'store'])->name('carousel.store');

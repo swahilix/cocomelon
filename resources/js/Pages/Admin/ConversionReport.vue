@@ -1,6 +1,6 @@
 <script setup>
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
 
 const props = defineProps({
@@ -28,11 +28,45 @@ const sourceLabel = (value) => ({
     referral: 'Referral',
     unknown: 'Unknown',
 }[value] || value || 'Unknown');
+
 const setDays = (days) => router.get('/admin/conversions', { days }, { preserveState: true, replace: true });
+const exportHref = computed(() => `/admin/conversions/export?days=${props.days}`);
+
 const sourceWithOrders = computed(() => props.sources
     .filter((source) => source.source !== 'unknown' && Number(source.completed_orders || 0) > 0)
     .sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0)));
 const strongestSource = computed(() => sourceWithOrders.value[0] || null);
+
+const campaignSource = ref('instagram');
+const campaignMedium = ref('social');
+const campaignName = ref('');
+const campaignTarget = ref('/shop');
+const copied = ref(false);
+
+const campaignUrl = computed(() => {
+    const base = String(page.props.store?.url || '').replace(/\/$/, '');
+    const rawTarget = String(campaignTarget.value || '/').trim();
+    const target = rawTarget.startsWith('http://') || rawTarget.startsWith('https://')
+        ? rawTarget
+        : `${base}/${rawTarget.replace(/^\//, '')}`;
+
+    try {
+        const url = new URL(target);
+        url.searchParams.set('utm_source', campaignSource.value);
+        if (campaignMedium.value.trim()) url.searchParams.set('utm_medium', campaignMedium.value.trim());
+        if (campaignName.value.trim()) url.searchParams.set('utm_campaign', campaignName.value.trim());
+        return url.toString();
+    } catch {
+        return '';
+    }
+});
+
+const copyCampaign = async () => {
+    if (!campaignUrl.value || !navigator?.clipboard) return;
+    await navigator.clipboard.writeText(campaignUrl.value);
+    copied.value = true;
+    window.setTimeout(() => { copied.value = false; }, 1800);
+};
 </script>
 
 <template>
@@ -45,10 +79,44 @@ const strongestSource = computed(() => sourceWithOrders.value[0] || null);
                 <h1 class="section-title">Conversion report</h1>
                 <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">See which traffic sources create product interest, checkout activity, WhatsApp enquiries and completed online orders.</p>
             </div>
-            <div class="inline-flex h-10 w-fit overflow-hidden rounded-[8px] border border-slate-200 bg-white">
-                <button v-for="option in [7, 30, 90]" :key="option" type="button" :class="['min-w-16 border-r border-slate-200 px-3 text-xs font-semibold last:border-r-0', days === option ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-50']" @click="setDays(option)">{{ option }} days</button>
+            <div class="flex flex-wrap items-center gap-2">
+                <a :href="exportHref" class="btn-light">Export CSV</a>
+                <div class="inline-flex h-10 w-fit overflow-hidden rounded-[8px] border border-slate-200 bg-white">
+                    <button v-for="option in [7, 30, 90]" :key="option" type="button" :class="['min-w-16 border-r border-slate-200 px-3 text-xs font-semibold last:border-r-0', days === option ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-50']" @click="setDays(option)">{{ option }} days</button>
+                </div>
             </div>
         </div>
+
+        <section class="card mt-6 p-5">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <h2 class="font-semibold text-slate-900">Campaign link builder</h2>
+                    <p class="mt-1 text-xs leading-5 text-slate-500">Create tagged links for posts, ads and WhatsApp campaigns. Visits from these links flow automatically into this report.</p>
+                </div>
+                <span class="rounded-[6px] bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-600">First-party tracking</span>
+            </div>
+
+            <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div>
+                    <label class="label">Source</label>
+                    <select v-model="campaignSource" class="input">
+                        <option value="instagram">Instagram</option>
+                        <option value="tiktok">TikTok</option>
+                        <option value="google">Google</option>
+                        <option value="whatsapp">WhatsApp</option>
+                        <option value="referral">Referral / partner</option>
+                    </select>
+                </div>
+                <div><label class="label">Medium</label><input v-model="campaignMedium" class="input" placeholder="social"></div>
+                <div><label class="label">Campaign name</label><input v-model.trim="campaignName" class="input" placeholder="weekend_sale"></div>
+                <div><label class="label">Destination</label><input v-model.trim="campaignTarget" class="input" placeholder="/shop or full URL"></div>
+            </div>
+
+            <div class="mt-4 flex flex-col gap-3 rounded-[8px] border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center">
+                <code class="min-w-0 flex-1 break-all text-[11px] leading-5 text-slate-700">{{ campaignUrl }}</code>
+                <button type="button" class="btn-primary shrink-0" :disabled="!campaignUrl" @click="copyCampaign">{{ copied ? 'Copied' : 'Copy link' }}</button>
+            </div>
+        </section>
 
         <div class="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <div class="metric-card"><p class="text-[10px] font-semibold uppercase tracking-[.12em] text-slate-400">Product views</p><b class="mt-2 block text-2xl">{{ number(summary.product_views) }}</b><p class="mt-1 text-xs text-slate-500">Unique product/session/day events</p></div>
@@ -105,7 +173,7 @@ const strongestSource = computed(() => sourceWithOrders.value[0] || null);
             </section>
 
             <section class="card overflow-hidden">
-                <div class="border-b border-slate-200 px-5 py-4"><h2 class="font-semibold">UTM campaigns</h2><p class="mt-1 text-xs text-slate-500">Use tagged links such as <span class="font-mono">?utm_source=instagram&utm_campaign=weekend_sale</span> to measure individual campaigns.</p></div>
+                <div class="border-b border-slate-200 px-5 py-4"><h2 class="font-semibold">UTM campaigns</h2><p class="mt-1 text-xs text-slate-500">Campaign links created above appear here after real visitors use them.</p></div>
                 <div class="overflow-x-auto">
                     <table class="admin-table min-w-[620px]">
                         <thead><tr><th>Campaign</th><th>Source</th><th>Events</th><th>Checkout</th><th>Completed</th><th>Revenue</th></tr></thead>
@@ -121,7 +189,7 @@ const strongestSource = computed(() => sourceWithOrders.value[0] || null);
         </div>
 
         <div class="mt-5 rounded-[8px] border border-slate-200 bg-white px-4 py-3 text-xs leading-5 text-slate-500">
-            This report uses first-party storefront events. Historical orders created before Phase 9 do not receive invented sources; attribution starts when this phase is deployed.
+            Historical orders created before conversion tracking do not receive invented sources. Attribution starts from the first tracked storefront visit.
         </div>
     </AdminLayout>
 </template>

@@ -27,10 +27,18 @@ class OrderController extends Controller
                     ->orWhere('customer_name', 'like', '%'.$request->search.'%')
                     ->orWhere('phone', 'like', '%'.$request->search.'%')))
                 ->when($request->filled('status'), fn ($query) => $query->where('status', $request->status))
+                ->when($request->filled('source'), function ($query) use ($request): void {
+                    $source = $request->string('source')->toString();
+                    if ($source === 'unknown') {
+                        $query->whereNull('acquisition_source');
+                    } else {
+                        $query->where('acquisition_source', $source);
+                    }
+                })
                 ->latest()
                 ->paginate(20)
                 ->withQueryString(),
-            'filters' => $request->only('search', 'status'),
+            'filters' => $request->only('search', 'status', 'source'),
         ]);
     }
 
