@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\HeroSlide;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductReel;
+use App\Models\ProductReview;
 use App\Models\Service;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -26,6 +28,8 @@ class StorefrontController extends Controller
             'featuredProducts' => Product::with(['brand', 'category'])
                 ->active()
                 ->where('featured', true)
+                ->withCount(['reviews as approved_reviews_count' => fn ($query) => $query->approved()])
+                ->withAvg(['reviews as approved_reviews_average' => fn ($query) => $query->approved()], 'rating')
                 ->orderBy('sort_order')
                 ->latest()
                 ->take(9)
@@ -85,14 +89,75 @@ class StorefrontController extends Controller
         );
     }
 
-    public function product(Product $product): Response
+    public function product(Request $request, Product $product): Response
     {
         abort_unless($product->status === 'active', 404);
         $product->load(['brand', 'category']);
 
+        $approvedReviews = ProductReview::query()
+            ->approved()
+            ->where('product_id', $product->id)
+            ->latest('approved_at')
+            ->latest('id')
+            ->take(30)
+            ->get();
+
+        $reviewSummary = ProductReview::query()
+            ->approved()
+            ->where('product_id', $product->id)
+            ->selectRaw('COUNT(*) as review_count, AVG(rating) as review_average')
+            ->first();
+
+        $reviewEligibility = [
+            'can_review' => false,
+            'reason' => 'Sign in and complete a purchase of this product to leave a verified review.',
+            'review' => null,
+        ];
+
+        if ($request->user() && ! $request->user()->is_admin) {
+            $eligibleOrder = Order::query()
+                ->where('user_id', $request->user()->id)
+                ->where('status', 'completed')
+                ->whereHas('items', fn ($items) => $items->where('product_id', $product->id))
+                ->latest('id')
+                ->first();
+
+            $existingReview = ProductReview::query()
+                ->where('product_id', $product->id)
+                ->where('user_id', $request->user()->id)
+                ->first();
+
+            $reviewEligibility = [
+                'can_review' => (bool) $eligibleOrder,
+                'reason' => $eligibleOrder ? null : 'Verified reviews are available after an order containing this product is completed.',
+                'review' => $existingReview ? [
+                    'rating' => $existingReview->rating,
+                    'title' => $existingReview->title,
+                    'body' => $existingReview->body,
+                    'status' => $existingReview->status,
+                ] : null,
+            ];
+        }
+
         return Inertia::render('Store/Product', [
             'product' => $product,
+            'reviews' => $approvedReviews->map(fn (ProductReview $review): array => [
+                'id' => $review->id,
+                'reviewer_name' => $review->reviewer_name,
+                'rating' => $review->rating,
+                'title' => $review->title,
+                'body' => $review->body,
+                'is_verified_purchase' => $review->is_verified_purchase,
+                'created_at' => $review->created_at?->toDateString(),
+            ])->values()->all(),
+            'reviewSummary' => [
+                'count' => (int) ($reviewSummary?->review_count ?? 0),
+                'average' => round((float) ($reviewSummary?->review_average ?? 0), 1),
+            ],
+            'reviewEligibility' => $reviewEligibility,
             'related' => Product::with(['brand', 'category'])
+                ->withCount(['reviews as approved_reviews_count' => fn ($query) => $query->approved()])
+                ->withAvg(['reviews as approved_reviews_average' => fn ($query) => $query->approved()], 'rating')
                 ->active()
                 ->whereKeyNot($product->id)
                 ->when($product->category_id, fn ($query) => $query->where('category_id', $product->category_id))

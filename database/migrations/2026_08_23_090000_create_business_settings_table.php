@@ -37,7 +37,7 @@ return new class extends Migration
         if (! DB::table('business_settings')->where('id', 1)->exists()) {
             DB::table('business_settings')->insert([
                 'id' => 1,
-                'business_name' => config('app.name', 'Prinx Electronics'),
+                'business_name' => config('app.name', 'Prinx Tech'),
                 'legal_name' => config('store.legal_name'),
                 'email' => config('store.email'),
                 'phone' => config('store.phone'),

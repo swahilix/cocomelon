@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\MerchantController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ProductReelController;
+use App\Http\Controllers\Admin\ProductReviewController as AdminProductReviewController;
 use App\Http\Controllers\Admin\PurchaseController;
 use App\Http\Controllers\Admin\ServiceController as AdminServiceController;
 use App\Http\Controllers\Admin\StockController;
@@ -84,6 +85,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 
         Route::resource('products', AdminProductController::class)->except('show');
         Route::post('products/{product}/restore', [AdminProductController::class, 'restore'])->whereNumber('product')->name('products.restore');
+        Route::get('reviews', [AdminProductReviewController::class, 'index'])->name('reviews.index');
+        Route::patch('reviews/{productReview}', [AdminProductReviewController::class, 'update'])->name('reviews.update');
         Route::get('gtin', [GtinController::class, 'index'])->name('gtin.index');
         Route::patch('gtin/{product}', [GtinController::class, 'update'])->name('gtin.update');
 

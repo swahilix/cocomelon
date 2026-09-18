@@ -119,8 +119,8 @@ class HeroSlideController extends Controller
                 $data['headline'] ?: 'homepage-banner-'.($data['sort_order'] ?? 0),
                 [
                     'title' => $data['headline'] ?: 'Prinx homepage banner',
-                    'description' => $data['image_alt'] ?: $data['headline'] ?: 'Prinx Electronics homepage banner',
-                    'keywords' => ['Prinx Electronics', 'homepage banner', 'electronics'],
+                    'description' => $data['image_alt'] ?: $data['headline'] ?: 'Prinx Tech homepage banner',
+                    'keywords' => ['Prinx Tech', 'homepage banner', 'electronics'],
                 ],
             );
         } catch (Throwable $exception) {

@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\CustomerPortalController;
+use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\WishlistController;
 use Illuminate\Support\Facades\Route;
 
@@ -29,3 +30,7 @@ Route::prefix('wishlist')->name('wishlist.')->middleware('auth')->group(function
     Route::post('/{product}', [WishlistController::class, 'store'])->name('store');
     Route::delete('/{product}', [WishlistController::class, 'destroy'])->name('destroy');
 });
+
+Route::post('/products/{product}/reviews', [ProductReviewController::class, 'store'])
+    ->middleware(['auth', 'throttle:6,1'])
+    ->name('products.reviews.store');

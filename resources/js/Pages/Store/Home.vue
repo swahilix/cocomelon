@@ -98,7 +98,8 @@ function discountPercent(product) {
     return Math.round(((regular - current) / regular) * 100);
 }
 
-const reviews = (product) => 38 + ((Number(product?.id || 1) * 17) % 96);
+const reviewCount = (product) => Number(product?.approved_reviews_count || 0);
+const reviewAverage = (product) => Number(product?.approved_reviews_average || 0);
 
 function addToCart(product) {
     if (!product?.slug || !product?.in_stock) return;
@@ -284,7 +285,7 @@ onBeforeUnmount(() => {
                         </Link>
                         <div class="px-3 pb-3">
                             <Link :href="`/products/${product.slug}`" class="line-clamp-1 block min-h-[16px] text-[10px] font-semibold text-slate-800 transition group-hover:text-prinx-600">{{ product.name }}</Link>
-                            <div class="mt-2 flex items-center gap-1 text-[9px]"><span class="tracking-[-1px] text-amber-500">★★★★★</span><span class="text-slate-400">({{ reviews(product) }})</span></div>
+                            <div class="mt-2 flex items-center gap-1 text-[9px]"><span class="text-amber-500">★</span><span class="text-slate-500">{{ reviewCount(product) ? reviewAverage(product).toFixed(1) : 'No reviews' }}</span><span v-if="reviewCount(product)" class="text-slate-400">({{ reviewCount(product) }})</span></div>
                             <div class="mt-2 flex min-h-[28px] flex-wrap items-baseline gap-x-2 gap-y-0.5">
                                 <strong class="text-[10px] font-semibold text-slate-800">{{ money(product.current_price) }}</strong>
                                 <span v-if="Number(product.current_price) < Number(product.price)" class="text-[9px] text-slate-400 line-through">{{ money(product.price) }}</span>

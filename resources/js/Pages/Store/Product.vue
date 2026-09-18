@@ -5,12 +5,24 @@ import AppLayout from '../../Layouts/AppLayout.vue';
 import ProductDescription from '../../Components/ProductDescription.vue';
 import SeoHead from '../../Components/SeoHead.vue';
 
-const props = defineProps({ product: Object, related: Array });
+const props = defineProps({
+    product: Object,
+    related: { type: Array, default: () => [] },
+    reviews: { type: Array, default: () => [] },
+    reviewSummary: { type: Object, default: () => ({ count: 0, average: 0 }) },
+    reviewEligibility: { type: Object, default: () => ({ can_review: false, reason: null, review: null }) },
+});
 const page = usePage();
 const qty = ref(1);
 const selected = ref(props.product.image_url);
 const activeTab = ref('description');
 const wished = ref(false);
+const reviewRating = ref(Number(props.reviewEligibility?.review?.rating || 5));
+const reviewTitle = ref(props.reviewEligibility?.review?.title || '');
+const reviewBody = ref(props.reviewEligibility?.review?.body || '');
+const reviewSubmitting = ref(false);
+const reviewAverage = computed(() => Number(props.reviewSummary?.average || 0));
+const reviewCount = computed(() => Number(props.reviewSummary?.count || 0));
 
 const baseUrl = String(page.props.store.url || '').replace(/\/$/, '');
 const absoluteUrl = (value) => /^https?:\/\//i.test(value || '') ? value : `${baseUrl}/${String(value || '').replace(/^\//, '')}`;
@@ -58,6 +70,19 @@ const schema = computed(() => ({
             color: props.product.color || undefined,
             size: props.product.size || undefined,
             brand: props.product.brand ? { '@type': 'Brand', name: props.product.brand.name } : undefined,
+            aggregateRating: reviewCount.value ? {
+                '@type': 'AggregateRating',
+                ratingValue: reviewAverage.value,
+                reviewCount: reviewCount.value,
+            } : undefined,
+            review: reviewCount.value ? props.reviews.map((review) => ({
+                '@type': 'Review',
+                author: { '@type': 'Person', name: review.reviewer_name },
+                datePublished: review.created_at,
+                name: review.title || undefined,
+                reviewBody: review.body,
+                reviewRating: { '@type': 'Rating', ratingValue: review.rating, bestRating: 5, worstRating: 1 },
+            })) : undefined,
             offers: {
                 '@type': 'Offer',
                 url: canonical.value,
@@ -122,6 +147,26 @@ function addRelated(item) {
     if (!item.in_stock) return;
     router.post(`/cart/${item.slug}`, { quantity: 1 }, { preserveScroll: true });
 }
+
+function starsFor(value) {
+    const rounded = Math.max(0, Math.min(5, Math.round(Number(value || 0))));
+    return '★'.repeat(rounded) + '☆'.repeat(5 - rounded);
+}
+
+function submitReview() {
+    if (!props.reviewEligibility?.can_review || reviewSubmitting.value) return;
+    reviewSubmitting.value = true;
+
+    router.post(`/products/${props.product.slug}/reviews`, {
+        rating: reviewRating.value,
+        title: reviewTitle.value,
+        body: reviewBody.value,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => { activeTab.value = 'reviews'; },
+        onFinish: () => { reviewSubmitting.value = false; },
+    });
+}
 </script>
 
 <template>
@@ -131,7 +176,7 @@ function addRelated(item) {
             :description="product.meta_description || product.short_description"
             :canonical="canonical"
             :image="product.image_url"
-            :image-alt="`${product.name} product image from Prinx Electronics`"
+            :image-alt="`${product.name} product image from Prinx Tech`"
             type="product"
             :schema="schema"
         />
@@ -170,8 +215,10 @@ function addRelated(item) {
                     <h1 class="text-[28px] font-semibold leading-[1.1] tracking-[-.025em] text-slate-950 sm:text-[34px]">{{ product.name }}</h1>
 
                     <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[10px] text-slate-500">
-                        <span class="tracking-[-1px] text-amber-500">★★★★★</span>
-                        <span>(0 reviews)</span>
+                        <button type="button" class="inline-flex items-center gap-2" @click="activeTab = 'reviews'">
+                            <span class="tracking-[-1px] text-amber-500">{{ starsFor(reviewAverage) }}</span>
+                            <span>{{ reviewAverage ? reviewAverage.toFixed(1) : 'No rating' }} · {{ reviewCount }} {{ reviewCount === 1 ? 'review' : 'reviews' }}</span>
+                        </button>
                         <span class="text-slate-300">•</span>
                         <span>Brand: <strong class="font-medium text-slate-700">{{ product.brand?.name || 'Prinx' }}</strong></span>
                         <span class="text-slate-300">•</span>
@@ -257,7 +304,7 @@ function addRelated(item) {
                     <div class="flex border-b border-slate-200 px-2">
                         <button type="button" class="relative px-3 py-3 text-[9px] font-semibold" :class="activeTab === 'description' ? 'text-prinx-600' : 'text-slate-500'" @click="activeTab = 'description'">Description<span v-if="activeTab === 'description'" class="absolute inset-x-2 bottom-0 h-[2px] bg-prinx-500"></span></button>
                         <button type="button" class="relative px-3 py-3 text-[9px] font-medium" :class="activeTab === 'specs' ? 'text-prinx-600' : 'text-slate-500'" @click="activeTab = 'specs'">Specifications<span v-if="activeTab === 'specs'" class="absolute inset-x-2 bottom-0 h-[2px] bg-prinx-500"></span></button>
-                        <button type="button" class="relative px-3 py-3 text-[9px] font-medium" :class="activeTab === 'reviews' ? 'text-prinx-600' : 'text-slate-500'" @click="activeTab = 'reviews'">Reviews (0)<span v-if="activeTab === 'reviews'" class="absolute inset-x-2 bottom-0 h-[2px] bg-prinx-500"></span></button>
+                        <button type="button" class="relative px-3 py-3 text-[9px] font-medium" :class="activeTab === 'reviews' ? 'text-prinx-600' : 'text-slate-500'" @click="activeTab = 'reviews'">Reviews ({{ reviewCount }})<span v-if="activeTab === 'reviews'" class="absolute inset-x-2 bottom-0 h-[2px] bg-prinx-500"></span></button>
                     </div>
                     <div class="min-h-[190px] px-4 py-4 text-[10px] leading-5 text-slate-600">
                         <ProductDescription v-if="activeTab === 'description'" :content="product.description" />
@@ -265,18 +312,48 @@ function addRelated(item) {
                             <div v-for="row in specificationRows" :key="row[0]" class="grid grid-cols-[140px_1fr] gap-4 py-2"><strong class="font-semibold text-slate-700">{{ row[0] }}</strong><span>{{ row[1] }}</span></div>
                             <p v-if="!specificationRows.length" class="py-8 text-center text-slate-400">No additional specifications available.</p>
                         </div>
-                        <div v-else class="flex min-h-[150px] items-center justify-center text-center text-slate-400">No customer reviews have been submitted yet.</div>
+                        <div v-else class="space-y-5">
+                            <div v-if="reviewEligibility.can_review" class="rounded-[8px] border border-prinx-100 bg-prinx-50/40 p-4">
+                                <div class="flex flex-wrap items-center justify-between gap-3">
+                                    <div>
+                                        <strong class="text-[12px] font-semibold text-slate-900">{{ reviewEligibility.review ? 'Update your review' : 'Write a verified review' }}</strong>
+                                        <p class="mt-1 text-[10px] text-slate-500">Only completed purchases can be reviewed. Your review appears after approval.</p>
+                                    </div>
+                                    <span v-if="reviewEligibility.review?.status" class="rounded-[6px] bg-white px-2 py-1 text-[9px] font-semibold capitalize text-slate-600">{{ reviewEligibility.review.status }}</span>
+                                </div>
+                                <form class="mt-4 grid gap-3" @submit.prevent="submitReview">
+                                    <select v-model.number="reviewRating" class="h-11 w-full rounded-[6px] border border-slate-200 bg-white px-3 text-[12px] outline-none focus:border-prinx-400" aria-label="Review rating">
+                                        <option :value="5">5 — Excellent</option><option :value="4">4 — Very good</option><option :value="3">3 — Good</option><option :value="2">2 — Fair</option><option :value="1">1 — Poor</option>
+                                    </select>
+                                    <input v-model="reviewTitle" maxlength="120" class="h-11 rounded-[6px] border border-slate-200 bg-white px-3 text-[12px] outline-none focus:border-prinx-400" placeholder="Short review title (optional)">
+                                    <textarea v-model="reviewBody" required minlength="10" maxlength="1500" rows="4" class="rounded-[6px] border border-slate-200 bg-white px-3 py-2.5 text-[12px] leading-5 outline-none focus:border-prinx-400" placeholder="Tell other customers about the product"></textarea>
+                                    <button type="submit" :disabled="reviewSubmitting" class="h-11 rounded-[6px] bg-prinx-500 px-4 text-[11px] font-semibold text-white transition hover:bg-prinx-600 disabled:opacity-50">{{ reviewSubmitting ? 'Submitting…' : 'Submit review' }}</button>
+                                </form>
+                            </div>
+                            <div v-else class="rounded-[8px] border border-slate-200 bg-slate-50 px-4 py-3 text-[10px] text-slate-600">{{ reviewEligibility.reason }}</div>
+                            <div v-if="reviews.length" class="divide-y divide-slate-100">
+                                <article v-for="review in reviews" :key="review.id" class="py-4 first:pt-0">
+                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                        <div class="flex items-center gap-2"><strong class="text-[11px] font-semibold text-slate-800">{{ review.reviewer_name }}</strong><span v-if="review.is_verified_purchase" class="rounded-[5px] bg-emerald-50 px-2 py-0.5 text-[8px] font-semibold text-emerald-700">Verified Purchase</span></div>
+                                        <span class="text-[9px] text-slate-400">{{ review.created_at }}</span>
+                                    </div>
+                                    <div class="mt-1 tracking-[-1px] text-amber-500">{{ starsFor(review.rating) }}</div>
+                                    <strong v-if="review.title" class="mt-2 block text-[11px] font-semibold text-slate-800">{{ review.title }}</strong>
+                                    <p class="mt-1 whitespace-pre-line text-[10px] leading-5 text-slate-600">{{ review.body }}</p>
+                                </article>
+                            </div>
+                            <div v-else class="py-8 text-center text-slate-400">No approved customer reviews yet.</div>
+                        </div>
                     </div>
                 </article>
 
                 <article class="overflow-hidden rounded-[7px] border border-slate-200 bg-white">
-                    <header class="flex items-center justify-between border-b border-slate-200 px-4 py-3"><span class="text-[10px] font-semibold text-slate-800">Reviews (0)</span><span class="text-[8px] text-slate-400">View all reviews ›</span></header>
+                    <header class="flex items-center justify-between border-b border-slate-200 px-4 py-3"><span class="text-[10px] font-semibold text-slate-800">Customer rating</span><button type="button" class="text-[9px] font-medium text-prinx-600" @click="activeTab = 'reviews'">View reviews</button></header>
                     <div class="flex min-h-[190px] flex-col items-center justify-center px-6 text-center">
-                        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-prinx-50 text-prinx-600">
-                            <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5h14v11H9l-4 3V5Z"/><path stroke-linecap="round" d="M8 9h8M8 12h5"/></svg>
-                        </div>
-                        <strong class="mt-3 text-[10px] font-semibold text-slate-700">No reviews yet</strong>
-                        <p class="mt-1 max-w-[230px] text-[9px] leading-4 text-slate-400">Customer reviews will appear here once they are available.</p>
+                        <strong class="text-[34px] font-semibold leading-none text-slate-950">{{ reviewCount ? reviewAverage.toFixed(1) : '—' }}</strong>
+                        <div class="mt-2 text-[16px] tracking-[-1px] text-amber-500">{{ starsFor(reviewAverage) }}</div>
+                        <p class="mt-2 text-[10px] text-slate-500">Based on {{ reviewCount }} verified {{ reviewCount === 1 ? 'review' : 'reviews' }}</p>
+                        <button type="button" class="mt-4 h-10 rounded-[6px] border border-prinx-200 bg-white px-4 text-[10px] font-semibold text-prinx-700" @click="activeTab = 'reviews'">{{ reviewEligibility.can_review ? 'Write a review' : 'Read reviews' }}</button>
                     </div>
                 </article>
             </section>
@@ -295,7 +372,7 @@ function addRelated(item) {
                         </Link>
                         <div class="flex min-w-0 flex-col justify-center border-l border-slate-100 p-3">
                             <Link :href="`/products/${item.slug}`" class="line-clamp-2 text-[9px] font-semibold leading-4 text-slate-800 transition group-hover:text-prinx-600">{{ item.name }}</Link>
-                            <div class="mt-1 text-[8px] tracking-[-1px] text-amber-500">★★★★★</div>
+                            <div class="mt-1 text-[9px] text-slate-500"><span class="text-amber-500">★</span> {{ Number(item.approved_reviews_average || 0).toFixed(1) }} <span>({{ item.approved_reviews_count || 0 }})</span></div>
                             <div class="mt-1 flex flex-wrap items-center gap-2"><strong class="text-[9px] font-semibold text-slate-800">{{ money(item.current_price) }}</strong><span v-if="Number(item.current_price) < Number(item.price)" class="text-[8px] text-slate-400 line-through">{{ money(item.price) }}</span></div>
                             <div class="mt-2 flex items-center gap-2">
                                 <button type="button" class="h-7 flex-1 rounded-[5px] border border-prinx-300 bg-white px-2 text-[8px] font-semibold text-prinx-600 hover:bg-prinx-500 hover:text-white disabled:border-slate-200 disabled:text-slate-400" :disabled="!item.in_stock" @click="addRelated(item)">Add to Cart</button>

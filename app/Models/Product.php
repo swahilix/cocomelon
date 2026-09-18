@@ -42,7 +42,7 @@ class Product extends Model
         static::saving(function (Product $product): void {
             $product->slug = $product->slug ?: Str::slug($product->name);
             $product->sku = strtoupper(trim($product->sku));
-            $product->meta_title = $product->meta_title ?: $product->name.' | Prinx Electronics';
+            $product->meta_title = $product->meta_title ?: $product->name.' | Prinx Tech';
             $product->meta_description = $product->meta_description ?: Str::limit(self::descriptionToPlainText((string) ($product->short_description ?: $product->description)), 155, '');
         });
 
@@ -63,6 +63,7 @@ class Product extends Model
     public function category() { return $this->belongsTo(Category::class); }
     public function brand() { return $this->belongsTo(Brand::class); }
     public function syncLogs() { return $this->hasMany(MerchantSyncLog::class); }
+    public function reviews() { return $this->hasMany(ProductReview::class); }
 
     public function scopeActive(Builder $query): Builder { return $query->where('status', 'active'); }
     public function scopeMerchantEligible(Builder $query): Builder

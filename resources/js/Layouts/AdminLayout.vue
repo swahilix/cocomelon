@@ -18,6 +18,7 @@ const sections = computed(() => [
         items: [
             ['Dashboard', '/admin', 'home-2', ['manage_storefront']],
             ['Products', '/admin/products', 'box', ['manage_storefront']],
+            ['Reviews', '/admin/reviews', 'star-1', ['manage_storefront']],
             ['GTIN scanner', '/admin/gtin', 'qr-code', ['manage_storefront']],
             ['Software', '/admin/software', 'monitor', ['manage_storefront']],
             ['Stock management', '/admin/stock', 'shop', ['view_inventory', 'manage_purchases']],
@@ -81,7 +82,7 @@ const logout = () => router.post('/logout');
         <Flash />
         <div v-if="open" class="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-sm lg:hidden" @click="closeMenu"></div>
         <aside :class="['fixed inset-y-0 left-0 z-50 flex w-[82vw] max-w-64 flex-col border-r border-slate-800 bg-slate-950 transition-transform duration-300 lg:w-60 lg:max-w-none lg:translate-x-0', open ? 'translate-x-0' : '-translate-x-full']">
-            <div class="flex h-[60px] items-center justify-between border-b border-slate-800 px-3.5 sm:h-[62px] sm:px-4"><Link href="/admin" @click="closeMenu"><img src="/assets/prinx-logo.png" class="h-8 w-auto brightness-0 invert sm:h-9" alt="Prinx Electronics"></Link><button class="flex h-9 w-9 items-center justify-center rounded-[8px] border border-slate-700 text-white lg:hidden" aria-label="Close navigation" @click="closeMenu"><Icon name="x-circle" :size="18" /></button></div>
+            <div class="flex h-[60px] items-center justify-between border-b border-slate-800 px-3.5 sm:h-[62px] sm:px-4"><Link href="/admin" @click="closeMenu"><img src="/assets/prinx-logo.png" class="h-8 w-auto brightness-0 invert sm:h-9" alt="Prinx Tech"></Link><button class="flex h-9 w-9 items-center justify-center rounded-[8px] border border-slate-700 text-white lg:hidden" aria-label="Close navigation" @click="closeMenu"><Icon name="x-circle" :size="18" /></button></div>
             <div class="scrollbar-hidden flex-1 overflow-y-auto p-2.5 sm:p-3">
                 <div v-for="section in sections" :key="section.label" class="mb-4"><p class="mb-1.5 px-2.5 text-[9px] font-medium uppercase tracking-[.16em] text-slate-500">{{ section.label }}</p><nav class="space-y-0.5"><Link v-for="item in section.items" :key="item[1]" :href="item[1]" :class="['group flex items-center gap-2.5 rounded-[8px] px-2 py-1.5 text-[13px] font-medium transition sm:py-1.5', active(item[1]) ? 'bg-prinx-500 text-white shadow-md shadow-prinx-500/15' : 'text-slate-300 hover:bg-slate-900 hover:text-white']" @click="closeMenu"><span :class="['flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] transition', active(item[1]) ? 'bg-white/15 text-white' : 'bg-slate-900 text-slate-400 group-hover:bg-slate-800 group-hover:text-prinx-400']"><Icon :name="item[2]" :size="16" /></span><span class="min-w-0 truncate">{{ item[0] }}</span></Link></nav></div>
             </div>

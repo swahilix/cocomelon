@@ -1,7 +1,7 @@
 import { createSSRApp, h } from 'vue';
 import { createInertiaApp, router } from '@inertiajs/vue3';
 
-const appName = 'Prinx Electronics';
+const appName = 'Prinx Tech';
 const formatTitle = (title) => !title
     ? appName
     : title.toLowerCase().includes(appName.toLowerCase())

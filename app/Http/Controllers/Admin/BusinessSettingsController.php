@@ -147,9 +147,9 @@ class BusinessSettingsController extends Controller
                     'business',
                     'accepted payment methods',
                     [
-                        'title' => 'Accepted payment methods | Prinx Electronics',
-                        'description' => 'Payment methods accepted by Prinx Electronics.',
-                        'keywords' => ['payment methods', 'Prinx Electronics', 'Tanzania'],
+                        'title' => 'Accepted payment methods | Prinx Tech',
+                        'description' => 'Payment methods accepted by Prinx Tech.',
+                        'keywords' => ['payment methods', 'Prinx Tech', 'Tanzania'],
                     ]
                 );
             } catch (Throwable $exception) {
