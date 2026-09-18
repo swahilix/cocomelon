@@ -173,10 +173,6 @@ class Product extends Model
             return 'Out of Stock';
         }
 
-        if ($this->low_stock) {
-            return 'Only '.(int) $this->stock_quantity.' left in stock';
-        }
-
         return 'In Stock';
     }
 

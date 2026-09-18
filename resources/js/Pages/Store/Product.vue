@@ -63,8 +63,6 @@ const displayStockQuantity = computed(() => selectedVariant.value ? Number(selec
 const displayStockMessage = computed(() => {
     if (!displayInStock.value) return 'Out of Stock';
     if (selectedVariant.value) {
-        const threshold = Number(props.product.low_stock_threshold || 0);
-        if (threshold > 0 && displayStockQuantity.value <= threshold) return `Only ${displayStockQuantity.value} left in stock`;
         return 'In Stock';
     }
     return props.product.stock_message || 'In Stock';
