@@ -324,8 +324,8 @@ onBeforeUnmount(() => {
                         <h2 class="text-[16px] font-semibold text-slate-950">Subscribe & Get 5% Off</h2>
                         <p class="mt-1 text-[11px] text-slate-600">Get the latest deals, new arrivals and exclusive offers.</p>
                     </div>
-                    <div class="flex h-[42px] overflow-hidden rounded-[7px] border border-slate-200 bg-white">
-                        <input v-model="newsletterEmail" type="email" required class="min-w-0 flex-1 border-0 px-4 text-[11px] text-slate-800 outline-none placeholder:text-slate-400" :placeholder="subscribed ? 'Thank you for subscribing' : 'Enter your email address'">
+                    <div class="flex h-11 overflow-hidden rounded-[7px] border border-slate-200 bg-white">
+                        <input v-model="newsletterEmail" type="email" required aria-label="Email address for newsletter" class="min-w-0 flex-1 border-0 px-4 text-[11px] text-slate-800 outline-none placeholder:text-slate-400" :placeholder="subscribed ? 'Thank you for subscribing' : 'Enter your email address'">
                         <button type="submit" class="min-w-[110px] bg-prinx-500 px-4 text-[11px] font-semibold text-white transition hover:bg-prinx-600">{{ subscribed ? 'Subscribed' : 'Subscribe' }}</button>
                     </div>
                 </form>

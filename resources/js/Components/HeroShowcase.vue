@@ -66,16 +66,16 @@ onBeforeUnmount(clearTimer);
                 @focusin="clearTimer"
                 @focusout="restart"
             >
-                <div class="relative overflow-hidden rounded-[16px] border border-slate-200 bg-white shadow-[0_14px_44px_rgba(15,23,42,.08)]">
+                <div class="relative aspect-[16/5] overflow-hidden rounded-[16px] border border-slate-200 bg-white shadow-[0_14px_44px_rgba(15,23,42,.08)]">
                     <Transition name="banner-fade" mode="out-in">
                         <a
                             v-if="activeSlide.link_url"
                             :key="`${activeSlide.id}-link`"
                             :href="activeSlide.link_url"
-                            class="block"
+                            class="absolute inset-0 block h-full w-full"
                             :aria-label="activeSlide.image_alt || activeSlide.headline || 'Open banner link'"
                         >
-                            <picture class="block aspect-[16/5] overflow-hidden bg-white">
+                            <picture class="block h-full w-full overflow-hidden bg-white">
                                 <img
                                     :src="activeSlide.image_url"
                                     :alt="activeSlide.image_alt || activeSlide.headline || 'Prinx Electronics banner'"
@@ -89,7 +89,7 @@ onBeforeUnmount(clearTimer);
                             </picture>
                         </a>
 
-                        <picture v-else :key="`${activeSlide.id}-image`" class="block aspect-[16/5] overflow-hidden bg-white">
+                        <picture v-else :key="`${activeSlide.id}-image`" class="absolute inset-0 block h-full w-full overflow-hidden bg-white">
                             <img
                                 :src="activeSlide.image_url"
                                 :alt="activeSlide.image_alt || activeSlide.headline || 'Prinx Electronics banner'"
@@ -103,7 +103,7 @@ onBeforeUnmount(clearTimer);
                         </picture>
                     </Transition>
 
-                    <div v-if="carouselSlides.length > 1" class="absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 items-center rounded-full bg-white/80 px-1 py-0.5 shadow-sm backdrop-blur sm:bottom-4 sm:px-1.5 sm:py-1" aria-label="Choose banner">
+                    <div v-if="carouselSlides.length > 1" class="absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 items-center rounded-full bg-white/80 px-1 py-0.5 shadow-sm backdrop-blur sm:bottom-4 sm:px-1.5 sm:py-1" role="group" aria-label="Choose banner">
                         <button
                             v-for="(slide, index) in carouselSlides"
                             :key="slide.id"

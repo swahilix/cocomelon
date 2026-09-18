@@ -50,19 +50,19 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                     </Link>
 
                     <div class="relative">
-                        <button type="button" class="flex h-[50px] w-full items-center gap-3 rounded-[10px] bg-[#f7b900] px-4 text-left text-[13px] font-semibold text-slate-950 shadow-sm transition hover:bg-[#eeb200]" @click="categoryOpen = !categoryOpen">
+                        <button type="button" class="flex h-[50px] w-full items-center gap-3 rounded-[10px] bg-[#f7b900] px-4 text-left text-[13px] font-semibold text-slate-950 shadow-sm transition hover:bg-[#eeb200]" aria-controls="desktop-category-menu" :aria-expanded="categoryOpen ? 'true' : 'false'" @click="categoryOpen = !categoryOpen">
                             <svg viewBox="0 0 24 24" class="h-[18px] w-[18px] fill-none stroke-current" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
                             <span class="min-w-0 flex-1 truncate">All Categories</span>
                             <svg viewBox="0 0 20 20" class="h-3.5 w-3.5 fill-current transition" :class="categoryOpen ? 'rotate-180' : ''" aria-hidden="true"><path d="M5.2 7.4a1 1 0 0 1 1.4 0L10 10.8l3.4-3.4a1 1 0 1 1 1.4 1.4l-4.1 4.1a1 1 0 0 1-1.4 0L5.2 8.8a1 1 0 0 1 0-1.4Z"/></svg>
                         </button>
-                        <div v-if="categoryOpen" class="absolute left-0 top-[58px] z-50 w-[280px] overflow-hidden rounded-[9px] border border-slate-200 bg-white py-1.5 shadow-[0_18px_50px_rgba(15,23,42,.14)]">
+                        <div v-if="categoryOpen" id="desktop-category-menu" class="absolute left-0 top-[58px] z-50 w-[280px] overflow-hidden rounded-[9px] border border-slate-200 bg-white py-1.5 shadow-[0_18px_50px_rgba(15,23,42,.14)]">
                             <Link href="/shop" class="block px-4 py-2.5 text-[12px] font-semibold text-slate-700 transition hover:bg-amber-50 hover:text-amber-700" @click="categoryOpen = false">Shop all products</Link>
                             <Link v-for="category in productCategories" :key="category.id" :href="`/shop?category=${encodeURIComponent(category.slug)}`" class="block border-t border-slate-100 px-4 py-2.5 text-[12px] text-slate-600 transition hover:bg-amber-50 hover:text-amber-700" @click="categoryOpen = false">{{ category.name }}</Link>
                         </div>
                     </div>
 
                     <form class="flex h-[50px] min-w-0 items-center rounded-[10px] border border-slate-200 bg-white px-4 shadow-[0_3px_15px_rgba(15,23,42,.03)] transition focus-within:border-amber-300" @submit.prevent="submitSearch">
-                        <input v-model="search" class="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-slate-800 outline-none placeholder:text-slate-400" placeholder="Search for products...">
+                        <input v-model="search" aria-label="Search products" class="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-slate-800 outline-none placeholder:text-slate-400" placeholder="Search for products...">
                         <button type="submit" class="ml-3 flex h-8 w-8 shrink-0 items-center justify-center text-slate-500 transition hover:text-amber-600" aria-label="Search">
                             <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path stroke-linecap="round" d="m16 16 4 4"/></svg>
                         </button>
@@ -146,7 +146,7 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                         <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5h2l2 10h10l2-7H7M9 19.2a1.2 1.2 0 1 0 0 .1Zm7 0a1.2 1.2 0 1 0 0 .1Z"/></svg>
                         <span v-if="cartCount" class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#f7b900] px-1 text-[9px] font-bold text-slate-950">{{ cartCount }}</span>
                     </Link>
-                    <button type="button" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[8px] border border-slate-200 bg-white text-slate-800" aria-label="Menu" @click="open = !open">
+                    <button type="button" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[8px] border border-slate-200 bg-white text-slate-800" aria-label="Menu" aria-controls="mobile-navigation" :aria-expanded="open ? 'true' : 'false'" @click="open = !open">
                         <svg v-if="!open" viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
                         <svg v-else viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18"/></svg>
                     </button>
@@ -154,12 +154,12 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
 
                 <div class="container-shell pb-3">
                     <form class="flex h-11 overflow-hidden rounded-[8px] border border-slate-200 bg-white" @submit.prevent="submitSearch">
-                        <input v-model="search" class="min-w-0 flex-1 border-0 px-3 text-[13px] outline-none" placeholder="Search for products...">
+                        <input v-model="search" aria-label="Search products" class="min-w-0 flex-1 border-0 px-3 text-[13px] outline-none" placeholder="Search for products...">
                         <button type="submit" class="flex w-12 items-center justify-center bg-[#f7b900] text-slate-950" aria-label="Search"><svg viewBox="0 0 24 24" class="h-[18px] w-[18px] fill-none stroke-current" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path stroke-linecap="round" d="m16 16 4 4"/></svg></button>
                     </form>
                 </div>
 
-                <div v-if="open" class="border-t border-slate-100 bg-white">
+                <div v-if="open" id="mobile-navigation" class="border-t border-slate-100 bg-white">
                     <div class="container-shell max-h-[calc(100vh-120px)] overflow-y-auto py-3">
                         <div class="grid grid-cols-2 gap-2 text-[13px] font-medium">
                             <Link href="/" class="rounded-[8px] border border-slate-200 px-3 py-3">Home</Link>

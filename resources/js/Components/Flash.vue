@@ -97,7 +97,7 @@ onBeforeUnmount(() => {
         <div
             v-if="visible && message"
             class="fixed right-2.5 top-2.5 z-[100] w-[calc(100%-1.25rem)] max-w-[320px] sm:right-4 sm:top-4 sm:w-full"
-            role="alert"
+            role="status"
             aria-live="polite"
         >
             <div
