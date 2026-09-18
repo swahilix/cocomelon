@@ -61,5 +61,57 @@ Artisan::command('media:optimize-storefront-images', function (): void {
         ->whereNotNull('logo')
         ->each(fn (Brand $brand) => $optimize($brand->logo, [160, 240]));
 
+    $logoSource = public_path('assets/prinx-logo.png');
+    if (is_file($logoSource)) {
+        foreach ([180, 360] as $width) {
+            try {
+                $destination = public_path("assets/prinx-logo-{$width}.webp");
+                $sourceModified = filemtime($logoSource) ?: time();
+
+                if (is_file($destination) && (filemtime($destination) ?: 0) >= $sourceModified) {
+                    continue;
+                }
+
+                if (extension_loaded('imagick')) {
+                    $logo = new \Imagick($logoSource);
+                    $logo->setImageFormat('webp');
+                    $logo->setImageCompressionQuality(82);
+                    $logo->stripImage();
+                    $logo->thumbnailImage($width, 0);
+                    $logo->writeImage($destination);
+                    $logo->clear();
+                    $generated++;
+                    continue;
+                }
+
+                if (extension_loaded('gd') && function_exists('imagewebp')) {
+                    $source = @imagecreatefromstring((string) file_get_contents($logoSource));
+                    if ($source === false) {
+                        throw new \RuntimeException('Unable to decode logo.');
+                    }
+
+                    $sourceWidth = imagesx($source);
+                    $sourceHeight = imagesy($source);
+                    $height = max(1, (int) round($sourceHeight * ($width / max(1, $sourceWidth))));
+                    $target = imagecreatetruecolor($width, $height);
+                    imagealphablending($target, false);
+                    imagesavealpha($target, true);
+                    imagecopyresampled($target, $source, 0, 0, 0, 0, $width, $height, $sourceWidth, $sourceHeight);
+
+                    if (! imagewebp($target, $destination, 82)) {
+                        throw new \RuntimeException('Unable to encode optimized logo.');
+                    }
+
+                    imagedestroy($source);
+                    imagedestroy($target);
+                    $generated++;
+                }
+            } catch (\Throwable $exception) {
+                $failed++;
+                $this->warn('Skipped Prinx logo optimization: '.$exception->getMessage());
+            }
+        }
+    }
+
     $this->info("Responsive storefront images ready ({$generated} variants, {$failed} skipped).");
 })->purpose('Generate cached responsive WebP images for the public storefront.');

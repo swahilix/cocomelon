@@ -5,7 +5,22 @@
         window.dataLayer = window.dataLayer || [];
         window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
         window.addEventListener('load', function () {
+            let loaded = false;
+            let fallbackTimer = null;
+            const events = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
+
+            const cleanup = function () {
+                events.forEach(function (eventName) {
+                    window.removeEventListener(eventName, triggerAnalytics);
+                });
+                if (fallbackTimer) window.clearTimeout(fallbackTimer);
+            };
+
             const loadAnalytics = function () {
+                if (loaded) return;
+                loaded = true;
+                cleanup();
+
                 const script = document.createElement('script');
                 script.async = true;
                 script.src = 'https://www.googletagmanager.com/gtag/js?id=GT-WVG5CCB7';
@@ -16,11 +31,19 @@
                 document.head.appendChild(script);
             };
 
-            if ('requestIdleCallback' in window) {
-                window.requestIdleCallback(loadAnalytics, { timeout: 3000 });
-            } else {
-                window.setTimeout(loadAnalytics, 1500);
-            }
+            const triggerAnalytics = function () {
+                if ('requestIdleCallback' in window) {
+                    window.requestIdleCallback(loadAnalytics, { timeout: 1200 });
+                } else {
+                    window.setTimeout(loadAnalytics, 0);
+                }
+            };
+
+            events.forEach(function (eventName) {
+                window.addEventListener(eventName, triggerAnalytics, { once: true, passive: true });
+            });
+
+            fallbackTimer = window.setTimeout(loadAnalytics, 12000);
         }, { once: true });
     </script>
 
@@ -48,7 +71,7 @@
         >
     @endif
 
-    @if (app()->environment('production') && request()->path() === '/')
+    @if (app()->environment('production') && request()->getPathInfo() === '/')
         <style>{!! \Illuminate\Support\Facades\Vite::content('resources/css/storefront-bundle.css') !!}</style>
         @vite('resources/js/app.js')
     @else

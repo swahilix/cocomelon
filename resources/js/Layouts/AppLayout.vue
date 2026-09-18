@@ -46,7 +46,7 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
             <div class="hidden border-b border-slate-100 lg:block">
                 <div class="container-shell grid h-[92px] grid-cols-[180px_180px_minmax(300px,1fr)_240px_auto] items-center gap-5">
                     <Link href="/" class="flex min-w-0 items-center">
-                        <img src="/assets/prinx-logo.png" :alt="store.name" width="340" height="100" class="h-[46px] w-auto max-w-[170px] object-contain">
+                        <picture><source type="image/webp" srcset="/assets/prinx-logo-180.webp 180w, /assets/prinx-logo-360.webp 360w" sizes="170px"><img src="/assets/prinx-logo.png" :alt="store.name" width="340" height="100" class="h-[46px] w-auto max-w-[170px] object-contain"></picture>
                     </Link>
 
                     <div class="relative">
@@ -137,7 +137,7 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
 
             <div class="lg:hidden">
                 <div class="container-shell flex h-[64px] items-center gap-3">
-                    <Link href="/" class="min-w-0 flex-1"><img src="/assets/prinx-logo.png" :alt="store.name" width="340" height="100" class="h-9 w-auto max-w-[165px] object-contain"></Link>
+                    <Link href="/" class="min-w-0 flex-1"><picture><source type="image/webp" srcset="/assets/prinx-logo-180.webp 180w, /assets/prinx-logo-360.webp 360w" sizes="150px"><img src="/assets/prinx-logo.png" :alt="store.name" width="340" height="100" class="h-9 w-auto max-w-[165px] object-contain"></picture></Link>
                     <Link data-mobile-wishlist-link :href="user ? '/wishlist' : '/login'" class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900" aria-label="Wishlist">
                         <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 9.2c0 5.4-8.5 10-8.5 10s-8.5-4.6-8.5-10A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8Z"/></svg>
                         <span v-if="wishlistCount" data-wishlist-badge class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#f7b900] px-1 text-[9px] font-bold text-slate-950">{{ wishlistCount }}</span>
@@ -188,7 +188,7 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
             <div class="container-shell py-8">
                 <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-[1.35fr_.8fr_1fr_.9fr_1fr]">
                     <div class="max-w-[270px]">
-                        <img src="/assets/prinx-logo.png" :alt="store.name" width="340" height="100" class="h-10 w-auto max-w-[160px] object-contain">
+                        <picture><source type="image/webp" srcset="/assets/prinx-logo-180.webp 180w, /assets/prinx-logo-360.webp 360w" sizes="160px"><img src="/assets/prinx-logo.png" :alt="store.name" width="340" height="100" class="h-10 w-auto max-w-[160px] object-contain"></picture>
                         <p class="mt-3 text-[10px] leading-5 text-slate-600">{{ store.description || 'Your one-stop destination for original tech products, accessories and support.' }}</p>
                         <div v-if="socialLinks.length" class="mt-4 flex items-center gap-2">
                             <a v-for="social in socialLinks" :key="social.key" :href="social.url" target="_blank" rel="noopener" :aria-label="social.label" class="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-[12px] font-semibold text-slate-700 transition hover:border-prinx-200 hover:text-prinx-700">{{ social.short }}</a>

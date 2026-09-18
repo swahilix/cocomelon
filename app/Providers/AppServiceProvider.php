@@ -40,7 +40,7 @@ class AppServiceProvider extends ServiceProvider
         Product::observe(ProductObserver::class);
 
         View::composer('app', function ($view): void {
-            if (request()->path() !== '/') {
+            if (request()->getPathInfo() !== '/') {
                 return;
             }
 

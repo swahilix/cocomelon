@@ -279,7 +279,7 @@ onBeforeUnmount(() => {
                 <div class="mt-4 grid grid-cols-2 gap-[10px] sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                     <article v-for="product in shopRowProducts" :key="product.id" class="group min-w-0 overflow-hidden rounded-[8px] border border-slate-200 bg-white transition hover:border-prinx-200 hover:shadow-[0_10px_24px_rgba(15,23,42,.06)]">
                         <Link :href="`/products/${product.slug}`" class="relative block h-[156px] overflow-hidden bg-white p-3">
-                            <img :src="product.image_url" :srcset="product.image_srcset || undefined" sizes="180px" :alt="product.name" width="180" height="180" class="h-full w-full object-contain transition duration-300 group-hover:scale-[1.025]" loading="lazy" decoding="async">
+                            <img :src="product.image_url" :srcset="product.image_srcset || undefined" sizes="(max-width: 639px) 100px, 180px" :alt="product.name" width="180" height="180" class="h-full w-full object-contain transition duration-300 group-hover:scale-[1.025]" loading="lazy" decoding="async">
                             <span v-if="discountPercent(product)" class="absolute right-2 top-2 rounded-[10px] bg-prinx-50 px-2 py-1 text-[9px] font-semibold text-prinx-700">-{{ discountPercent(product) }}%</span>
                         </Link>
                         <div class="px-3 pb-3">
@@ -340,7 +340,7 @@ onBeforeUnmount(() => {
             <div class="container-shell py-8">
                 <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-[1.35fr_.8fr_1fr_.9fr_1fr]">
                     <div class="max-w-[270px]">
-                        <img src="/assets/prinx-logo.png" :alt="store.name" width="340" height="100" class="h-10 w-auto max-w-[160px] object-contain">
+                        <picture><source type="image/webp" srcset="/assets/prinx-logo-180.webp 180w, /assets/prinx-logo-360.webp 360w" sizes="160px"><img src="/assets/prinx-logo.png" :alt="store.name" width="340" height="100" class="h-10 w-auto max-w-[160px] object-contain"></picture>
                         <p class="mt-3 text-[10px] leading-5 text-slate-600">{{ store.description || 'Your one-stop destination for original tech products, accessories and support.' }}</p>
                         <div v-if="socialLinks.length" class="mt-4 flex items-center gap-2">
                             <a v-for="social in socialLinks" :key="social.key" :href="social.url" target="_blank" rel="noopener" :aria-label="social.label" class="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-[12px] font-semibold text-slate-700 transition hover:border-prinx-200 hover:text-prinx-700">{{ social.short }}</a>
