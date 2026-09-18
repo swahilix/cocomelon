@@ -3,6 +3,7 @@ import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import ProductDescription from '../../Components/ProductDescription.vue';
+import ProductRating from '../../Components/ProductRating.vue';
 import SeoHead from '../../Components/SeoHead.vue';
 
 const props = defineProps({
@@ -318,9 +319,8 @@ function submitReview() {
                     <h1 class="text-[28px] font-semibold leading-[1.1] tracking-[-.025em] text-slate-950 sm:text-[34px]">{{ product.name }}</h1>
 
                     <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[10px] text-slate-500">
-                        <button type="button" class="inline-flex items-center gap-2" @click="activeTab = 'reviews'">
-                            <span class="tracking-[-1px] text-amber-500">{{ starsFor(reviewAverage) }}</span>
-                            <span>{{ reviewAverage ? reviewAverage.toFixed(1) : 'No rating' }} · {{ reviewCount }} {{ reviewCount === 1 ? 'review' : 'reviews' }}</span>
+                        <button type="button" class="inline-flex items-center" @click="activeTab = 'reviews'">
+                            <ProductRating class="text-[10px]" :rating="reviewAverage" :count="reviewCount" />
                         </button>
                         <span class="text-slate-300">•</span>
                         <span>Brand: <strong class="font-medium text-slate-700">{{ product.brand?.name || 'Prinx' }}</strong></span>
@@ -513,8 +513,8 @@ function submitReview() {
                     <header class="flex items-center justify-between border-b border-slate-200 px-4 py-3"><span class="text-[10px] font-semibold text-slate-800">Customer rating</span><button type="button" class="text-[9px] font-medium text-prinx-600" @click="activeTab = 'reviews'">View reviews</button></header>
                     <div class="flex min-h-[190px] flex-col items-center justify-center px-6 text-center">
                         <strong class="text-[34px] font-semibold leading-none text-slate-950">{{ reviewCount ? reviewAverage.toFixed(1) : '—' }}</strong>
-                        <div class="mt-2 text-[16px] tracking-[-1px] text-amber-500">{{ starsFor(reviewAverage) }}</div>
-                        <p class="mt-2 text-[10px] text-slate-500">Based on {{ reviewCount }} verified {{ reviewCount === 1 ? 'review' : 'reviews' }}</p>
+                        <ProductRating class="mt-2 text-[16px]" :rating="reviewAverage" :count="reviewCount" />
+                        <p class="mt-2 text-[10px] text-slate-500">{{ reviewCount ? 'Verified customer reviews' : 'No customer reviews yet' }}</p>
                         <button type="button" class="mt-4 h-10 rounded-[6px] border border-prinx-200 bg-white px-4 text-[10px] font-semibold text-prinx-700" @click="activeTab = 'reviews'">{{ reviewEligibility.can_review ? 'Write a review' : 'Read reviews' }}</button>
                     </div>
                 </article>
@@ -534,7 +534,7 @@ function submitReview() {
                         </Link>
                         <div class="flex min-w-0 flex-col justify-center border-l border-slate-100 p-3">
                             <Link :href="`/products/${item.slug}`" class="line-clamp-2 text-[9px] font-semibold leading-4 text-slate-800 transition group-hover:text-prinx-600">{{ item.name }}</Link>
-                            <div class="mt-1 text-[9px] text-slate-500"><span class="text-amber-500">★</span> {{ Number(item.approved_reviews_average || 0).toFixed(1) }} <span>({{ item.approved_reviews_count || 0 }})</span></div>
+                            <ProductRating class="mt-1 text-[9px]" :rating="item.approved_reviews_average || 0" :count="item.approved_reviews_count || 0" />
                             <div class="mt-1 flex flex-wrap items-center gap-2"><strong class="text-[9px] font-semibold text-slate-800">{{ money(item.current_price) }}</strong><span v-if="Number(item.current_price) < Number(item.price)" class="text-[8px] text-slate-400 line-through">{{ money(item.price) }}</span></div>
                             <div class="mt-2 flex items-center gap-2">
                                 <button type="button" class="h-7 flex-1 rounded-[5px] border border-prinx-300 bg-white px-2 text-[8px] font-semibold text-prinx-600 hover:bg-prinx-500 hover:text-white disabled:border-slate-200 disabled:text-slate-400" :disabled="!item.in_stock" @click="addRelated(item)">{{ Number(item.active_variants_count || 0) > 0 ? 'Select options' : 'Add to Cart' }}</button>

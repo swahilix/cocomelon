@@ -3,6 +3,7 @@ import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import SeoHead from '../../Components/SeoHead.vue';
+import ProductRating from '../../Components/ProductRating.vue';
 
 const props = defineProps({
     products: Object,
@@ -109,8 +110,6 @@ const discount = (product) => {
     if (!regular || current >= regular) return 0;
     return Math.max(1, Math.round(((regular - current) / regular) * 100));
 };
-const reviewCount = (product) => Number(product?.approved_reviews_count || 0);
-const reviewAverage = (product) => Number(product?.approved_reviews_average || 0);
 const addToCart = (product) => {
     if (Number(product.active_variants_count || 0) > 0) {
         router.visit(`/products/${product.slug}`);
@@ -254,7 +253,7 @@ const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label 
                             </Link>
                             <div class="px-3 pb-3">
                                 <Link :href="`/products/${product.slug}`" class="line-clamp-1 block min-h-[16px] text-[10px] font-semibold text-slate-800 transition group-hover:text-prinx-600">{{ product.name }}</Link>
-                                <div class="mt-2 flex items-center gap-1 text-[9px]"><span class="text-amber-500">★</span><span class="text-slate-500">{{ reviewCount(product) ? reviewAverage(product).toFixed(1) : 'No reviews' }}</span><span v-if="reviewCount(product)" class="text-slate-400">({{ reviewCount(product) }})</span></div>
+                                <ProductRating class="mt-2 text-[9px]" :rating="product.approved_reviews_average || 0" :count="product.approved_reviews_count || 0" />
                                 <div class="mt-2 flex min-h-[28px] flex-wrap items-baseline gap-x-2 gap-y-0.5">
                                     <strong class="text-[10px] font-semibold text-slate-800">{{ money(product.current_price) }}</strong>
                                     <span v-if="Number(product.current_price) < Number(product.price)" class="text-[9px] text-slate-400 line-through">{{ money(product.price) }}</span>
@@ -275,7 +274,7 @@ const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label 
                             <Link :href="`/products/${product.slug}`" class="flex h-[110px] w-[120px] shrink-0 items-center justify-center"><img :src="product.image_url" :alt="product.name" class="h-full w-full object-contain"></Link>
                             <div class="flex min-w-0 flex-1 flex-col justify-center">
                                 <Link :href="`/products/${product.slug}`" class="text-[13px] font-semibold text-slate-800 hover:text-prinx-600">{{ product.name }}</Link>
-                                <div class="mt-2 text-[10px] text-slate-500"><span class="text-amber-500">★</span> {{ reviewCount(product) ? reviewAverage(product).toFixed(1) : 'No reviews' }} <span v-if="reviewCount(product)" class="ml-1 text-slate-400">({{ reviewCount(product) }})</span></div>
+                                <ProductRating class="mt-2 text-[10px]" :rating="product.approved_reviews_average || 0" :count="product.approved_reviews_count || 0" />
                                 <div class="mt-2 flex items-center gap-3"><strong class="text-[12px]">{{ money(product.current_price) }}</strong><span v-if="Number(product.current_price) < Number(product.price)" class="text-[10px] text-slate-400 line-through">{{ money(product.price) }}</span></div>
                             </div>
                             <div class="my-auto flex flex-col gap-2">

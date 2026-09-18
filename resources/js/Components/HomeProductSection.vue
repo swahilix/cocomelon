@@ -1,6 +1,7 @@
 <script setup>
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import ProductRating from './ProductRating.vue';
 
 const props = defineProps({
     title: { type: String, required: true },
@@ -21,8 +22,6 @@ const money = (value) => new Intl.NumberFormat('en-TZ', {
     maximumFractionDigits: 0,
 }).format(Number(value || 0));
 
-const reviewCount = (product) => Number(product?.approved_reviews_count || 0);
-const reviewAverage = (product) => Number(product?.approved_reviews_average || 0);
 const discountPercent = (product) => {
     const regular = Number(product?.price || 0);
     const current = Number(product?.current_price || regular);
@@ -74,11 +73,11 @@ function addToCart(product) {
                         <p v-if="product.brand?.name" class="truncate text-[8px] font-medium uppercase tracking-[.08em] text-slate-400">{{ product.brand.name }}</p>
                         <Link :href="`/products/${product.slug}`" class="mt-1 line-clamp-2 block min-h-[32px] text-[10px] font-semibold leading-4 text-slate-800 transition group-hover:text-prinx-600">{{ product.name }}</Link>
 
-                        <div class="mt-1.5 flex min-h-[18px] items-center gap-1 text-[9px]">
-                            <span class="text-amber-500">★</span>
-                            <span class="text-slate-500">{{ reviewCount(product) ? reviewAverage(product).toFixed(1) : 'No reviews' }}</span>
-                            <span v-if="reviewCount(product)" class="text-slate-400">({{ reviewCount(product) }})</span>
-                        </div>
+                        <ProductRating
+                            class="mt-1.5 min-h-[18px] text-[9px]"
+                            :rating="product.approved_reviews_average || 0"
+                            :count="product.approved_reviews_count || 0"
+                        />
 
                         <p v-if="metricKey && Number(product[metricKey] || 0) > 0" class="mt-1 text-[9px] font-medium text-slate-500">
                             {{ Number(product[metricKey]).toLocaleString() }} {{ metricLabel }}

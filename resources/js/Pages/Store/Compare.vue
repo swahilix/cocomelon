@@ -13,9 +13,12 @@ const money = (value) => new Intl.NumberFormat('en-TZ', {
     maximumFractionDigits: 0,
 }).format(Number(value || 0));
 const specs = computed(() => [...new Set(props.products.flatMap((product) => Object.keys(product.specifications || {})))]);
-const rating = (product) => Number(product.approved_reviews_count || 0)
-    ? `${Number(product.approved_reviews_average || 0).toFixed(1)} / 5 (${product.approved_reviews_count})`
-    : 'No reviews yet';
+const rating = (product) => {
+    const count = Math.max(0, Number(product.approved_reviews_count || 0));
+    const average = Math.max(0, Math.min(5, Number(product.approved_reviews_average || 0)));
+    const filled = count > 0 ? Math.round(average) : 0;
+    return `${'★'.repeat(filled)}${'☆'.repeat(5 - filled)} (${count})`;
+};
 const variantSummary = (product) => (product.variants || []).map((variant) => variant.display_name).join(', ') || 'No variants';
 </script>
 

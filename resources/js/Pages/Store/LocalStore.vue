@@ -3,6 +3,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import SeoHead from '../../Components/SeoHead.vue';
+import ProductRating from '../../Components/ProductRating.vue';
 
 defineProps({
     categories: { type: Array, default: () => [] },
@@ -95,7 +96,7 @@ const money = (value) => new Intl.NumberFormat('en-TZ', {
                     <Link v-for="product in products" :key="product.id" :href="`/products/${product.slug}`" class="rounded-[8px] border border-slate-200 bg-white p-3 hover:border-prinx-200">
                         <img :src="product.image_url" :alt="product.name" class="h-32 w-full object-contain">
                         <strong class="mt-2 line-clamp-2 block text-[10px] leading-4 text-slate-800">{{ product.name }}</strong>
-                        <div class="mt-1 text-[9px] text-slate-500"><span class="text-amber-500">★</span> {{ Number(product.approved_reviews_average || 0).toFixed(1) }} <span>({{ product.approved_reviews_count || 0 }})</span></div>
+                        <ProductRating class="mt-1 text-[9px]" :rating="product.approved_reviews_average || 0" :count="product.approved_reviews_count || 0" />
                         <span class="mt-2 block text-[10px] font-semibold text-prinx-600">{{ money(product.current_price) }}</span>
                     </Link>
                 </div>
