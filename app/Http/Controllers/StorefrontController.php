@@ -34,7 +34,7 @@ class StorefrontController extends Controller
     {
         $newArrivals = $this->productCardsQuery()
             ->latest('products.created_at')
-            ->take(5)
+            ->take(6)
             ->get();
 
         $dailyDeals = $this->productCardsQuery()
@@ -45,7 +45,7 @@ class StorefrontController extends Controller
             ->where(fn ($query) => $query->whereNull('sale_ends_at')->orWhere('sale_ends_at', '>=', now()))
             ->orderByRaw('CASE WHEN sale_ends_at IS NULL THEN 1 ELSE 0 END')
             ->orderBy('sale_ends_at')
-            ->take(5)
+            ->take(6)
             ->get();
 
         $bestSellerRows = OrderItem::query()
@@ -56,7 +56,7 @@ class StorefrontController extends Controller
             ->where('orders.status', 'completed')
             ->groupBy('order_items.product_id')
             ->orderByDesc('units_sold')
-            ->take(5)
+            ->take(6)
             ->get();
 
         $bestSellers = $this->rankedProducts(
@@ -93,7 +93,7 @@ class StorefrontController extends Controller
                 });
         }
 
-        $trendingScores = $trendingScores->sortDesc()->take(5);
+        $trendingScores = $trendingScores->sortDesc()->take(6);
         $trending = $this->rankedProducts(
             $trendingScores->keys()->map(fn ($id) => (int) $id)->all(),
             $trendingScores->all(),

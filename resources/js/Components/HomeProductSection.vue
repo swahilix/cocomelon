@@ -52,8 +52,8 @@ function addToCart(product) {
                 <Link :href="viewAllHref" class="shrink-0 text-[11px] font-medium text-prinx-600 transition hover:text-prinx-700">View all <span aria-hidden="true">→</span></Link>
             </div>
 
-            <div class="mt-4 grid grid-cols-2 gap-[10px] sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                <article v-for="product in products.slice(0, 5)" :key="product.id" class="group min-w-0 overflow-hidden rounded-[8px] border border-slate-200 bg-white transition hover:border-prinx-200 hover:shadow-[0_10px_24px_rgba(15,23,42,.06)]">
+            <div class="mt-4 grid grid-cols-2 gap-[10px] sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                <article v-for="product in products.slice(0, 6)" :key="product.id" class="group min-w-0 overflow-hidden rounded-[8px] border border-slate-200 bg-white transition hover:border-prinx-200 hover:shadow-[0_10px_24px_rgba(15,23,42,.06)]">
                     <Link :href="`/products/${product.slug}`" class="relative block h-[156px] overflow-hidden bg-white p-3">
                         <img
                             :src="product.image_url"
