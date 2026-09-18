@@ -39,7 +39,7 @@ class MailCredentialVault
     public function imapPassword(MailAccount $account): string
     {
         return $this->decrypt(
-            $account->getRawOriginal('imap_password_encrypted'),
+            $account->getAttributes()['imap_password_encrypted'] ?? null,
             'IMAP',
         );
     }
@@ -47,7 +47,7 @@ class MailCredentialVault
     public function smtpPassword(MailAccount $account): string
     {
         return $this->decrypt(
-            $account->getRawOriginal('smtp_password_encrypted'),
+            $account->getAttributes()['smtp_password_encrypted'] ?? null,
             'SMTP',
         );
     }

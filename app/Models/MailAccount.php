@@ -82,12 +82,12 @@ class MailAccount extends Model
 
     public function hasStoredImapPassword(): bool
     {
-        return filled($this->getRawOriginal('imap_password_encrypted'));
+        return filled($this->getAttributes()['imap_password_encrypted'] ?? null);
     }
 
     public function hasStoredSmtpPassword(): bool
     {
-        return filled($this->getRawOriginal('smtp_password_encrypted'));
+        return filled($this->getAttributes()['smtp_password_encrypted'] ?? null);
     }
 
     public function scopeActive(Builder $query): Builder

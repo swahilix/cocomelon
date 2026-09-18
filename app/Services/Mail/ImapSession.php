@@ -163,6 +163,10 @@ class ImapSession
             throw ImapException::failed('Invalid IMAP command.');
         }
 
+        if (feof($this->stream)) {
+            throw ImapException::failed('Server closed the connection unexpectedly.');
+        }
+
         $tag = sprintf('A%04d', $this->tagCounter++);
         $written = @fwrite($this->stream, "{$tag} {$command}\r\n");
         if ($written === false) {
@@ -195,7 +199,7 @@ class ImapSession
 
     public function parseListLine(string $line): ?array
     {
-        if (! preg_match('/^\*\s+LIST\s+\(([^)]*)\)\s+(NIL|"(?:[^"\\]|\\.)*")\s+(.+)$/i', $line, $m)) {
+        if (! preg_match('/^\\*\\s+LIST\\s+\\(([^)]*)\\)\\s+(NIL|"[^"]*")\\s+(.+)$/i', $line, $m)) {
             return null;
         }
 
