@@ -38,7 +38,7 @@ Status: implemented and deployed
 - Remove duplicated or low-value homepage content.
 
 ## Phase 4 — Stock & Delivery Urgency
-Status: implemented; pending deployment verification
+Status: implemented; CI repair included with Phase 5
 
 - Show exact low-stock messaging only from real inventory.
 - "Only X left" when quantity is genuinely low.
@@ -46,6 +46,8 @@ Status: implemented; pending deployment verification
 - Delivery/pickup availability near Buy Now.
 
 ## Phase 5 — Trust & Policy Content
+Status: implemented; pending deployment verification
+
 - FAQ page.
 - Warranty information page.
 - Clear returns/refund page.

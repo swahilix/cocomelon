@@ -130,7 +130,7 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
 
                     <div class="inline-flex h-[40px] shrink-0 items-center gap-2.5 rounded-[9px] border border-slate-200 bg-white px-4 text-[11px] font-semibold text-slate-700 shadow-sm">
                         <svg viewBox="0 0 24 24" class="h-[19px] w-[19px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h11v9H3V7Zm11 3h4l3 3v3h-7v-6ZM6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm11 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/></svg>
-                        Fast Delivery in <strong class="text-amber-500">20 – 40 mins</strong>
+                        <span v-if="store.delivery_enabled">Delivery <strong class="text-amber-500">{{ store.delivery_eta || 'available' }}</strong></span><span v-else-if="store.pickup_enabled"><strong class="text-amber-500">Store pickup available</strong></span><span v-else>Order assistance available</span>
                     </div>
                 </div>
             </div>
@@ -210,10 +210,10 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                     <div>
                         <h3 class="text-[12px] font-semibold text-slate-900">Customer Service</h3>
                         <nav class="mt-3 space-y-2 text-[10px] text-slate-600">
-                            <Link href="/pages/contact" class="block hover:text-prinx-600">Help Center</Link>
+                            <Link href="/pages/faq" class="block hover:text-prinx-600">FAQ</Link>
+                            <Link href="/pages/warranty" class="block hover:text-prinx-600">Warranty Information</Link>
                             <Link href="/pages/returns" class="block hover:text-prinx-600">Returns & Refunds</Link>
-                            <Link href="/pages/shipping" class="block hover:text-prinx-600">Shipping & Delivery</Link>
-                            <Link href="/services" class="block hover:text-prinx-600">Technical Services</Link>
+                            <Link href="/pages/shipping" class="block hover:text-prinx-600">Delivery & Store Pickup</Link>
                             <Link href="/pages/contact" class="block hover:text-prinx-600">Contact Us</Link>
                         </nav>
                     </div>

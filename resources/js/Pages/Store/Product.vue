@@ -365,6 +365,13 @@ function submitReview() {
                             <div><strong class="block text-[9px] font-semibold text-slate-800">Secure Payment</strong><span class="mt-1 block text-[8px] text-slate-500">Safe & encrypted</span></div>
                         </div>
                     </div>
+
+                    <nav class="mt-3 flex flex-wrap gap-x-4 gap-y-2 border-t border-slate-100 pt-3 text-[9px] font-medium text-slate-500" aria-label="Purchase information">
+                        <Link href="/pages/warranty" class="hover:text-prinx-600">Warranty information</Link>
+                        <Link href="/pages/returns" class="hover:text-prinx-600">Returns & refunds</Link>
+                        <Link href="/pages/shipping" class="hover:text-prinx-600">Delivery & pickup</Link>
+                        <Link href="/pages/faq" class="hover:text-prinx-600">FAQ</Link>
+                    </nav>
                 </div>
             </section>
 

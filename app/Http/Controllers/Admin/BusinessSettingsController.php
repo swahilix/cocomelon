@@ -99,12 +99,13 @@ class BusinessSettingsController extends Controller
             : null;
         $smsFieldsSubmitted = $request->hasAny(['sms_enabled', 'sms_provider', 'sms_api_key', 'sms_sender_id', 'sms_bearer_token']);
         $fulfillmentFields = ['delivery_enabled', 'delivery_area', 'delivery_eta', 'pickup_enabled', 'pickup_location', 'pickup_instructions'];
+        $fulfillmentFieldsSubmitted = $request->hasAny($fulfillmentFields);
 
         if (! Schema::hasColumn('business_settings', 'delivery_enabled')) {
             foreach ($fulfillmentFields as $field) {
                 unset($validated[$field]);
             }
-        } else {
+        } elseif ($fulfillmentFieldsSubmitted) {
             $deliveryEnabled = (bool) ($validated['delivery_enabled'] ?? false);
             $pickupEnabled = (bool) ($validated['pickup_enabled'] ?? false);
 

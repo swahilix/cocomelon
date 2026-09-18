@@ -21,7 +21,7 @@ class FeedController extends Controller
             $extra = collect($merchant->merchantGalleryUrls($p))->take(10)->map(fn ($image) => '<g:additional_image_link>'.$esc($image).'</g:additional_image_link>')->implode('');
             return '<item><g:id>'.$esc($p->sku).'</g:id><title>'.$esc($p->name).'</title><description>'.$esc(Str::limit($p->plain_description,5000,'')).'</description><link>'.$esc(route('products.show',$p)).'</link><g:image_link>'.$esc($merchant->merchantImageUrl($p)).'</g:image_link>'.$extra.'<g:availability>'.$availability.'</g:availability><g:condition>'.$esc($p->condition).'</g:condition><g:price>'.$esc(number_format((float)$p->price,2,'.','').' '.config('store.currency')).'</g:price>'.$sale.($p->brand?'<g:brand>'.$esc($p->brand->name).'</g:brand>':'').($p->gtin?'<g:gtin>'.$esc($p->gtin).'</g:gtin>':'').($p->mpn?'<g:mpn>'.$esc($p->mpn).'</g:mpn>':'').($p->google_product_category?'<g:google_product_category>'.$esc($p->google_product_category).'</g:google_product_category>':'').(($p->product_type || $p->category)?'<g:product_type>'.$esc($p->product_type ?: 'Electronics > '.$p->category->name).'</g:product_type>':'').'</item>';
         })->implode('');
-        $xml = '<?xml version="1.0" encoding="UTF-8"?><rss xmlns:g="http://base.google.com/ns/1.0" version="2.0"><channel><title>Prinx Electronics Products</title><link>'.e(config('app.url')).'</link><description>Prinx Electronics product catalogue</description>'.$items.'</channel></rss>';
+        $xml = '<?xml version="1.0" encoding="UTF-8"?><rss xmlns:g="http://base.google.com/ns/1.0" version="2.0"><channel><title>Prinx Tech Products</title><link>'.e(config('app.url')).'</link><description>Prinx Tech product catalogue</description>'.$items.'</channel></rss>';
         return response($xml,200,['Content-Type'=>'application/xml; charset=UTF-8']);
     }
 
@@ -33,6 +33,9 @@ class FeedController extends Controller
             ['loc' => route('home'), 'lastmod' => now(), 'images' => []],
             ['loc' => route('catalog'), 'lastmod' => now(), 'images' => []],
             ['loc' => route('services'), 'lastmod' => now(), 'images' => []],
+            ...collect(['about', 'contact', 'faq', 'shipping', 'returns', 'warranty', 'privacy', 'terms'])
+                ->map(fn (string $page) => ['loc' => route('pages.show', $page), 'lastmod' => now(), 'images' => []])
+                ->all(),
         ])
             ->merge(Category::productType()->active()->get()->map(fn (Category $category) => [
                 'loc' => route('categories.products', $category),
@@ -40,7 +43,7 @@ class FeedController extends Controller
                 'images' => [[
                     'loc' => $category->image_url,
                     'title' => $category->name.' product category',
-                    'caption' => $category->description ?: 'Browse '.$category->name.' products at Prinx Electronics.',
+                    'caption' => $category->description ?: 'Browse '.$category->name.' products at Prinx Tech.',
                 ]],
             ]))
             ->merge(Category::serviceType()->active()->get()->map(fn (Category $category) => [
@@ -49,7 +52,7 @@ class FeedController extends Controller
                 'images' => [[
                     'loc' => $category->image_url,
                     'title' => $category->name.' service category',
-                    'caption' => $category->description ?: 'Browse '.$category->name.' services at Prinx Electronics.',
+                    'caption' => $category->description ?: 'Browse '.$category->name.' services at Prinx Tech.',
                 ]],
             ]))
             ->merge(Product::active()->get()->map(fn (Product $product) => [

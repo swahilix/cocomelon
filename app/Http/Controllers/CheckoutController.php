@@ -31,7 +31,7 @@ class CheckoutController extends Controller
             'customer_name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email', 'max:190'],
             'phone' => ['required', 'string', 'max:30'],
-            'fulfillment_method' => ['required', 'in:delivery,pickup'],
+            'fulfillment_method' => ['nullable', 'in:delivery,pickup'],
             'address_line_1' => ['nullable', 'required_if:fulfillment_method,delivery', 'string', 'max:190'],
             'address_line_2' => ['nullable', 'string', 'max:190'],
             'city' => ['nullable', 'required_if:fulfillment_method,delivery', 'string', 'max:100'],
@@ -43,6 +43,17 @@ class CheckoutController extends Controller
         $business = DB::table('business_settings')->where('id', 1)->first();
         $deliveryEnabled = (bool) ($business?->delivery_enabled ?? true);
         $pickupEnabled = (bool) ($business?->pickup_enabled ?? false);
+
+        if (blank($data['fulfillment_method'] ?? null)) {
+            $data['fulfillment_method'] = $deliveryEnabled ? 'delivery' : 'pickup';
+        }
+
+        if ($data['fulfillment_method'] === 'delivery' && (blank($data['address_line_1'] ?? null) || blank($data['city'] ?? null))) {
+            return back()->withErrors([
+                'address_line_1' => 'Enter a delivery address.',
+                'city' => 'Enter the delivery area or district.',
+            ])->withInput();
+        }
 
         if ($data['fulfillment_method'] === 'delivery' && ! $deliveryEnabled) {
             return back()->withErrors(['fulfillment_method' => 'Delivery is currently unavailable.'])->withInput();

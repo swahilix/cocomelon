@@ -41,7 +41,7 @@ Route::get('/services', [StorefrontController::class, 'services'])->name('servic
 Route::get('/services/category/{category}', [StorefrontController::class, 'serviceCategory'])->name('categories.services');
 Route::get('/services/{service}', [StorefrontController::class, 'service'])->name('services.show');
 Route::post('/services/{service}/inquiry', [ServiceInquiryController::class, 'store'])->name('services.inquiry');
-Route::get('/pages/{page}', [PageController::class, 'show'])->whereIn('page', ['about', 'contact', 'shipping', 'returns', 'privacy', 'terms'])->name('pages.show');
+Route::get('/pages/{page}', [PageController::class, 'show'])->whereIn('page', ['about', 'contact', 'faq', 'shipping', 'returns', 'warranty', 'privacy', 'terms'])->name('pages.show');
 
 Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
 Route::delete('/cart', [CartController::class, 'clear'])->name('cart.clear');

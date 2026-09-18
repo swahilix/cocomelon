@@ -1,5 +1,6 @@
 <script setup>
 import { nextTick, onMounted, ref } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import SeoHead from '../../Components/SeoHead.vue';
 
@@ -7,6 +8,9 @@ const props = defineProps({
     page: Object,
     locator: { type: Object, default: null },
 });
+
+const appPage = usePage();
+const storeName = appPage.props.store?.name || 'Prinx Tech';
 
 const locatorHost = ref(null);
 const locatorError = ref(false);
@@ -89,7 +93,7 @@ onMounted(initialiseLocator);
     <AppLayout>
         <SeoHead :title="page.title" :description="page.intro" />
         <div class="container-shell max-w-4xl py-10">
-            <p class="section-kicker">Prinx Electronics</p>
+            <p class="section-kicker">{{ storeName }}</p>
             <h1 class="section-title">{{ page.title }}</h1>
             <p class="mt-3 text-lg text-slate-500">{{ page.intro }}</p>
 
