@@ -38,22 +38,20 @@ main:has(.homepage-store-footer) + footer { display: block !important; }
     }
 }
 
-/* Mobile storefront search button sizing. */
+/* Mobile storefront search target remains at least 44px for accessibility. */
 @media (max-width: 1023px) {
     header form button[aria-label="Search"] {
-        height: 34px !important;
-        width: 34px !important;
-        margin-top: 4px !important;
-        margin-right: 4px !important;
-        flex: 0 0 34px;
+        height: 44px !important;
+        width: 44px !important;
+        margin: 0 !important;
+        flex: 0 0 44px;
     }
 }
 
-/* Homepage newsletter subscribe button. */
+/* Homepage newsletter subscribe button: accessible touch target. */
 main form:has(input[type="email"]) button[type="submit"] {
-    height: 34px !important;
-    margin-top: 3px !important;
-    margin-right: 4px !important;
+    min-height: 44px !important;
+    margin: 0 !important;
     border-radius: 6px !important;
 }
 

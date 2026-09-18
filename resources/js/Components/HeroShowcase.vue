@@ -1,4 +1,5 @@
 <script setup>
+import { Head } from '@inertiajs/vue3';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const props = defineProps({
@@ -11,6 +12,7 @@ let timer = null;
 
 const carouselSlides = computed(() => props.slides.filter((slide) => Boolean(slide?.image_url)));
 const activeSlide = computed(() => carouselSlides.value[activeIndex.value] || null);
+const firstSlide = computed(() => carouselSlides.value[0] || null);
 
 function clearTimer() {
     if (timer) {
@@ -51,6 +53,10 @@ onBeforeUnmount(clearTimer);
 </script>
 
 <template>
+    <Head v-if="firstSlide?.image_url">
+        <link head-key="homepage-hero-preload" rel="preload" as="image" :href="firstSlide.image_url" fetchpriority="high">
+    </Head>
+
     <section v-if="activeSlide" class="bg-[#fbfbfb] pt-7 sm:pt-8" aria-label="Homepage banners">
         <div class="container-shell">
             <div
@@ -69,44 +75,52 @@ onBeforeUnmount(clearTimer);
                             class="block"
                             :aria-label="activeSlide.image_alt || activeSlide.headline || 'Open banner link'"
                         >
-                            <picture class="block overflow-hidden bg-white sm:aspect-[16/6] lg:aspect-[16/5]">
+                            <picture class="block aspect-[16/5] overflow-hidden bg-white">
                                 <img
                                     :src="activeSlide.image_url"
                                     :alt="activeSlide.image_alt || activeSlide.headline || 'Prinx Electronics banner'"
-                                    class="block h-auto w-full object-contain sm:h-full sm:object-cover"
+                                    class="block h-full w-full object-contain sm:object-cover"
+                                    width="1600"
+                                    height="500"
+                                    loading="eager"
                                     fetchpriority="high"
                                     decoding="async"
                                 >
                             </picture>
                         </a>
 
-                        <picture v-else :key="`${activeSlide.id}-image`" class="block overflow-hidden bg-white sm:aspect-[16/6] lg:aspect-[16/5]">
+                        <picture v-else :key="`${activeSlide.id}-image`" class="block aspect-[16/5] overflow-hidden bg-white">
                             <img
                                 :src="activeSlide.image_url"
                                 :alt="activeSlide.image_alt || activeSlide.headline || 'Prinx Electronics banner'"
-                                class="block h-auto w-full object-contain sm:h-full sm:object-cover"
+                                class="block h-full w-full object-contain sm:object-cover"
+                                width="1600"
+                                height="500"
+                                loading="eager"
                                 fetchpriority="high"
                                 decoding="async"
                             >
                         </picture>
                     </Transition>
 
-                    <div v-if="carouselSlides.length > 1" class="absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-white/80 px-2.5 py-1.5 shadow-sm backdrop-blur sm:bottom-4 sm:gap-2 sm:px-3 sm:py-2" role="tablist" aria-label="Choose banner">
+                    <div v-if="carouselSlides.length > 1" class="absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 items-center rounded-full bg-white/80 px-1 py-0.5 shadow-sm backdrop-blur sm:bottom-4 sm:px-1.5 sm:py-1" aria-label="Choose banner">
                         <button
                             v-for="(slide, index) in carouselSlides"
                             :key="slide.id"
                             type="button"
                             :aria-label="`Show banner ${index + 1}`"
-                            :aria-selected="index === activeIndex"
-                            :class="['h-1.5 rounded-full transition-all', index === activeIndex ? 'w-6 bg-prinx-500 sm:w-7' : 'w-2.5 bg-slate-400 hover:bg-slate-600 sm:w-3']"
+                            :aria-current="index === activeIndex ? 'true' : undefined"
+                            class="flex h-11 w-11 items-center justify-center rounded-full"
                             @click="goTo(index)"
-                        ></button>
+                        >
+                            <span :class="['block h-1.5 rounded-full transition-all', index === activeIndex ? 'w-6 bg-prinx-500 sm:w-7' : 'w-3 bg-slate-500 hover:bg-slate-700']"></span>
+                        </button>
                     </div>
 
                     <div v-if="carouselSlides.length > 1" class="absolute bottom-2 right-2 z-20 flex items-center gap-1.5 sm:bottom-4 sm:right-4 sm:gap-2">
                         <button
                             type="button"
-                            class="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-600 shadow-[0_5px_16px_rgba(15,23,42,.10)] backdrop-blur transition hover:border-prinx-200 hover:text-prinx-600 sm:h-10 sm:w-10 sm:bg-white"
+                            class="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-[0_5px_16px_rgba(15,23,42,.10)] backdrop-blur transition hover:border-prinx-200 hover:text-prinx-700 sm:bg-white"
                             aria-label="Previous banner"
                             @click="previous"
                         >
@@ -114,7 +128,7 @@ onBeforeUnmount(clearTimer);
                         </button>
                         <button
                             type="button"
-                            class="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-600 shadow-[0_5px_16px_rgba(15,23,42,.10)] backdrop-blur transition hover:border-prinx-200 hover:text-prinx-600 sm:h-10 sm:w-10 sm:bg-white"
+                            class="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-[0_5px_16px_rgba(15,23,42,.10)] backdrop-blur transition hover:border-prinx-200 hover:text-prinx-700 sm:bg-white"
                             aria-label="Next banner"
                             @click="next"
                         >

@@ -1,0 +1,84 @@
+/* Prinx storefront brand normalization.
+   The homepage reference was initially implemented with yellow/amber accents.
+   Keep the layout intact while rendering every storefront accent from the
+   official Prinx orange palette defined in tailwind.config.js. */
+
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="bg-[#f7b900]"] {
+    background-color: #ff4d0a !important;
+    color: #fff !important;
+}
+
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="hover:bg-[#eeb200]"]:hover,
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="hover:bg-[#eaae00]"]:hover {
+    background-color: #ee3500 !important;
+}
+
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="text-[#e2a700]"],
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="text-[#e8aa00]"],
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="text-[#f0ad00]"],
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="text-amber-600"],
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="text-amber-700"],
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="text-amber-400"] {
+    color: #a92800 !important;
+}
+
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="text-amber-300"] {
+    color: #9a3412 !important;
+}
+
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="stroke-[#f4b400]"] {
+    stroke: #ff4d0a !important;
+}
+
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="bg-amber-50"] {
+    background-color: #fff4ed !important;
+}
+
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="hover:bg-amber-50"]:hover {
+    background-color: #fff4ed !important;
+}
+
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="hover:text-amber-600"]:hover,
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="hover:text-amber-700"]:hover {
+    color: #8f2200 !important;
+}
+
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="border-amber-200"],
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="hover:border-amber-200"]:hover {
+    border-color: #ffc9a8 !important;
+}
+
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="border-amber-300"],
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="hover:border-amber-300"]:hover {
+    border-color: #ffa270 !important;
+}
+
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="border-amber-400/30"] {
+    border-color: rgba(255, 113, 56, .3) !important;
+}
+
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="bg-amber-400/10"] {
+    background-color: rgba(255, 113, 56, .10) !important;
+}
+
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="bg-amber-400/15"] {
+    background-color: rgba(255, 113, 56, .15) !important;
+}
+
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="border-[#ffe687]"] {
+    border-color: #ffc9a8 !important;
+}
+
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="border-[#fff2bd]"] {
+    border-color: #ffe6d4 !important;
+}
+
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="bg-[linear-gradient(135deg,#fff_0%,#fffef7_58%,#fff9dc_100%)]"] {
+    background-image: linear-gradient(135deg, #fff 0%, #fff8f4 58%, #fff0e8 100%) !important;
+}
+
+/* Orange buttons use white foreground for stronger brand contrast. */
+[class~="min-h-screen"][class~="bg-[#fbfbfb]"] [class~="bg-[#f7b900]"] svg {
+    color: currentColor;
+    stroke: currentColor;
+}

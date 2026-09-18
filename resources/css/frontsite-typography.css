@@ -23,3 +23,19 @@ body:not(:has(.admin-shell)):not(:has(.pos-shell)) .image-spec {
         padding-right: 0.5rem;
     }
 }
+
+
+/* Lighthouse accessibility: preserve Prinx orange for surfaces, use darker
+   foreground variants for small text so links and labels meet AA contrast. */
+body:not(:has(.admin-shell)):not(:has(.pos-shell)) .text-prinx-500,
+body:not(:has(.admin-shell)):not(:has(.pos-shell)) .text-prinx-600 {
+    color: #a92800 !important;
+}
+body:not(:has(.admin-shell)):not(:has(.pos-shell)) .text-amber-500,
+body:not(:has(.admin-shell)):not(:has(.pos-shell)) .text-amber-600,
+body:not(:has(.admin-shell)):not(:has(.pos-shell)) .text-amber-700 {
+    color: #92400e !important;
+}
+body:not(:has(.admin-shell)):not(:has(.pos-shell)) .text-slate-400 {
+    color: #64748b !important;
+}

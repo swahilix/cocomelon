@@ -9,6 +9,7 @@ const categoryOpen = ref(false);
 const search = ref('');
 const user = computed(() => page.props.auth?.user);
 const cartCount = computed(() => page.props.cartCount || 0);
+const wishlistCount = computed(() => page.props.wishlistCount || 0);
 const productCategories = computed(() => page.props.navigationCategories || []);
 const store = computed(() => page.props.store || {});
 const whatsappHref = computed(() => {
@@ -45,7 +46,7 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
             <div class="hidden border-b border-slate-100 lg:block">
                 <div class="container-shell grid h-[92px] grid-cols-[180px_180px_minmax(300px,1fr)_240px_auto] items-center gap-5">
                     <Link href="/" class="flex min-w-0 items-center">
-                        <img src="/assets/prinx-logo.png" :alt="store.name" class="h-[46px] w-auto max-w-[170px] object-contain">
+                        <img src="/assets/prinx-logo.png" :alt="store.name" width="340" height="100" class="h-[46px] w-auto max-w-[170px] object-contain">
                     </Link>
 
                     <div class="relative">
@@ -86,10 +87,10 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                             <svg viewBox="0 0 24 24" class="h-[22px] w-[22px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path stroke-linecap="round" d="M5 20c.7-4.2 3-6.3 7-6.3s6.3 2.1 7 6.3"/></svg>
                         </Link>
 
-                        <span class="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-900" title="Wishlist">
+                        <Link :href="user ? '/wishlist' : '/login'" class="relative flex h-11 w-11 items-center justify-center rounded-full text-slate-900 transition hover:bg-amber-50 hover:text-amber-700" title="Wishlist" aria-label="Wishlist">
                             <svg viewBox="0 0 24 24" class="h-[22px] w-[22px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 9.2c0 5.4-8.5 10-8.5 10s-8.5-4.6-8.5-10A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8Z"/></svg>
-                            <span class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#f7b900] px-1 text-[8px] font-bold text-slate-950">0</span>
-                        </span>
+                            <span v-if="wishlistCount" class="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#f7b900] px-1 text-[9px] font-bold text-slate-950">{{ wishlistCount }}</span>
+                        </Link>
 
                         <Link href="/cart" class="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-900 transition hover:bg-amber-50 hover:text-amber-700" title="Cart" aria-label="Shopping cart">
                             <svg viewBox="0 0 24 24" class="h-[23px] w-[23px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5h2l2 10h10l2-7H7M9 19.2a1.2 1.2 0 1 0 0 .1Zm7 0a1.2 1.2 0 1 0 0 .1Z"/></svg>
@@ -136,12 +137,16 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
 
             <div class="lg:hidden">
                 <div class="container-shell flex h-[64px] items-center gap-3">
-                    <Link href="/" class="min-w-0 flex-1"><img src="/assets/prinx-logo.png" :alt="store.name" class="h-9 w-auto max-w-[165px] object-contain"></Link>
-                    <Link href="/cart" class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900" aria-label="Shopping cart">
+                    <Link href="/" class="min-w-0 flex-1"><img src="/assets/prinx-logo.png" :alt="store.name" width="340" height="100" class="h-9 w-auto max-w-[165px] object-contain"></Link>
+                    <Link data-mobile-wishlist-link :href="user ? '/wishlist' : '/login'" class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900" aria-label="Wishlist">
+                        <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 9.2c0 5.4-8.5 10-8.5 10s-8.5-4.6-8.5-10A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8Z"/></svg>
+                        <span v-if="wishlistCount" data-wishlist-badge class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#f7b900] px-1 text-[9px] font-bold text-slate-950">{{ wishlistCount }}</span>
+                    </Link>
+                    <Link href="/cart" class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900" aria-label="Shopping cart">
                         <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5h2l2 10h10l2-7H7M9 19.2a1.2 1.2 0 1 0 0 .1Zm7 0a1.2 1.2 0 1 0 0 .1Z"/></svg>
                         <span v-if="cartCount" class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#f7b900] px-1 text-[9px] font-bold text-slate-950">{{ cartCount }}</span>
                     </Link>
-                    <button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] border border-slate-200 bg-white text-slate-800" aria-label="Menu" @click="open = !open">
+                    <button type="button" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[8px] border border-slate-200 bg-white text-slate-800" aria-label="Menu" @click="open = !open">
                         <svg v-if="!open" viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
                         <svg v-else viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18"/></svg>
                     </button>
@@ -166,6 +171,7 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                             <Link v-if="!user" href="/login" class="rounded-[8px] border border-slate-200 px-3 py-3">Account</Link>
                             <Link v-else-if="user?.is_admin" href="/admin" class="rounded-[8px] border border-slate-200 px-3 py-3">Admin panel</Link>
                             <Link v-else href="/account" class="rounded-[8px] border border-slate-200 px-3 py-3">My Account</Link>
+                            <Link data-mobile-wishlist-menu :href="user ? '/wishlist' : '/login'" class="rounded-[8px] border border-slate-200 px-3 py-3">Wishlist<span v-if="wishlistCount"> ({{ wishlistCount }})</span></Link>
                         </div>
                         <p class="mt-4 text-[10px] font-bold uppercase tracking-[.14em] text-slate-400">All Categories</p>
                         <div class="mt-2 divide-y divide-slate-100 overflow-hidden rounded-[8px] border border-slate-200">
@@ -182,10 +188,10 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
             <div class="container-shell py-8">
                 <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-[1.35fr_.8fr_1fr_.9fr_1fr]">
                     <div class="max-w-[270px]">
-                        <img src="/assets/prinx-logo.png" :alt="store.name" class="h-10 w-auto max-w-[160px] object-contain">
+                        <img src="/assets/prinx-logo.png" :alt="store.name" width="340" height="100" class="h-10 w-auto max-w-[160px] object-contain">
                         <p class="mt-3 text-[10px] leading-5 text-slate-600">{{ store.description || 'Your one-stop destination for original tech products, accessories and support.' }}</p>
                         <div v-if="socialLinks.length" class="mt-4 flex items-center gap-2">
-                            <a v-for="social in socialLinks" :key="social.key" :href="social.url" target="_blank" rel="noopener" :aria-label="social.label" class="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-semibold text-slate-700 transition hover:border-prinx-200 hover:text-prinx-600">{{ social.short }}</a>
+                            <a v-for="social in socialLinks" :key="social.key" :href="social.url" target="_blank" rel="noopener" :aria-label="social.label" class="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-[12px] font-semibold text-slate-700 transition hover:border-prinx-200 hover:text-prinx-700">{{ social.short }}</a>
                         </div>
                         <p class="mt-5 text-[9px] text-slate-400">© {{ store.year }} {{ store.name }}. All rights reserved.</p>
                     </div>
@@ -240,7 +246,7 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
 
                 <div v-if="store.payment_strip_url" class="mt-6 flex items-center justify-end gap-3 border-t border-slate-100">
                     <span class="text-[12px] text-slate-500">We accept</span>
-                    <img :src="store.payment_strip_url" alt="Accepted payment methods" class="h-auto max-h-[35px] w-auto max-w-full object-contain">
+                    <img :src="store.payment_strip_url" alt="Accepted payment methods" width="360" height="70" loading="lazy" decoding="async" class="h-auto max-h-[35px] w-auto max-w-full object-contain">
                 </div>
             </div>
         </footer>
