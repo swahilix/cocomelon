@@ -21,7 +21,7 @@ Success checks:
 - Google Product schema contains aggregate rating only when real approved reviews exist.
 
 ## Phase 2 — WhatsApp Buying Assistance
-Status: implemented; pending deployment verification
+Status: implemented and deployed
 
 - "Ask about this product" WhatsApp CTA on every product page.
 - Pre-filled product name, URL and price.
@@ -29,6 +29,8 @@ Status: implemented; pending deployment verification
 - Track WhatsApp product enquiries as conversion events.
 
 ## Phase 3 — Stronger Homepage Merchandising
+Status: implemented; pending deployment verification
+
 - New Arrivals section.
 - Best Sellers section based on real sales.
 - Trending section based on recent product views/cart activity.

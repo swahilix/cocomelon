@@ -6,40 +6,105 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\HeroSlide;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductReel;
 use App\Models\ProductReview;
 use App\Models\Service;
+use App\Services\ImageOptimizationService;
+use App\Services\ProductActivityService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class StorefrontController extends Controller
 {
-    public function __construct(private readonly \App\Services\ImageOptimizationService $images)
-    {
+    public function __construct(
+        private readonly ImageOptimizationService $images,
+        private readonly ProductActivityService $activity,
+    ) {
     }
 
     public function home(): Response
     {
+        $newArrivals = $this->productCardsQuery()
+            ->latest('products.created_at')
+            ->take(5)
+            ->get();
+
+        $dailyDeals = $this->productCardsQuery()
+            ->whereNotNull('sale_price')
+            ->where('sale_price', '>', 0)
+            ->whereColumn('sale_price', '<', 'price')
+            ->where(fn ($query) => $query->whereNull('sale_starts_at')->orWhere('sale_starts_at', '<=', now()))
+            ->where(fn ($query) => $query->whereNull('sale_ends_at')->orWhere('sale_ends_at', '>=', now()))
+            ->orderByRaw('CASE WHEN sale_ends_at IS NULL THEN 1 ELSE 0 END')
+            ->orderBy('sale_ends_at')
+            ->take(5)
+            ->get();
+
+        $bestSellerRows = OrderItem::query()
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->select('order_items.product_id')
+            ->selectRaw('SUM(order_items.quantity) as units_sold')
+            ->whereNotNull('order_items.product_id')
+            ->where('orders.status', 'completed')
+            ->groupBy('order_items.product_id')
+            ->orderByDesc('units_sold')
+            ->take(5)
+            ->get();
+
+        $bestSellers = $this->rankedProducts(
+            $bestSellerRows->pluck('product_id')->map(fn ($id) => (int) $id)->all(),
+            $bestSellerRows->pluck('units_sold', 'product_id')->map(fn ($value) => (int) $value)->all(),
+            'units_sold',
+        );
+
+        $trendingScores = collect();
+
+        if (Schema::hasTable('product_activity_events')) {
+            $trendingScores = DB::table('product_activity_events')
+                ->select('product_id')
+                ->selectRaw("SUM(CASE WHEN event_type = 'cart_add' THEN 3 ELSE 1 END) as score")
+                ->where('created_at', '>=', now()->subDays(30))
+                ->groupBy('product_id')
+                ->pluck('score', 'product_id')
+                ->map(fn ($value) => (int) $value);
+        }
+
+        if (Schema::hasTable('product_contact_events')) {
+            DB::table('product_contact_events')
+                ->select('product_id')
+                ->selectRaw('COUNT(*) as enquiries')
+                ->where('channel', 'whatsapp')
+                ->where('created_at', '>=', now()->subDays(30))
+                ->groupBy('product_id')
+                ->pluck('enquiries', 'product_id')
+                ->each(function ($count, $productId) use (&$trendingScores): void {
+                    $trendingScores->put(
+                        $productId,
+                        (int) $trendingScores->get($productId, 0) + ((int) $count * 4),
+                    );
+                });
+        }
+
+        $trendingScores = $trendingScores->sortDesc()->take(5);
+        $trending = $this->rankedProducts(
+            $trendingScores->keys()->map(fn ($id) => (int) $id)->all(),
+            $trendingScores->all(),
+            'trend_score',
+        );
+
         return Inertia::render('Store/Home', [
             'heroSlides' => $this->heroSlides(),
             'productReels' => $this->productReels(),
-            'featuredProducts' => Product::with(['brand', 'category'])
-                ->active()
-                ->where('featured', true)
-                ->withCount(['reviews as approved_reviews_count' => fn ($query) => $query->approved()])
-                ->withAvg(['reviews as approved_reviews_average' => fn ($query) => $query->approved()], 'rating')
-                ->orderBy('sort_order')
-                ->latest()
-                ->take(9)
-                ->get()
-                ->map(fn (Product $product): array => [
-                    ...$product->toArray(),
-                    'image_srcset' => $this->images->responsiveWebpSrcset($product->primary_image, [240, 360, 480]),
-                ])
-                ->values()
-                ->all(),
+            'newArrivals' => $this->homeProductPayload($newArrivals),
+            'bestSellers' => $this->homeProductPayload($bestSellers),
+            'trendingProducts' => $this->homeProductPayload($trending),
+            'dailyDeals' => $this->homeProductPayload($dailyDeals),
             'productCategories' => Category::productType()
                 ->active()
                 ->withCount(['products' => fn ($query) => $query->active()])
@@ -92,6 +157,7 @@ class StorefrontController extends Controller
     public function product(Request $request, Product $product): Response
     {
         abort_unless($product->status === 'active', 404);
+        $this->activity->record($request, $product, 'view');
         $product->load(['brand', 'category']);
 
         $approvedReviews = ProductReview::query()
@@ -189,6 +255,45 @@ class StorefrontController extends Controller
         return Inertia::render('Store/Service', [
             'service' => $service->load('category'),
         ]);
+    }
+
+    private function productCardsQuery()
+    {
+        return Product::query()
+            ->with(['brand', 'category'])
+            ->withCount(['reviews as approved_reviews_count' => fn ($query) => $query->approved()])
+            ->withAvg(['reviews as approved_reviews_average' => fn ($query) => $query->approved()], 'rating')
+            ->active()
+            ->where(fn ($query) => $query->where('track_stock', false)->orWhere('stock_quantity', '>', 0));
+    }
+
+    private function rankedProducts(array $productIds, array $metrics, string $metricKey): Collection
+    {
+        if ($productIds === []) {
+            return collect();
+        }
+
+        $rank = array_flip($productIds);
+
+        return $this->productCardsQuery()
+            ->whereIn('products.id', $productIds)
+            ->get()
+            ->sortBy(fn (Product $product) => $rank[$product->id] ?? PHP_INT_MAX)
+            ->values()
+            ->each(function (Product $product) use ($metrics, $metricKey): void {
+                $product->setAttribute($metricKey, (int) ($metrics[$product->id] ?? 0));
+            });
+    }
+
+    private function homeProductPayload(Collection $products): array
+    {
+        return $products
+            ->map(fn (Product $product): array => [
+                ...$product->toArray(),
+                'image_srcset' => $this->images->responsiveWebpSrcset($product->primary_image, [240, 360, 480]),
+            ])
+            ->values()
+            ->all();
     }
 
     private function productReels(): array

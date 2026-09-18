@@ -1,13 +1,17 @@
 <script setup>
 import { Link, router, usePage } from '@inertiajs/vue3';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import HeroShowcase from '../../Components/HeroShowcase.vue';
+import HomeProductSection from '../../Components/HomeProductSection.vue';
 import SeoHead from '../../Components/SeoHead.vue';
 
 const props = defineProps({
     heroSlides: { type: Array, default: () => [] },
-    featuredProducts: { type: Array, default: () => [] },
+    newArrivals: { type: Array, default: () => [] },
+    bestSellers: { type: Array, default: () => [] },
+    trendingProducts: { type: Array, default: () => [] },
+    dailyDeals: { type: Array, default: () => [] },
     productCategories: { type: Array, default: () => [] },
     brands: { type: Array, default: () => [] },
 });
@@ -16,9 +20,6 @@ const page = usePage();
 const store = computed(() => page.props.store || {});
 const newsletterEmail = ref('');
 const subscribed = ref(false);
-const now = ref(Date.now());
-const fallbackDealEndsAt = Date.now() + (2 * 24 * 60 * 60 * 1000) + (18 * 60 * 60 * 1000);
-let countdownTimer = null;
 
 const money = (value) => new Intl.NumberFormat('en-TZ', {
     style: 'currency',
@@ -26,9 +27,16 @@ const money = (value) => new Intl.NumberFormat('en-TZ', {
     maximumFractionDigits: 0,
 }).format(Number(value || 0));
 
-const dealProducts = computed(() => (props.featuredProducts || []).slice(0, 4));
-const shopRowProducts = computed(() => (props.featuredProducts || []).slice(4, 9));
-const promoProducts = computed(() => (props.featuredProducts || []).slice(0, 3));
+const promoProducts = computed(() => {
+    const seen = new Set();
+    return [...(props.dailyDeals || []), ...(props.newArrivals || [])]
+        .filter((product) => {
+            if (!product?.id || seen.has(product.id)) return false;
+            seen.add(product.id);
+            return true;
+        })
+        .slice(0, 3);
+});
 const socialLinks = computed(() => Object.entries(store.value.social || {})
     .filter(([, url]) => Boolean(url))
     .map(([key, url]) => ({
@@ -37,25 +45,6 @@ const socialLinks = computed(() => Object.entries(store.value.social || {})
         label: key === 'x' ? 'X' : key.charAt(0).toUpperCase() + key.slice(1),
         short: ({ facebook: 'f', instagram: '◎', youtube: '▶', tiktok: '♪', x: 'X' })[key] || key.slice(0, 1).toUpperCase(),
     })));
-
-const dealEndsAt = computed(() => {
-    const futureEnds = dealProducts.value
-        .map((product) => new Date(product.sale_ends_at || '').getTime())
-        .filter((value) => Number.isFinite(value) && value > now.value);
-
-    return futureEnds.length ? Math.min(...futureEnds) : fallbackDealEndsAt;
-});
-
-const countdown = computed(() => {
-    const total = Math.max(0, dealEndsAt.value - now.value);
-    const seconds = Math.floor(total / 1000);
-    return {
-        days: String(Math.floor(seconds / 86400)).padStart(2, '0'),
-        hours: String(Math.floor((seconds % 86400) / 3600)).padStart(2, '0'),
-        minutes: String(Math.floor((seconds % 3600) / 60)).padStart(2, '0'),
-        seconds: String(seconds % 60).padStart(2, '0'),
-    };
-});
 
 const promoCopy = [
     { eyebrow: 'Top Quality', title: 'Accessories You’ll Love', description: 'Discover accessories that power your lifestyle.' },
@@ -98,14 +87,6 @@ function discountPercent(product) {
     return Math.round(((regular - current) / regular) * 100);
 }
 
-const reviewCount = (product) => Number(product?.approved_reviews_count || 0);
-const reviewAverage = (product) => Number(product?.approved_reviews_average || 0);
-
-function addToCart(product) {
-    if (!product?.slug || !product?.in_stock) return;
-    router.post(`/cart/${product.slug}`, { quantity: 1 }, { preserveScroll: true });
-}
-
 function promoImage(index) {
     return promoProducts.value[index]?.image_url || props.productCategories[index]?.image_url || '/assets/accessory.svg';
 }
@@ -131,20 +112,13 @@ function subscribe() {
     subscribed.value = true;
 }
 
-onMounted(() => {
-    countdownTimer = window.setInterval(() => { now.value = Date.now(); }, 1000);
-});
-
-onBeforeUnmount(() => {
-    if (countdownTimer) window.clearInterval(countdownTimer);
-});
 </script>
 
 <template>
     <AppLayout>
         <SeoHead
             title="Electronics, Accessories & Technical Services"
-            description="Shop electronics, smartphones, computers and accessories, or request professional electronics services from Prinx Electronics."
+            description="Shop electronics, smartphones, computers and accessories, or request professional electronics services from Prinx Tech."
             canonical="/"
             :schema="homeSchema"
         />
@@ -223,84 +197,35 @@ onBeforeUnmount(() => {
             </div>
         </section>
 
-        <section class="bg-[#fbfbfb] pt-8">
-            <div class="container-shell">
-                <div class="flex flex-wrap items-center justify-between gap-4">
-                    <div class="flex flex-wrap items-center gap-4">
-                        <h2 class="inline-flex items-center gap-2 text-[18px] font-semibold text-slate-950">
-                            <svg viewBox="0 0 24 24" class="h-5 w-5 fill-current text-prinx-500" aria-hidden="true"><path d="M13.3 2 5 13h5l-1.3 9L19 10h-5.3L13.3 2Z"/></svg>
-                            Flash Deals
-                        </h2>
-                        <div class="flex items-center gap-2 text-[10px]">
-                            <span class="font-medium text-prinx-500">Ends in</span>
-                            <template v-for="(value, label) in countdown" :key="label">
-                                <div class="text-center">
-                                    <span class="flex h-7 min-w-7 items-center justify-center rounded-[5px] bg-prinx-500 px-1.5 text-[10px] font-semibold text-white">{{ value }}</span>
-                                    <span class="mt-1 block text-[7px] capitalize text-slate-400">{{ label }}</span>
-                                </div>
-                                <span v-if="label !== 'seconds'" class="self-start pt-1 text-prinx-400">:</span>
-                            </template>
-                        </div>
-                    </div>
-                    <Link href="/shop" class="inline-flex items-center gap-2 text-[11px] font-medium text-prinx-500 transition hover:text-prinx-700">View all deals <span class="text-base">→</span></Link>
-                </div>
+        <HomeProductSection
+            title="Daily Deals"
+            subtitle="Only products with a real active sale price appear here."
+            :products="dailyDeals"
+            badge="Live offers"
+        />
 
-                <div v-if="dealProducts.length" class="mt-4 grid overflow-hidden rounded-[10px] border border-slate-200 bg-white sm:grid-cols-2 lg:grid-cols-4">
-                    <article v-for="(product, index) in dealProducts" :key="product.id" :class="['flex min-h-[146px] gap-3 p-4', index ? 'border-t border-slate-200 sm:border-l sm:border-t-0' : '', index === 2 ? 'sm:border-t lg:border-t-0' : '']">
-                        <Link :href="`/products/${product.slug}`" class="flex h-[108px] w-[112px] shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-slate-50">
-                            <img :src="product.image_url" :srcset="product.image_srcset || undefined" sizes="96px" :alt="product.name" width="112" height="112" class="h-[96px] w-[96px] object-contain" loading="lazy" decoding="async">
-                        </Link>
-                        <div class="flex min-w-0 flex-1 flex-col">
-                            <Link :href="`/products/${product.slug}`" class="line-clamp-2 text-[11px] font-semibold leading-4 text-slate-900 transition hover:text-prinx-600">{{ product.name }}</Link>
-                            <div class="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                                <strong class="text-[11px] font-semibold text-slate-950">{{ money(product.current_price) }}</strong>
-                                <span v-if="discountPercent(product)" class="text-[9px] text-slate-400 line-through">{{ money(product.price) }}</span>
-                                <span v-if="discountPercent(product)" class="text-[9px] font-semibold text-prinx-500">-{{ discountPercent(product) }}%</span>
-                            </div>
-                            <div class="mt-auto flex items-center gap-2 pt-3">
-                                <button type="button" class="h-11 flex-1 rounded-[6px] border border-prinx-500 bg-white px-2 text-[10px] font-semibold text-prinx-600 transition hover:bg-prinx-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40" :disabled="!product.in_stock" @click="addToCart(product)">Add to Cart</button>
-                                <button type="button" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[6px] border border-slate-200 bg-white text-slate-700 transition hover:border-prinx-200 hover:text-prinx-700" aria-label="Add to wishlist">
-                                    <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 9.2c0 5.4-8.5 10-8.5 10s-8.5-4.6-8.5-10A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8Z"/></svg>
-                                </button>
-                            </div>
-                        </div>
-                    </article>
-                </div>
-                <div v-else class="mt-4 rounded-[10px] border border-slate-200 bg-white px-5 py-10 text-center text-sm text-slate-500">Flash deals will appear here when featured products are available.</div>
-            </div>
-        </section>
+        <HomeProductSection
+            title="New Arrivals"
+            subtitle="The newest products added to Prinx Tech."
+            :products="newArrivals"
+            view-all-href="/shop?sort=newest"
+        />
 
-        <section v-if="shopRowProducts.length" class="bg-[#fbfbfb] pt-5">
-            <div class="container-shell">
-                <div class="flex items-center justify-between gap-4">
-                    <h2 class="text-[17px] font-semibold text-slate-950">Featured Products</h2>
-                    <Link href="/shop" class="inline-flex items-center gap-2 text-[11px] font-medium text-prinx-500 transition hover:text-prinx-700">View all products <span class="text-base">→</span></Link>
-                </div>
+        <HomeProductSection
+            title="Best Sellers"
+            subtitle="Ranked by quantity sold in completed customer orders."
+            :products="bestSellers"
+            metric-key="units_sold"
+            metric-label="sold"
+        />
 
-                <div class="mt-4 grid grid-cols-2 gap-[10px] sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                    <article v-for="product in shopRowProducts" :key="product.id" class="group min-w-0 overflow-hidden rounded-[8px] border border-slate-200 bg-white transition hover:border-prinx-200 hover:shadow-[0_10px_24px_rgba(15,23,42,.06)]">
-                        <Link :href="`/products/${product.slug}`" class="relative block h-[156px] overflow-hidden bg-white p-3">
-                            <img :src="product.image_url" :srcset="product.image_srcset || undefined" sizes="(max-width: 639px) 100px, 180px" :alt="product.name" width="180" height="180" class="h-full w-full object-contain transition duration-300 group-hover:scale-[1.025]" loading="lazy" decoding="async">
-                            <span v-if="discountPercent(product)" class="absolute right-2 top-2 rounded-[10px] bg-prinx-50 px-2 py-1 text-[9px] font-semibold text-prinx-700">-{{ discountPercent(product) }}%</span>
-                        </Link>
-                        <div class="px-3 pb-3">
-                            <Link :href="`/products/${product.slug}`" class="line-clamp-1 block min-h-[16px] text-[10px] font-semibold text-slate-800 transition group-hover:text-prinx-600">{{ product.name }}</Link>
-                            <div class="mt-2 flex items-center gap-1 text-[9px]"><span class="text-amber-500">★</span><span class="text-slate-500">{{ reviewCount(product) ? reviewAverage(product).toFixed(1) : 'No reviews' }}</span><span v-if="reviewCount(product)" class="text-slate-400">({{ reviewCount(product) }})</span></div>
-                            <div class="mt-2 flex min-h-[28px] flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                                <strong class="text-[10px] font-semibold text-slate-800">{{ money(product.current_price) }}</strong>
-                                <span v-if="Number(product.current_price) < Number(product.price)" class="text-[9px] text-slate-400 line-through">{{ money(product.price) }}</span>
-                            </div>
-                            <div class="mt-2 flex gap-2">
-                                <button type="button" class="h-11 min-w-0 flex-1 rounded-[5px] border border-prinx-300 bg-white px-2 text-[10px] font-semibold text-prinx-600 transition hover:bg-prinx-500 hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-500" :disabled="!product.in_stock" @click="addToCart(product)">Add to Cart</button>
-                                <button type="button" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[5px] border border-slate-200 bg-white text-slate-700 transition hover:border-prinx-300 hover:text-prinx-700" :aria-label="`Add ${product.name} to wishlist`">
-                                    <svg viewBox="0 0 24 24" class="h-[16px] w-[16px] fill-none stroke-current" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 9.2c0 5.4-8.5 10-8.5 10s-8.5-4.6-8.5-10A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8Z"/></svg>
-                                </button>
-                            </div>
-                        </div>
-                    </article>
-                </div>
-            </div>
-        </section>
+        <HomeProductSection
+            title="Trending Now"
+            subtitle="Based on recent product views, cart interest and WhatsApp enquiries."
+            :products="trendingProducts"
+            metric-key="trend_score"
+            metric-label="interest points"
+        />
 
         <section class="bg-[#fbfbfb] pt-7">
             <div class="container-shell">

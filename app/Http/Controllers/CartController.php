@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Services\CartService;
+use App\Services\ProductActivityService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -31,10 +32,11 @@ class CartController extends Controller
         ]);
     }
 
-    public function store(Request $request, Product $product, CartService $cart): RedirectResponse
+    public function store(Request $request, Product $product, CartService $cart, ProductActivityService $activity): RedirectResponse
     {
         $data = $request->validate(['quantity' => ['nullable', 'integer', 'min:1', 'max:99']]);
         $cart->add($product, (int) ($data['quantity'] ?? 1));
+        $activity->record($request, $product, 'cart_add');
 
         return back()->with('success', 'Product added to cart.');
     }
