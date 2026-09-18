@@ -70,11 +70,8 @@ function addToCart(product) {
                     </Link>
 
                     <div class="px-3 pb-3">
-                        <div class="flex min-h-[18px] items-center justify-between gap-2">
-                            <p v-if="product.brand?.name" class="min-w-0 flex-1 truncate text-[8px] font-medium uppercase tracking-[.08em] text-slate-400">{{ product.brand.name }}</p>
-                            <ProductRating class="shrink-0 text-[9px]" :rating="product.approved_reviews_average || 0" :count="product.approved_reviews_count || 0" />
-                        </div>
-                        <Link :href="`/products/${product.slug}`" class="mt-1 line-clamp-2 block min-h-[32px] text-[10px] font-semibold leading-4 text-slate-800 transition group-hover:text-prinx-600">{{ product.name }}</Link>
+                        <Link :href="`/products/${product.slug}`" class="line-clamp-2 block min-h-[32px] text-[10px] font-semibold leading-4 text-slate-800 transition group-hover:text-prinx-600">{{ product.name }}</Link>
+                        <ProductRating class="mt-1 text-[9px]" :rating="product.approved_reviews_average || 0" :count="product.approved_reviews_count || 0" />
 
                         <p v-if="metricKey && Number(product[metricKey] || 0) > 0" class="mt-1 text-[9px] font-medium text-slate-500">
                             {{ Number(product[metricKey]).toLocaleString() }} {{ metricLabel }}

@@ -2,6 +2,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import AppLayout from '../../Layouts/AppLayout.vue';
+import ProductRating from '../../Components/ProductRating.vue';
 
 const props = defineProps({
     products: { type: Array, default: () => [] },
@@ -63,12 +64,10 @@ const remove = (product) => router.delete(`/wishlist/${product.slug}`, {
                         </Link>
 
                         <div class="flex flex-1 flex-col p-3 sm:p-4">
-                            <div class="flex min-w-0 items-center justify-between gap-2">
-                                <span class="truncate text-xs font-medium text-prinx-600">{{ product.category?.name || 'Electronics' }}</span>
-                                <span class="truncate text-xs text-slate-400">{{ product.brand?.name || 'Prinx' }}</span>
-                            </div>
+                            <span class="truncate text-xs font-medium text-prinx-600">{{ product.category?.name || 'Electronics' }}</span>
 
                             <Link :href="`/products/${product.slug}`" class="mt-2 line-clamp-2 min-h-[40px] text-xs font-semibold leading-5 text-slate-900 transition hover:text-prinx-600 sm:text-sm">{{ product.name }}</Link>
+                            <ProductRating class="mt-1 text-[10px]" :rating="product.approved_reviews_average || 0" :count="product.approved_reviews_count || 0" />
 
                             <p class="mt-2 text-xs font-semibold" :class="product.in_stock ? 'text-emerald-600' : 'text-red-500'">{{ product.in_stock ? 'In Stock' : 'Out of Stock' }}</p>
 

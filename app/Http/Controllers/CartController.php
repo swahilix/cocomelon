@@ -24,6 +24,8 @@ class CartController extends Controller
             'recommended' => Product::query()
                 ->with(['brand', 'category'])
                 ->withCount(['variants as active_variants_count' => fn ($query) => $query->active()])
+                ->withCount(['reviews as approved_reviews_count' => fn ($query) => $query->approved()])
+                ->withAvg(['reviews as approved_reviews_average' => fn ($query) => $query->approved()], 'rating')
                 ->active()
                 ->when($cartProductIds->isNotEmpty(), fn ($query) => $query->whereNotIn('id', $cartProductIds))
                 ->where(fn ($query) => $query->where('track_stock', false)->orWhere('stock_quantity', '>', 0))

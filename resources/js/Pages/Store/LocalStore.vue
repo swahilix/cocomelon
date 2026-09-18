@@ -95,11 +95,8 @@ const money = (value) => new Intl.NumberFormat('en-TZ', {
                 <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                     <Link v-for="product in products" :key="product.id" :href="`/products/${product.slug}`" class="rounded-[8px] border border-slate-200 bg-white p-3 hover:border-prinx-200">
                         <img :src="product.image_url" :alt="product.name" class="h-32 w-full object-contain">
-                        <div class="mt-2 flex min-h-[18px] items-center justify-between gap-2">
-                            <span v-if="product.brand?.name" class="min-w-0 flex-1 truncate text-[8px] font-medium uppercase tracking-[.08em] text-slate-400">{{ product.brand.name }}</span>
-                            <ProductRating class="shrink-0 text-[9px]" :rating="product.approved_reviews_average || 0" :count="product.approved_reviews_count || 0" />
-                        </div>
-                        <strong class="mt-1 line-clamp-2 block text-[10px] leading-4 text-slate-800">{{ product.name }}</strong>
+                        <strong class="mt-2 line-clamp-2 block text-[10px] leading-4 text-slate-800">{{ product.name }}</strong>
+                        <ProductRating class="mt-1 text-[9px]" :rating="product.approved_reviews_average || 0" :count="product.approved_reviews_count || 0" />
                         <span class="mt-2 block text-[10px] font-semibold text-prinx-600">{{ money(product.current_price) }}</span>
                     </Link>
                 </div>

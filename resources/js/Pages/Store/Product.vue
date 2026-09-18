@@ -529,11 +529,8 @@ function submitReview() {
                             <span v-if="relatedDiscount(item)" class="absolute right-2 top-2 rounded-[5px] bg-prinx-50 px-1.5 py-1 text-[8px] font-semibold text-prinx-700">-{{ relatedDiscount(item) }}%</span>
                         </Link>
                         <div class="flex min-w-0 flex-col justify-center border-l border-slate-100 p-3">
-                            <div class="flex min-h-[18px] items-center justify-between gap-2">
-                                <span v-if="item.brand?.name" class="min-w-0 flex-1 truncate text-[8px] font-medium uppercase tracking-[.08em] text-slate-400">{{ item.brand.name }}</span>
-                                <ProductRating class="shrink-0 text-[9px]" :rating="item.approved_reviews_average || 0" :count="item.approved_reviews_count || 0" />
-                            </div>
-                            <Link :href="`/products/${item.slug}`" class="mt-1 line-clamp-2 text-[9px] font-semibold leading-4 text-slate-800 transition group-hover:text-prinx-600">{{ item.name }}</Link>
+                            <Link :href="`/products/${item.slug}`" class="line-clamp-2 text-[9px] font-semibold leading-4 text-slate-800 transition group-hover:text-prinx-600">{{ item.name }}</Link>
+                            <ProductRating class="mt-1 text-[9px]" :rating="item.approved_reviews_average || 0" :count="item.approved_reviews_count || 0" />
                             <div class="mt-1 flex flex-wrap items-center gap-2"><strong class="text-[9px] font-semibold text-slate-800">{{ money(item.current_price) }}</strong><span v-if="Number(item.current_price) < Number(item.price)" class="text-[8px] text-slate-400 line-through">{{ money(item.price) }}</span></div>
                             <div class="mt-2 flex items-center gap-2">
                                 <button type="button" class="h-7 flex-1 rounded-[5px] border border-prinx-300 bg-white px-2 text-[8px] font-semibold text-prinx-600 hover:bg-prinx-500 hover:text-white disabled:border-slate-200 disabled:text-slate-400" :disabled="!item.in_stock" @click="addRelated(item)">{{ Number(item.active_variants_count || 0) > 0 ? 'Select options' : 'Add to Cart' }}</button>

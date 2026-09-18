@@ -240,11 +240,8 @@ const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label 
                                 <span v-if="discount(product)" class="absolute right-2 top-2 rounded-[10px] bg-prinx-50 px-2 py-1 text-[9px] font-semibold text-prinx-700">-{{ discount(product) }}%</span>
                             </Link>
                             <div class="px-3 pb-3">
-                                <div class="flex min-h-[18px] items-center justify-between gap-2">
-                                    <span v-if="product.brand?.name" class="min-w-0 flex-1 truncate text-[8px] font-medium uppercase tracking-[.08em] text-slate-400">{{ product.brand.name }}</span>
-                                    <ProductRating class="shrink-0 text-[9px]" :rating="product.approved_reviews_average || 0" :count="product.approved_reviews_count || 0" />
-                                </div>
-                                <Link :href="`/products/${product.slug}`" class="mt-1 line-clamp-1 block min-h-[16px] text-[10px] font-semibold text-slate-800 transition group-hover:text-prinx-600">{{ product.name }}</Link>
+                                <Link :href="`/products/${product.slug}`" class="line-clamp-1 block min-h-[16px] text-[10px] font-semibold text-slate-800 transition group-hover:text-prinx-600">{{ product.name }}</Link>
+                                <ProductRating class="mt-1 text-[9px]" :rating="product.approved_reviews_average || 0" :count="product.approved_reviews_count || 0" />
                                 <div class="mt-2 flex min-h-[28px] flex-wrap items-baseline gap-x-2 gap-y-0.5">
                                     <strong class="text-[10px] font-semibold text-slate-800">{{ money(product.current_price) }}</strong>
                                     <span v-if="Number(product.current_price) < Number(product.price)" class="text-[9px] text-slate-400 line-through">{{ money(product.price) }}</span>
@@ -263,11 +260,8 @@ const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label 
                         <article v-for="product in products.data" :key="product.id" class="flex gap-4 rounded-[8px] border border-slate-200 bg-white p-3">
                             <Link :href="`/products/${product.slug}`" class="flex h-[110px] w-[120px] shrink-0 items-center justify-center"><img :src="product.image_url" :alt="product.name" class="h-full w-full object-contain"></Link>
                             <div class="flex min-w-0 flex-1 flex-col justify-center">
-                                <div class="flex items-center justify-between gap-3">
-                                    <span v-if="product.brand?.name" class="min-w-0 flex-1 truncate text-[9px] font-medium uppercase tracking-[.08em] text-slate-400">{{ product.brand.name }}</span>
-                                    <ProductRating class="shrink-0 text-[10px]" :rating="product.approved_reviews_average || 0" :count="product.approved_reviews_count || 0" />
-                                </div>
-                                <Link :href="`/products/${product.slug}`" class="mt-1 text-[13px] font-semibold text-slate-800 hover:text-prinx-600">{{ product.name }}</Link>
+                                <Link :href="`/products/${product.slug}`" class="text-[13px] font-semibold text-slate-800 hover:text-prinx-600">{{ product.name }}</Link>
+                                <ProductRating class="mt-1 text-[10px]" :rating="product.approved_reviews_average || 0" :count="product.approved_reviews_count || 0" />
                                 <div class="mt-2 flex items-center gap-3"><strong class="text-[12px]">{{ money(product.current_price) }}</strong><span v-if="Number(product.current_price) < Number(product.price)" class="text-[10px] text-slate-400 line-through">{{ money(product.price) }}</span></div>
                             </div>
                             <div class="my-auto flex flex-col gap-2">

@@ -22,6 +22,8 @@ class WishlistController extends Controller
             ->active()
             ->with(['category', 'brand'])
             ->withCount(['variants as active_variants_count' => fn ($query) => $query->active()])
+            ->withCount(['reviews as approved_reviews_count' => fn ($query) => $query->approved()])
+            ->withAvg(['reviews as approved_reviews_average' => fn ($query) => $query->approved()], 'rating')
             ->whereIn('id', $rows->pluck('product_id'))
             ->get()
             ->keyBy('id');
@@ -44,6 +46,8 @@ class WishlistController extends Controller
                 'stock_quantity' => (int) $product->stock_quantity,
                 'track_stock' => (bool) $product->track_stock,
                 'active_variants_count' => (int) $product->active_variants_count,
+                'approved_reviews_count' => (int) $product->approved_reviews_count,
+                'approved_reviews_average' => (float) ($product->approved_reviews_average ?? 0),
                 'image_url' => $product->image_url,
                 'category' => $product->category ? [
                     'id' => (int) $product->category->id,
