@@ -253,8 +253,8 @@ onBeforeUnmount(() => {
                                 <span v-if="discountPercent(product)" class="text-[9px] font-semibold text-prinx-500">-{{ discountPercent(product) }}%</span>
                             </div>
                             <div class="mt-auto flex items-center gap-2 pt-3">
-                                <button type="button" class="h-8 flex-1 rounded-[6px] border border-prinx-500 bg-white px-2 text-[9px] font-semibold text-prinx-600 transition hover:bg-prinx-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40" :disabled="!product.in_stock" @click="addToCart(product)">Add to Cart</button>
-                                <button type="button" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] border border-slate-200 bg-white text-slate-700 transition hover:border-prinx-200 hover:text-prinx-600" aria-label="Add to wishlist">
+                                <button type="button" class="h-11 flex-1 rounded-[6px] border border-prinx-500 bg-white px-2 text-[10px] font-semibold text-prinx-600 transition hover:bg-prinx-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40" :disabled="!product.in_stock" @click="addToCart(product)">Add to Cart</button>
+                                <button type="button" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[6px] border border-slate-200 bg-white text-slate-700 transition hover:border-prinx-200 hover:text-prinx-700" aria-label="Add to wishlist">
                                     <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 9.2c0 5.4-8.5 10-8.5 10s-8.5-4.6-8.5-10A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8Z"/></svg>
                                 </button>
                             </div>
@@ -286,8 +286,8 @@ onBeforeUnmount(() => {
                                 <span v-if="Number(product.current_price) < Number(product.price)" class="text-[9px] text-slate-400 line-through">{{ money(product.price) }}</span>
                             </div>
                             <div class="mt-2 flex gap-2">
-                                <button type="button" class="h-[30px] min-w-0 flex-1 rounded-[5px] border border-prinx-300 bg-white px-2 text-[9px] font-semibold text-prinx-600 transition hover:bg-prinx-500 hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400" :disabled="!product.in_stock" @click="addToCart(product)">Add to Cart</button>
-                                <button type="button" class="flex h-[30px] w-[34px] shrink-0 items-center justify-center rounded-[5px] border border-slate-200 bg-white text-slate-600 transition hover:border-prinx-300 hover:text-prinx-600" :aria-label="`Add ${product.name} to wishlist`">
+                                <button type="button" class="h-11 min-w-0 flex-1 rounded-[5px] border border-prinx-300 bg-white px-2 text-[10px] font-semibold text-prinx-600 transition hover:bg-prinx-500 hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-500" :disabled="!product.in_stock" @click="addToCart(product)">Add to Cart</button>
+                                <button type="button" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[5px] border border-slate-200 bg-white text-slate-700 transition hover:border-prinx-300 hover:text-prinx-700" :aria-label="`Add ${product.name} to wishlist`">
                                     <svg viewBox="0 0 24 24" class="h-[16px] w-[16px] fill-none stroke-current" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 9.2c0 5.4-8.5 10-8.5 10s-8.5-4.6-8.5-10A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8Z"/></svg>
                                 </button>
                             </div>
@@ -339,7 +339,7 @@ onBeforeUnmount(() => {
                         <img src="/assets/prinx-logo.png" :alt="store.name" width="340" height="100" class="h-10 w-auto max-w-[160px] object-contain">
                         <p class="mt-3 text-[10px] leading-5 text-slate-600">{{ store.description || 'Your one-stop destination for original tech products, accessories and support.' }}</p>
                         <div v-if="socialLinks.length" class="mt-4 flex items-center gap-2">
-                            <a v-for="social in socialLinks" :key="social.key" :href="social.url" target="_blank" rel="noopener" :aria-label="social.label" class="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-semibold text-slate-700 transition hover:border-prinx-200 hover:text-prinx-600">{{ social.short }}</a>
+                            <a v-for="social in socialLinks" :key="social.key" :href="social.url" target="_blank" rel="noopener" :aria-label="social.label" class="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-[12px] font-semibold text-slate-700 transition hover:border-prinx-200 hover:text-prinx-700">{{ social.short }}</a>
                         </div>
                         <p class="mt-5 text-[9px] text-slate-400">© {{ store.year }} {{ store.name }}. All rights reserved.</p>
                     </div>

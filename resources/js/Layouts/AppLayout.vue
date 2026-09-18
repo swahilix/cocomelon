@@ -63,7 +63,7 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
 
                     <form class="flex h-[50px] min-w-0 items-center rounded-[10px] border border-slate-200 bg-white px-4 shadow-[0_3px_15px_rgba(15,23,42,.03)] transition focus-within:border-amber-300" @submit.prevent="submitSearch">
                         <input v-model="search" aria-label="Search products" class="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-slate-800 outline-none placeholder:text-slate-400" placeholder="Search for products...">
-                        <button type="submit" class="ml-3 flex h-8 w-8 shrink-0 items-center justify-center text-slate-500 transition hover:text-amber-600" aria-label="Search">
+                        <button type="submit" class="ml-3 flex h-11 w-11 shrink-0 items-center justify-center text-slate-600 transition hover:text-amber-700" aria-label="Search">
                             <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path stroke-linecap="round" d="m16 16 4 4"/></svg>
                         </button>
                     </form>
@@ -80,10 +80,10 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                     </div>
 
                     <div class="flex items-center justify-end gap-1.5">
-                        <Link v-if="user?.is_admin" href="/admin" class="flex h-10 w-10 items-center justify-center rounded-full text-slate-900 transition hover:bg-amber-50 hover:text-amber-700" title="Admin panel" aria-label="Admin panel">
+                        <Link v-if="user?.is_admin" href="/admin" class="flex h-11 w-11 items-center justify-center rounded-full text-slate-900 transition hover:bg-amber-50 hover:text-amber-700" title="Admin panel" aria-label="Admin panel">
                             <svg viewBox="0 0 24 24" class="h-[22px] w-[22px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path stroke-linecap="round" d="M5 20c.7-4.2 3-6.3 7-6.3s6.3 2.1 7 6.3"/></svg>
                         </Link>
-                        <Link v-else :href="user ? '/account' : '/login'" class="flex h-10 w-10 items-center justify-center rounded-full text-slate-900 transition hover:bg-amber-50 hover:text-amber-700" title="Account" aria-label="Account">
+                        <Link v-else :href="user ? '/account' : '/login'" class="flex h-11 w-11 items-center justify-center rounded-full text-slate-900 transition hover:bg-amber-50 hover:text-amber-700" title="Account" aria-label="Account">
                             <svg viewBox="0 0 24 24" class="h-[22px] w-[22px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path stroke-linecap="round" d="M5 20c.7-4.2 3-6.3 7-6.3s6.3 2.1 7 6.3"/></svg>
                         </Link>
 
@@ -92,7 +92,7 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                             <span v-if="wishlistCount" class="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#f7b900] px-1 text-[9px] font-bold text-slate-950">{{ wishlistCount }}</span>
                         </Link>
 
-                        <Link href="/cart" class="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-900 transition hover:bg-amber-50 hover:text-amber-700" title="Cart" aria-label="Shopping cart">
+                        <Link href="/cart" class="relative flex h-11 w-11 items-center justify-center rounded-full text-slate-900 transition hover:bg-amber-50 hover:text-amber-700" title="Cart" aria-label="Shopping cart">
                             <svg viewBox="0 0 24 24" class="h-[23px] w-[23px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5h2l2 10h10l2-7H7M9 19.2a1.2 1.2 0 1 0 0 .1Zm7 0a1.2 1.2 0 1 0 0 .1Z"/></svg>
                             <span class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#f7b900] px-1 text-[8px] font-bold text-slate-950">{{ cartCount }}</span>
                         </Link>

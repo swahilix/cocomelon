@@ -240,7 +240,9 @@ return new class extends Migration {
         if (! Schema::hasTable('mail_audit_logs')) {
             Schema::create('mail_audit_logs', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+                // Production may use a legacy users.id definition. Keep the audit
+                // reference indexed without enforcing a cross-schema foreign key.
+                $table->unsignedBigInteger('user_id')->nullable()->index();
                 $table->foreignId('mail_account_id')->nullable()->constrained('mail_accounts')->nullOnDelete();
                 $table->foreignId('mail_message_id')->nullable()->constrained('mail_messages')->nullOnDelete();
                 $table->string('action', 80)->index();
