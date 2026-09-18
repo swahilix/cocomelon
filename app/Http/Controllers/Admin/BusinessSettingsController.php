@@ -78,6 +78,14 @@ class BusinessSettingsController extends Controller
             'pickup_enabled' => ['nullable', 'boolean'],
             'pickup_location' => ['nullable', 'string', 'max:255'],
             'pickup_instructions' => ['nullable', 'string', 'max:255'],
+            'payment_mobile_money_enabled' => ['nullable', 'boolean'],
+            'payment_bank_transfer_enabled' => ['nullable', 'boolean'],
+            'payment_cash_on_delivery_enabled' => ['nullable', 'boolean'],
+            'payment_mobile_money_description' => ['nullable', 'string', 'max:255'],
+            'payment_bank_transfer_description' => ['nullable', 'string', 'max:255'],
+            'payment_cash_on_delivery_description' => ['nullable', 'string', 'max:255'],
+            'payment_safety_note' => ['nullable', 'string', 'max:255'],
+            'payment_strip_visible' => ['nullable', 'boolean'],
             'description' => ['nullable', 'string', 'max:2000'],
             'facebook_url' => ['nullable', 'url:http,https', 'max:255'],
             'instagram_url' => ['nullable', 'url:http,https', 'max:255'],
@@ -130,6 +138,36 @@ class BusinessSettingsController extends Controller
             if ($pickupEnabled && blank($validated['pickup_location'] ?? null)) {
                 throw ValidationException::withMessages([
                     'pickup_location' => 'Enter the store pickup location.',
+                ]);
+            }
+        }
+
+        $paymentFields = [
+            'payment_mobile_money_enabled',
+            'payment_bank_transfer_enabled',
+            'payment_cash_on_delivery_enabled',
+            'payment_mobile_money_description',
+            'payment_bank_transfer_description',
+            'payment_cash_on_delivery_description',
+            'payment_safety_note',
+            'payment_strip_visible',
+        ];
+        $paymentFieldsSubmitted = $request->hasAny($paymentFields);
+
+        if (! Schema::hasColumn('business_settings', 'payment_mobile_money_enabled')) {
+            foreach ($paymentFields as $field) {
+                unset($validated[$field]);
+            }
+        } elseif ($paymentFieldsSubmitted) {
+            $enabledMethods = collect([
+                (bool) ($validated['payment_mobile_money_enabled'] ?? false),
+                (bool) ($validated['payment_bank_transfer_enabled'] ?? false),
+                (bool) ($validated['payment_cash_on_delivery_enabled'] ?? false),
+            ])->filter()->count();
+
+            if ($enabledMethods === 0) {
+                throw ValidationException::withMessages([
+                    'payment_mobile_money_enabled' => 'Keep at least one customer payment method enabled.',
                 ]);
             }
         }

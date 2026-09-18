@@ -78,12 +78,57 @@ class HandleInertiaRequests extends Middleware
             'x' => $value('x_url'),
         ];
         $databaseProfiles = array_values(array_filter($social));
+        $paymentSettingsReady = Schema::hasTable('business_settings')
+            && Schema::hasColumn('business_settings', 'payment_mobile_money_enabled');
+
+        $paymentMethods = collect([
+            [
+                'value' => 'mobile_money',
+                'title' => 'Mobile Money',
+                'description' => $paymentSettingsReady
+                    ? $value('payment_mobile_money_description', 'Pay using the mobile money instructions provided for your order.')
+                    : 'Pay using the mobile money instructions provided for your order.',
+                'icon' => 'phone',
+                'enabled' => $paymentSettingsReady ? (bool) ($business?->payment_mobile_money_enabled ?? true) : true,
+            ],
+            [
+                'value' => 'bank_transfer',
+                'title' => 'Bank Transfer',
+                'description' => $paymentSettingsReady
+                    ? $value('payment_bank_transfer_description', 'Pay by bank transfer using the confirmed order instructions.')
+                    : 'Pay by bank transfer using the confirmed order instructions.',
+                'icon' => 'bank',
+                'enabled' => $paymentSettingsReady ? (bool) ($business?->payment_bank_transfer_enabled ?? true) : true,
+            ],
+            [
+                'value' => 'cash_on_delivery',
+                'title' => 'Cash Payment',
+                'description' => $paymentSettingsReady
+                    ? $value('payment_cash_on_delivery_description', 'Pay in cash when your order is delivered or collected.')
+                    : 'Pay in cash when your order is delivered or collected.',
+                'icon' => 'cash',
+                'enabled' => $paymentSettingsReady ? (bool) ($business?->payment_cash_on_delivery_enabled ?? true) : true,
+            ],
+        ])->filter(fn (array $method) => $method['enabled'])
+            ->map(function (array $method): array {
+                unset($method['enabled']);
+                return $method;
+            })
+            ->values()
+            ->all();
+
+        $paymentSafetyNote = $paymentSettingsReady
+            ? $value('payment_safety_note', 'Prinx Tech will never ask for your mobile-money PIN, password or OTP.')
+            : 'Prinx Tech will never ask for your mobile-money PIN, password or OTP.';
+
         $paymentStrip = Schema::hasTable('business_settings') && Schema::hasColumn('business_settings', 'payment_strip')
             ? $value('payment_strip')
             : null;
+        $paymentStripVisible = ! Schema::hasColumn('business_settings', 'payment_strip_visible')
+            || (bool) ($business?->payment_strip_visible ?? false);
         $paymentStripUrl = null;
 
-        if ($paymentStrip) {
+        if ($paymentStrip && $paymentStripVisible) {
             $paymentStripUrl = Str::startsWith($paymentStrip, ['http://', 'https://', '/'])
                 ? $paymentStrip
                 : Storage::disk(config('media.disk', 'public'))->url($paymentStrip);
@@ -137,6 +182,8 @@ class HandleInertiaRequests extends Middleware
                     ? $value('pickup_instructions')
                     : null,
                 'legal_name' => $value('legal_name', config('store.legal_name')),
+                'payment_methods' => $paymentMethods,
+                'payment_safety_note' => $paymentSafetyNote,
                 'payment_strip_url' => $paymentStripUrl,
                 'social' => $social,
                 'same_as' => $databaseProfiles !== [] ? $databaseProfiles : config('store.social_profiles'),

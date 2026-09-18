@@ -60,6 +60,7 @@ const stockDot = computed(() => props.product.in_stock
     ? (props.product.low_stock ? 'bg-amber-500' : 'bg-emerald-500')
     : 'bg-red-500');
 const hasFulfillment = computed(() => Boolean(page.props.store?.delivery_enabled || page.props.store?.pickup_enabled));
+const paymentMethods = computed(() => page.props.store?.payment_methods || []);
 
 const specificationRows = computed(() => [
     props.product.brand?.name ? ['Brand', props.product.brand.name] : null,
@@ -335,6 +336,14 @@ function submitReview() {
                         </div>
                     </div>
 
+                    <div v-if="paymentMethods.length" class="mt-3 rounded-[7px] border border-slate-200 bg-white px-3 py-3">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <strong class="mr-1 text-[10px] font-semibold text-slate-800">Payment options:</strong>
+                            <span v-for="method in paymentMethods" :key="method.value" class="rounded-[5px] bg-slate-100 px-2 py-1 text-[9px] font-medium text-slate-700">{{ method.title }}</span>
+                        </div>
+                        <p v-if="page.props.store.payment_safety_note" class="mt-2 text-[9px] leading-4 text-emerald-700">{{ page.props.store.payment_safety_note }}</p>
+                    </div>
+
                     <a
                         v-if="whatsappHref"
                         :href="whatsappHref"
@@ -362,7 +371,7 @@ function submitReview() {
                         </div>
                         <div class="flex items-center gap-3 px-4 py-4">
                             <svg viewBox="0 0 24 24" class="h-7 w-7 shrink-0 fill-none stroke-prinx-500" stroke-width="1.6"><rect x="5" y="9" width="14" height="11" rx="2"/><path stroke-linecap="round" d="M8 9V7a4 4 0 0 1 8 0v2M12 13v3"/></svg>
-                            <div><strong class="block text-[9px] font-semibold text-slate-800">Secure Payment</strong><span class="mt-1 block text-[8px] text-slate-500">Safe & encrypted</span></div>
+                            <div><strong class="block text-[9px] font-semibold text-slate-800">Payment Options</strong><span class="mt-1 block text-[8px] text-slate-500">{{ paymentMethods.map((method) => method.title).join(' · ') }}</span></div>
                         </div>
                     </div>
 

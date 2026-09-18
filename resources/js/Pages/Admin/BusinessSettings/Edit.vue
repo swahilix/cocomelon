@@ -29,6 +29,14 @@ const form = useForm({
     pickup_enabled: Boolean(props.settings?.pickup_enabled),
     pickup_location: props.settings?.pickup_location || '',
     pickup_instructions: props.settings?.pickup_instructions || '',
+    payment_mobile_money_enabled: props.settings?.payment_mobile_money_enabled !== false,
+    payment_bank_transfer_enabled: props.settings?.payment_bank_transfer_enabled !== false,
+    payment_cash_on_delivery_enabled: props.settings?.payment_cash_on_delivery_enabled !== false,
+    payment_mobile_money_description: props.settings?.payment_mobile_money_description || 'Pay using the mobile money instructions provided for your order.',
+    payment_bank_transfer_description: props.settings?.payment_bank_transfer_description || 'Pay by bank transfer using the confirmed order instructions.',
+    payment_cash_on_delivery_description: props.settings?.payment_cash_on_delivery_description || 'Pay in cash when your order is delivered or collected.',
+    payment_safety_note: props.settings?.payment_safety_note || 'Prinx Tech will never ask for your mobile-money PIN, password or OTP.',
+    payment_strip_visible: Boolean(props.settings?.payment_strip_visible),
     description: props.settings?.description || '',
     facebook_url: props.settings?.facebook_url || '',
     instagram_url: props.settings?.instagram_url || '',
@@ -214,10 +222,51 @@ const save = () => form.post('/admin/business-settings', {
                 <section class="form-section">
                     <div class="mb-3 flex items-start gap-2">
                         <span class="flex h-8 w-8 items-center justify-center rounded-[8px] bg-prinx-50 text-prinx-600"><Icon name="card" :size="17" /></span>
-                        <div><h2 class="font-semibold text-slate-900">Footer payment methods</h2><p class="text-[11px] text-slate-500">Upload one wide “We Accept” strip containing all supported payment logos.</p></div>
+                        <div><h2 class="font-semibold text-slate-900">Payment methods & customer trust</h2><p class="text-[11px] text-slate-500">Only enabled methods are advertised and accepted at checkout.</p></div>
                     </div>
-                    <div><label class="label">We Accept strip</label><input type="file" class="input" accept="image/jpeg,image/png,image/webp" @change="form.payment_strip = $event.target.files[0] || null"><p class="image-spec">Recommended: wide transparent image similar to 2048 × 256 px · PNG, JPG or WebP · max 4 MB.</p><p v-if="form.errors.payment_strip" class="error">{{ form.errors.payment_strip }}</p></div>
-                    <div v-if="paymentStripUrl" class="mt-4"><p class="label">Current footer strip</p><div class="flex min-h-24 items-center justify-center overflow-hidden rounded-[9px] border border-slate-200 bg-white p-4"><img :src="paymentStripUrl" alt="Accepted payment methods" class="max-h-20 max-w-full object-contain"></div></div>
+
+                    <div class="grid gap-3 lg:grid-cols-3">
+                        <div class="rounded-[8px] border border-slate-200 bg-slate-50 p-3">
+                            <label class="flex cursor-pointer items-center justify-between gap-3">
+                                <span><strong class="block text-xs font-semibold text-slate-900">Mobile Money</strong><span class="mt-1 block text-[10px] text-slate-500">Show and accept mobile-money orders.</span></span>
+                                <input v-model="form.payment_mobile_money_enabled" type="checkbox" class="h-4 w-4 accent-prinx-500">
+                            </label>
+                            <textarea v-model="form.payment_mobile_money_description" rows="3" class="input mt-3 min-h-20 resize-y" :disabled="!form.payment_mobile_money_enabled" placeholder="Describe how customers will pay"></textarea>
+                        </div>
+                        <div class="rounded-[8px] border border-slate-200 bg-slate-50 p-3">
+                            <label class="flex cursor-pointer items-center justify-between gap-3">
+                                <span><strong class="block text-xs font-semibold text-slate-900">Bank Transfer</strong><span class="mt-1 block text-[10px] text-slate-500">Show and accept bank-transfer orders.</span></span>
+                                <input v-model="form.payment_bank_transfer_enabled" type="checkbox" class="h-4 w-4 accent-prinx-500">
+                            </label>
+                            <textarea v-model="form.payment_bank_transfer_description" rows="3" class="input mt-3 min-h-20 resize-y" :disabled="!form.payment_bank_transfer_enabled" placeholder="Describe how customers will pay"></textarea>
+                        </div>
+                        <div class="rounded-[8px] border border-slate-200 bg-slate-50 p-3">
+                            <label class="flex cursor-pointer items-center justify-between gap-3">
+                                <span><strong class="block text-xs font-semibold text-slate-900">Cash Payment</strong><span class="mt-1 block text-[10px] text-slate-500">Cash on delivery or collection where available.</span></span>
+                                <input v-model="form.payment_cash_on_delivery_enabled" type="checkbox" class="h-4 w-4 accent-prinx-500">
+                            </label>
+                            <textarea v-model="form.payment_cash_on_delivery_description" rows="3" class="input mt-3 min-h-20 resize-y" :disabled="!form.payment_cash_on_delivery_enabled" placeholder="Describe how customers will pay"></textarea>
+                        </div>
+                    </div>
+                    <p v-if="form.errors.payment_mobile_money_enabled" class="error mt-2">{{ form.errors.payment_mobile_money_enabled }}</p>
+
+                    <div class="mt-4">
+                        <label class="label">Payment safety message</label>
+                        <input v-model="form.payment_safety_note" class="input" placeholder="Safety message shown near payment choices">
+                        <p class="mt-1 text-[10px] text-slate-500">Recommended: remind customers never to share PINs, passwords or OTP codes.</p>
+                        <p v-if="form.errors.payment_safety_note" class="error">{{ form.errors.payment_safety_note }}</p>
+                    </div>
+
+                    <div class="mt-5 border-t border-slate-200 pt-4">
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div><p class="label mb-1">Optional payment-logo strip</p><p class="text-[10px] leading-4 text-slate-500">A logo image does not enable a payment method. Show it only when every visible logo matches the methods enabled above.</p></div>
+                            <label class="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-700"><input v-model="form.payment_strip_visible" type="checkbox" class="h-4 w-4 accent-prinx-500"> Show strip publicly</label>
+                        </div>
+                        <input type="file" class="input mt-3" accept="image/jpeg,image/png,image/webp" @change="form.payment_strip = $event.target.files[0] || null">
+                        <p class="image-spec">Recommended: wide transparent image · PNG, JPG or WebP · max 4 MB.</p>
+                        <p v-if="form.errors.payment_strip" class="error">{{ form.errors.payment_strip }}</p>
+                        <div v-if="paymentStripUrl" class="mt-4"><p class="label">Current uploaded strip</p><div class="flex min-h-24 items-center justify-center overflow-hidden rounded-[9px] border border-slate-200 bg-white p-4"><img :src="paymentStripUrl" alt="Uploaded payment method logos" class="max-h-20 max-w-full object-contain"></div></div>
+                    </div>
                 </section>
 
                 <div class="flex justify-end pb-2"><button type="submit" class="btn-primary" :disabled="form.processing"><Icon name="tick-circle" :size="15" /> Save business settings</button></div>

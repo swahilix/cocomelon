@@ -10,6 +10,7 @@ use App\Services\InventoryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -27,6 +28,14 @@ class CheckoutController extends Controller
 
     public function store(Request $request, CartService $cart, InventoryService $inventory): RedirectResponse
     {
+        $business = DB::table('business_settings')->where('id', 1)->first();
+        $paymentSettingsReady = Schema::hasColumn('business_settings', 'payment_mobile_money_enabled');
+        $enabledPaymentMethods = array_keys(array_filter([
+            'mobile_money' => $paymentSettingsReady ? (bool) ($business?->payment_mobile_money_enabled ?? true) : true,
+            'bank_transfer' => $paymentSettingsReady ? (bool) ($business?->payment_bank_transfer_enabled ?? true) : true,
+            'cash_on_delivery' => $paymentSettingsReady ? (bool) ($business?->payment_cash_on_delivery_enabled ?? true) : true,
+        ]));
+
         $data = $request->validate([
             'customer_name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email', 'max:190'],
@@ -37,10 +46,15 @@ class CheckoutController extends Controller
             'city' => ['nullable', 'required_if:fulfillment_method,delivery', 'string', 'max:100'],
             'region' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:1000'],
-            'payment_method' => ['required', 'in:cash_on_delivery,mobile_money,bank_transfer'],
+            'payment_method' => ['required', 'string', 'max:40'],
         ]);
 
-        $business = DB::table('business_settings')->where('id', 1)->first();
+        if (! in_array($data['payment_method'], $enabledPaymentMethods, true)) {
+            return back()->withErrors([
+                'payment_method' => 'That payment method is not currently available. Choose one of the payment options shown at checkout.',
+            ])->withInput();
+        }
+
         $deliveryEnabled = (bool) ($business?->delivery_enabled ?? true);
         $pickupEnabled = (bool) ($business?->pickup_enabled ?? false);
 

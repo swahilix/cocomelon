@@ -244,9 +244,12 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                     </div>
                 </div>
 
-                <div v-if="store.payment_strip_url" class="mt-6 flex items-center justify-end gap-3 border-t border-slate-100">
-                    <span class="text-[12px] text-slate-500">We accept</span>
-                    <img :src="store.payment_strip_url" alt="Accepted payment methods" width="360" height="70" loading="lazy" decoding="async" class="h-auto max-h-[35px] w-auto max-w-full object-contain">
+                <div v-if="store.payment_methods?.length" class="mt-6 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-end">
+                    <div class="flex flex-wrap items-center gap-2 text-[10px] text-slate-600">
+                        <span class="font-semibold text-slate-800">Payment options:</span>
+                        <span v-for="method in store.payment_methods" :key="method.value" class="rounded-[5px] bg-slate-100 px-2 py-1">{{ method.title }}</span>
+                    </div>
+                    <img v-if="store.payment_strip_url" :src="store.payment_strip_url" alt="Configured payment method logos" width="360" height="70" loading="lazy" decoding="async" class="h-auto max-h-[35px] w-auto max-w-full object-contain">
                 </div>
             </div>
         </footer>

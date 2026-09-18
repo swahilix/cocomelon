@@ -22,7 +22,7 @@ const form = useForm({
     region: '',
     notes: '',
     fulfillment_method: page.props.store?.delivery_enabled !== false ? 'delivery' : 'pickup',
-    payment_method: 'mobile_money',
+    payment_method: store.value.payment_methods?.[0]?.value || '',
 });
 
 const money = (value) => new Intl.NumberFormat('en-TZ', {
@@ -36,26 +36,7 @@ const isPickup = computed(() => form.fulfillment_method === 'pickup');
 const displayedShipping = computed(() => isPickup.value ? 0 : Number(props.cart.shipping || 0));
 const displayedTotal = computed(() => Math.max(0, Number(props.cart.subtotal || 0) + displayedShipping.value - Number(props.cart.discount || 0)));
 
-const paymentMethods = [
-    {
-        value: 'mobile_money',
-        title: 'Mobile Money',
-        text: 'Pay with M-Pesa, Airtel Money or Tigo Pesa',
-        icon: 'phone',
-    },
-    {
-        value: 'bank_transfer',
-        title: 'Bank Transfer',
-        text: 'Pay securely using our bank details',
-        icon: 'card',
-    },
-    {
-        value: 'cash_on_delivery',
-        title: 'Cash on Delivery',
-        text: 'Pay with cash when your order arrives',
-        icon: 'cash',
-    },
-];
+const paymentMethods = computed(() => store.value.payment_methods || []);
 
 onMounted(() => {
     try {
@@ -291,13 +272,17 @@ const submit = () => {
                                         <div class="flex items-start gap-3">
                                             <span :class="['mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2', form.payment_method === method.value ? 'border-prinx-500' : 'border-slate-300']"><span v-if="form.payment_method === method.value" class="h-2.5 w-2.5 rounded-full bg-prinx-500"></span></span>
                                             <svg v-if="method.icon === 'phone'" viewBox="0 0 24 24" class="h-7 w-7 shrink-0 fill-none stroke-slate-600" stroke-width="1.6"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M10 5h4M11 19h2"/></svg>
-                                            <svg v-else-if="method.icon === 'card'" viewBox="0 0 24 24" class="h-7 w-7 shrink-0 fill-none stroke-slate-600" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M7 15h4"/></svg>
+                                            <svg v-else-if="method.icon === 'bank'" viewBox="0 0 24 24" class="h-7 w-7 shrink-0 fill-none stroke-slate-600" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9h18M5 9v8m4-8v8m6-8v8m4-8v8M3 18h18M12 3l9 4H3l9-4Z"/></svg>
                                             <svg v-else viewBox="0 0 24 24" class="h-7 w-7 shrink-0 fill-none stroke-slate-600" stroke-width="1.6"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9h.01M18 15h.01"/></svg>
-                                            <span class="min-w-0"><strong class="block text-xs font-semibold text-slate-900">{{ method.title }}</strong><span class="mt-1 block text-xs leading-5 text-slate-500">{{ method.text }}</span></span>
+                                            <span class="min-w-0"><strong class="block text-xs font-semibold text-slate-900">{{ method.title }}</strong><span class="mt-1 block text-xs leading-5 text-slate-500">{{ method.description }}</span></span>
                                         </div>
                                     </button>
                                 </div>
                                 <p v-if="form.errors.payment_method" class="mt-2 text-xs text-red-600">{{ form.errors.payment_method }}</p>
+                                <div v-if="store.payment_safety_note" class="mt-3 flex items-start gap-2 rounded-[7px] border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs leading-5 text-emerald-800">
+                                    <svg viewBox="0 0 24 24" class="mt-0.5 h-4 w-4 shrink-0 fill-none stroke-current" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3 5 7v5c0 4.3 2.5 7.3 7 9 4.5-1.7 7-4.7 7-9V7l-7-4Z"/><path stroke-linecap="round" d="m9 12 2 2 4-4"/></svg>
+                                    <span>{{ store.payment_safety_note }}</span>
+                                </div>
                             </section>
 
                             <div class="space-y-3 p-4 sm:p-5">
@@ -373,7 +358,7 @@ const submit = () => {
                 <section class="mt-5 grid gap-3 rounded-[8px] border border-prinx-100 bg-gradient-to-r from-[#fff8f4] via-white to-[#fff8f4] p-4 sm:grid-cols-2 lg:grid-cols-4">
                     <div class="flex items-center justify-center gap-3 sm:justify-start lg:justify-center">
                         <svg viewBox="0 0 24 24" class="h-7 w-7 shrink-0 fill-none stroke-prinx-500" stroke-width="1.7"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1"/></svg>
-                        <div><strong class="block text-xs font-semibold text-slate-900">Secure Payment</strong><span class="mt-1 block text-xs text-slate-500">Secure checkout process</span></div>
+                        <div><strong class="block text-xs font-semibold text-slate-900">Payment Options</strong><span class="mt-1 block text-xs text-slate-500">{{ paymentMethods.map((method) => method.title).join(' · ') }}</span></div>
                     </div>
                     <div class="flex items-center justify-center gap-3 sm:justify-start lg:justify-center">
                         <svg viewBox="0 0 24 24" class="h-7 w-7 shrink-0 fill-none stroke-prinx-500" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="m12 3 2.3 2 3-.2.7 3 2.5 1.7-1.2 2.7 1.2 2.7-2.5 1.7-.7 3-3-.2-2.3 2-2.3-2-3 .2-.7-3-2.5-1.7 1.2-2.7-1.2-2.7L6 7.8l.7-3 3 .2L12 3Z"/><path d="m9 12 2 2 4-4"/></svg>

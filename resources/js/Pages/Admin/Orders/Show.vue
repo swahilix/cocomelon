@@ -46,6 +46,7 @@ const money = (value) => `TZS ${Number(value || 0).toLocaleString()}`;
                         <div class="flex items-center justify-between gap-4"><span class="text-slate-500">Subtotal</span><strong>{{ money(order.subtotal) }}</strong></div>
                         <div class="flex items-center justify-between gap-4"><span class="text-slate-500">Shipping</span><strong>{{ money(order.shipping_total) }}</strong></div>
                         <div class="flex items-center justify-between gap-4"><span class="text-slate-500">Fulfillment</span><strong class="capitalize">{{ order.fulfillment_method === 'pickup' ? 'Store pickup' : 'Delivery' }}</strong></div>
+                        <div class="flex items-center justify-between gap-4"><span class="text-slate-500">Payment method</span><strong>{{ ({ mobile_money: 'Mobile Money', bank_transfer: 'Bank Transfer', cash_on_delivery: 'Cash Payment' })[order.payment_method] || order.payment_method }}</strong></div>
                         <div v-if="Number(order.discount_total || 0) > 0" class="flex items-center justify-between gap-4 text-emerald-700"><span>Discount <strong v-if="order.coupon_code">({{ order.coupon_code }})</strong></span><strong>-{{ money(order.discount_total) }}</strong></div>
                         <div class="flex items-center justify-between gap-4 border-t border-slate-200 pt-3"><span class="font-semibold text-slate-900">Grand total</span><strong class="text-lg text-prinx-600">{{ money(order.grand_total) }}</strong></div>
                     </div>

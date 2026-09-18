@@ -23,11 +23,12 @@ const money = (value) => new Intl.NumberFormat('en-TZ', {
                     <p class="mt-2 text-emerald-50">Thank you. The Prinx Tech team will contact you to confirm the order.</p>
                 </div>
                 <div class="p-6 sm:p-8">
-                    <div class="grid gap-4 sm:grid-cols-4">
+                    <div class="grid gap-4 sm:grid-cols-5">
                         <div><span class="text-xs font-bold uppercase text-slate-400">Order number</span><b class="mt-1 block">{{ order.order_number }}</b></div>
                         <div><span class="text-xs font-bold uppercase text-slate-400">Total</span><b class="mt-1 block">{{ money(order.grand_total) }}</b></div>
                         <div><span class="text-xs font-bold uppercase text-slate-400">Status</span><b class="mt-1 block capitalize">{{ order.status }}</b></div>
                         <div><span class="text-xs font-bold uppercase text-slate-400">Fulfillment</span><b class="mt-1 block capitalize">{{ order.fulfillment_method === 'pickup' ? 'Store pickup' : 'Delivery' }}</b></div>
+                        <div><span class="text-xs font-bold uppercase text-slate-400">Payment</span><b class="mt-1 block">{{ ({ mobile_money: 'Mobile Money', bank_transfer: 'Bank Transfer', cash_on_delivery: 'Cash Payment' })[order.payment_method] || order.payment_method }}</b></div>
                     </div>
                     <div v-if="order.fulfillment_method === 'pickup'" class="mt-5 rounded-[7px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
                         Your order is for <strong>store pickup</strong>. We will contact you when it is ready to collect.

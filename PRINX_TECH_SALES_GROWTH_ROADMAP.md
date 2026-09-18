@@ -46,7 +46,7 @@ Status: implemented; CI repair included with Phase 5
 - Delivery/pickup availability near Buy Now.
 
 ## Phase 5 — Trust & Policy Content
-Status: implemented; pending deployment verification
+Status: implemented and deployed
 
 - FAQ page.
 - Warranty information page.
@@ -55,6 +55,8 @@ Status: implemented; pending deployment verification
 - Make these pages visible near purchase controls and footer.
 
 ## Phase 6 — Payment Confidence
+Status: implemented; pending deployment verification
+
 - Show accepted payment methods beside Buy Now/checkout.
 - Mobile money, card and bank/payment options from actual configured methods.
 - Clear payment-security messaging.
