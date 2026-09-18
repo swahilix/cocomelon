@@ -130,9 +130,11 @@ const clearSelection = () => {
                                 </Link>
 
                                 <div class="flex flex-1 flex-col p-3">
-                                    <p class="truncate text-[8px] uppercase tracking-[.08em] text-slate-400">{{ product.brand?.name || product.category?.name || 'Prinx Tech' }}</p>
+                                    <div class="flex min-h-[18px] items-center justify-between gap-2">
+                                        <p class="min-w-0 flex-1 truncate text-[8px] uppercase tracking-[.08em] text-slate-400">{{ product.brand?.name || product.category?.name || 'Prinx Tech' }}</p>
+                                        <ProductRating class="shrink-0 text-[9px]" :rating="product.approved_reviews_average || 0" :count="product.approved_reviews_count || 0" />
+                                    </div>
                                     <Link :href="`/products/${product.slug}`" class="mt-1 line-clamp-2 min-h-[32px] text-[10px] font-semibold leading-4 text-slate-800 hover:text-prinx-600">{{ product.name }}</Link>
-                                    <ProductRating class="mt-1.5 text-[9px]" :rating="product.approved_reviews_average || 0" :count="product.approved_reviews_count || 0" />
                                     <strong class="mt-2 text-[10px] text-slate-900">{{ money(product.current_price) }}</strong>
                                     <p class="mt-1 text-[9px]" :class="product.in_stock ? 'text-emerald-600' : 'text-red-500'">{{ product.stock_message || (product.in_stock ? 'In Stock' : 'Out of Stock') }}</p>
 
