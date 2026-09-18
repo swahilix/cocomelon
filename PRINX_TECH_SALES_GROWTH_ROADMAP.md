@@ -3,7 +3,7 @@
 Goal: turn prinx.tz from a fast catalogue into a trusted local ecommerce store that creates enquiries, orders and repeat customers.
 
 ## Phase 1 — Brand & Trust Foundation
-Status: implementing now
+Status: implemented; deployment repair included
 
 - Use **Prinx Tech** consistently across storefront, SEO and business settings.
 - Replace fake review counts with genuine customer review data.
@@ -21,6 +21,8 @@ Success checks:
 - Google Product schema contains aggregate rating only when real approved reviews exist.
 
 ## Phase 2 — WhatsApp Buying Assistance
+Status: implemented; pending deployment verification
+
 - "Ask about this product" WhatsApp CTA on every product page.
 - Pre-filled product name, URL and price.
 - Sticky mobile contact CTA without covering checkout controls.

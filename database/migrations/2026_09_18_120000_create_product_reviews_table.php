@@ -8,11 +8,18 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // A previous production attempt may have created the table before a
+        // legacy foreign-key ALTER failed. In that case the columns already
+        // exist and this migration can be safely marked complete.
+        if (Schema::hasTable('product_reviews')) {
+            return;
+        }
+
         Schema::create('product_reviews', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('product_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('order_id')->nullable()->constrained()->nullOnDelete();
+            $table->unsignedBigInteger('product_id')->index();
+            $table->unsignedBigInteger('user_id')->nullable()->index();
+            $table->unsignedBigInteger('order_id')->nullable()->index();
             $table->string('reviewer_name');
             $table->unsignedTinyInteger('rating');
             $table->string('title', 120)->nullable();
@@ -20,7 +27,7 @@ return new class extends Migration
             $table->string('status', 20)->default('pending')->index();
             $table->boolean('is_verified_purchase')->default(false)->index();
             $table->timestamp('approved_at')->nullable()->index();
-            $table->foreignId('moderated_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('moderated_by')->nullable()->index();
             $table->text('moderation_note')->nullable();
             $table->timestamps();
 

@@ -23,6 +23,23 @@ const reviewBody = ref(props.reviewEligibility?.review?.body || '');
 const reviewSubmitting = ref(false);
 const reviewAverage = computed(() => Number(props.reviewSummary?.average || 0));
 const reviewCount = computed(() => Number(props.reviewSummary?.count || 0));
+const whatsappDigits = computed(() => {
+    let digits = String(page.props.store?.whatsapp || '').replace(/\D/g, '');
+    if (digits.length === 10 && digits.startsWith('0')) digits = `255${digits.slice(1)}`;
+    if (digits.length === 9) digits = `255${digits}`;
+    return digits;
+});
+const whatsappMessage = computed(() => [
+    `Hello ${page.props.store?.name || 'Prinx Tech'}, I'm interested in this product:`,
+    props.product.name,
+    `Price: ${money(props.product.current_price)}`,
+    canonical.value,
+    '',
+    'Is it available?',
+].join('\n'));
+const whatsappHref = computed(() => whatsappDigits.value
+    ? `https://wa.me/${whatsappDigits.value}?text=${encodeURIComponent(whatsappMessage.value)}`
+    : null);
 
 const baseUrl = String(page.props.store.url || '').replace(/\/$/, '');
 const absoluteUrl = (value) => /^https?:\/\//i.test(value || '') ? value : `${baseUrl}/${String(value || '').replace(/^\//, '')}`;
@@ -104,6 +121,24 @@ const schema = computed(() => ({
     ],
 }));
 
+function trackWhatsApp(placement) {
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (!token) return;
+
+    fetch(`/products/${encodeURIComponent(props.product.slug)}/contact-events`, {
+        method: 'POST',
+        keepalive: true,
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': token,
+            'X-Requested-With': 'XMLHttpRequest',
+            Accept: 'application/json',
+        },
+        body: JSON.stringify({ channel: 'whatsapp', placement }),
+    }).catch(() => {});
+}
+
 function add() {
     if (!props.product.in_stock) return;
     router.post(`/cart/${props.product.slug}`, { quantity: qty.value }, { preserveScroll: true });
@@ -181,7 +216,7 @@ function submitReview() {
             :schema="schema"
         />
 
-        <div class="container-shell pb-8 pt-4 sm:pt-5">
+        <div class="container-shell pb-24 pt-4 sm:pt-5 lg:pb-8">
             <nav class="flex flex-wrap items-center gap-2 text-[10px] font-medium text-slate-500" aria-label="Breadcrumb">
                 <Link href="/" class="transition hover:text-prinx-600">Home</Link>
                 <span>/</span>
@@ -277,6 +312,18 @@ function submitReview() {
                             Add to Wishlist
                         </button>
                     </div>
+
+                    <a
+                        v-if="whatsappHref"
+                        :href="whatsappHref"
+                        target="_blank"
+                        rel="noopener"
+                        class="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-[6px] border border-emerald-600 bg-white px-4 text-[11px] font-semibold text-emerald-700 transition hover:bg-emerald-50"
+                        @click="trackWhatsApp('primary')"
+                    >
+                        <svg viewBox="0 0 24 24" class="h-[18px] w-[18px] fill-none stroke-current" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20 11.5a8 8 0 0 1-11.8 7L4 20l1.5-4.1A8 8 0 1 1 20 11.5Z"/><path stroke-linecap="round" d="M8.5 8.5c.8 3 2.4 4.6 5.4 5.5"/></svg>
+                        Ask about this product on WhatsApp
+                    </a>
 
                     <div class="mt-5 grid overflow-hidden rounded-[7px] border border-slate-200 bg-white sm:grid-cols-2 xl:grid-cols-4">
                         <div class="flex items-center gap-3 border-b border-slate-100 px-4 py-4 sm:border-r xl:border-b-0">
@@ -382,6 +429,19 @@ function submitReview() {
                     </article>
                 </div>
             </section>
+        </div>
+
+        <div v-if="whatsappHref" class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/96 px-3 pb-[max(.75rem,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-8px_28px_rgba(15,23,42,.10)] backdrop-blur lg:hidden">
+            <a
+                :href="whatsappHref"
+                target="_blank"
+                rel="noopener"
+                class="mx-auto flex h-12 max-w-[560px] items-center justify-center gap-2 rounded-[7px] bg-emerald-600 px-4 text-[12px] font-semibold text-white"
+                @click="trackWhatsApp('mobile_sticky')"
+            >
+                <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20 11.5a8 8 0 0 1-11.8 7L4 20l1.5-4.1A8 8 0 1 1 20 11.5Z"/><path stroke-linecap="round" d="M8.5 8.5c.8 3 2.4 4.6 5.4 5.5"/></svg>
+                Ask Prinx Tech on WhatsApp
+            </a>
         </div>
     </AppLayout>
 </template>
