@@ -53,10 +53,15 @@ class ProductVariantCompareTest extends TestCase
         $this->assertSame(1, Product::findOrFail($product->id)->stock_quantity);
     }
 
-    public function test_compare_page_accepts_up_to_four_active_products(): void
+    public function test_compare_page_is_a_standalone_product_selection_workspace(): void
     {
         $first = $this->product(['name' => 'Compare Phone A', 'sku' => 'COMPARE-A']);
         $second = $this->product(['name' => 'Compare Phone B', 'sku' => 'COMPARE-B']);
+
+        $this->get('/compare')
+            ->assertOk()
+            ->assertSee('Compare Phone A')
+            ->assertSee('Compare Phone B');
 
         $this->get('/compare?products='.$first->slug.','.$second->slug)
             ->assertOk()

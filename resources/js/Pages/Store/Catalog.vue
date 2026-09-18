@@ -20,7 +20,6 @@ const city = computed(() => store.value.city || store.value.region || 'Dodoma');
 const filtersVisible = ref(true);
 const viewMode = ref('grid');
 const brandSearch = ref('');
-const compareSelection = ref([]);
 
 const form = reactive({
     search: props.filters.search || '',
@@ -117,17 +116,6 @@ const addToCart = (product) => {
     }
     router.post(`/cart/${product.slug}`, { quantity: 1 }, { preserveScroll: true });
 };
-const toggleCompare = (product) => {
-    const slug = product.slug;
-    if (compareSelection.value.includes(slug)) {
-        compareSelection.value = compareSelection.value.filter((item) => item !== slug);
-        return;
-    }
-    if (compareSelection.value.length >= 4) return;
-    compareSelection.value = [...compareSelection.value, slug];
-};
-const compareHref = computed(() => `/compare?products=${compareSelection.value.join(',')}`);
-const isCompared = (product) => compareSelection.value.includes(product.slug);
 const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label === String(pageNumber))?.url || null;
 </script>
 
@@ -260,7 +248,6 @@ const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label 
                                 </div>
                                 <div class="mt-2 flex gap-2">
                                     <button type="button" class="h-[30px] min-w-0 flex-1 rounded-[5px] border border-prinx-300 bg-white px-2 text-[9px] font-semibold text-prinx-600 transition hover:bg-prinx-500 hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400" :disabled="!product.in_stock" @click="addToCart(product)">{{ Number(product.active_variants_count || 0) > 0 ? 'Select options' : 'Add to Cart' }}</button>
-                                    <button type="button" :class="['flex h-[30px] shrink-0 items-center justify-center rounded-[5px] border px-2 text-[8px] font-semibold transition', isCompared(product) ? 'border-prinx-500 bg-prinx-50 text-prinx-700' : 'border-slate-200 bg-white text-slate-600 hover:border-prinx-300 hover:text-prinx-600']" :disabled="!isCompared(product) && compareSelection.length >= 4" @click="toggleCompare(product)">{{ isCompared(product) ? 'Added' : 'Compare' }}</button>
                                     <button type="button" class="flex h-[30px] w-[34px] shrink-0 items-center justify-center rounded-[5px] border border-slate-200 bg-white text-slate-600 transition hover:border-prinx-300 hover:text-prinx-600" :aria-label="`Add ${product.name} to wishlist`">
                                         <svg viewBox="0 0 24 24" class="h-[16px] w-[16px] fill-none stroke-current" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 9.2c0 5.4-8.5 10-8.5 10s-8.5-4.6-8.5-10A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8Z"/></svg>
                                     </button>
@@ -279,7 +266,6 @@ const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label 
                             </div>
                             <div class="my-auto flex flex-col gap-2">
                                 <button type="button" class="h-[34px] rounded-[6px] border border-prinx-300 px-4 text-[10px] font-semibold text-prinx-600 hover:bg-prinx-500 hover:text-white" :disabled="!product.in_stock" @click="addToCart(product)">{{ Number(product.active_variants_count || 0) > 0 ? 'Select options' : 'Add to Cart' }}</button>
-                                <button type="button" :class="['h-[32px] rounded-[6px] border px-4 text-[9px] font-semibold', isCompared(product) ? 'border-prinx-500 bg-prinx-50 text-prinx-700' : 'border-slate-200 bg-white text-slate-600']" :disabled="!isCompared(product) && compareSelection.length >= 4" @click="toggleCompare(product)">{{ isCompared(product) ? 'Remove compare' : 'Compare' }}</button>
                             </div>
                         </article>
                     </div>
@@ -303,11 +289,5 @@ const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label 
                 </div>
             </div>
         </section>
-        <div v-if="compareSelection.length" class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 pb-[max(.7rem,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-8px_28px_rgba(15,23,42,.10)] backdrop-blur">
-            <div class="container-shell flex flex-wrap items-center justify-between gap-3">
-                <div><strong class="text-[11px] text-slate-900">{{ compareSelection.length }} selected for comparison</strong><p class="mt-0.5 text-[9px] text-slate-500">Choose 2–4 products.</p></div>
-                <div class="flex gap-2"><button type="button" class="h-10 rounded-[6px] border border-slate-200 px-4 text-[10px] font-semibold text-slate-600" @click="compareSelection = []">Clear</button><Link :href="compareHref" :class="['flex h-10 items-center rounded-[6px] px-5 text-[10px] font-semibold text-white', compareSelection.length >= 2 ? 'bg-prinx-500' : 'pointer-events-none bg-slate-300']">Compare now</Link></div>
-            </div>
-        </div>
     </AppLayout>
 </template>

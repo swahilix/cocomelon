@@ -110,6 +110,9 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                         <Link href="/shop" :class="['flex items-center gap-2 px-3 transition hover:text-amber-600', active('/shop') || active('/products') ? 'text-amber-600' : '']">
                             <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14l-1 12H6L5 8Zm3 0a4 4 0 0 1 8 0"/></svg>Shop
                         </Link>
+                        <Link href="/compare" :class="['flex items-center gap-2 px-3 transition hover:text-amber-600', active('/compare') ? 'text-amber-600' : '']">
+                            <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 7h14M5 17h14M8 4v6M16 14v6"/></svg>Compare
+                        </Link>
                         <Link href="/software" :class="['relative flex items-center gap-2 px-3 transition hover:text-amber-600', active('/software') ? 'text-amber-600' : '']">
                             <svg viewBox="0 0 24 24" class="h-[17px] w-[17px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>Software
                             <span v-if="active('/software')" class="absolute inset-x-2 bottom-0 h-[2px] bg-[#f7b900]"></span>
@@ -167,6 +170,7 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                         <div class="grid grid-cols-2 gap-2 text-[13px] font-medium">
                             <Link href="/" class="rounded-[8px] border border-slate-200 px-3 py-3">Home</Link>
                             <Link href="/shop" class="rounded-[8px] border border-slate-200 px-3 py-3">Shop</Link>
+                            <Link href="/compare" class="rounded-[8px] border border-slate-200 px-3 py-3">Compare Products</Link>
                             <Link href="/software" class="rounded-[8px] border border-slate-200 px-3 py-3">Software</Link>
                             <Link href="/services" class="rounded-[8px] border border-slate-200 px-3 py-3">Services</Link>
                             <Link href="/guides" class="rounded-[8px] border border-slate-200 px-3 py-3">Buying Guides</Link>
@@ -204,6 +208,7 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                         <h3 class="text-[12px] font-semibold text-slate-900">Shop</h3>
                         <nav class="mt-3 space-y-2 text-[10px] text-slate-600">
                             <Link href="/shop" class="block hover:text-prinx-600">All Products</Link>
+                            <Link href="/compare" class="block hover:text-prinx-600">Compare Products</Link>
                             <Link href="/shop?sort=newest" class="block hover:text-prinx-600">New Arrivals</Link>
                             <Link href="/shop" class="block hover:text-prinx-600">Best Sellers</Link>
                             <Link href="/shop" class="block hover:text-prinx-600">Deals Of The Day</Link>

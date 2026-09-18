@@ -448,10 +448,6 @@ function submitReview() {
                         </div>
                     </div>
 
-                    <div v-if="related.length" class="mt-3">
-                        <Link :href="`/compare?products=${product.slug},${related[0].slug}`" class="inline-flex h-9 items-center rounded-[6px] border border-slate-200 bg-white px-3 text-[10px] font-semibold text-slate-700 hover:border-prinx-300 hover:text-prinx-600">Compare with similar products</Link>
-                    </div>
-
                     <nav class="mt-3 flex flex-wrap gap-x-4 gap-y-2 border-t border-slate-100 pt-3 text-[9px] font-medium text-slate-500" aria-label="Purchase information">
                         <Link href="/pages/warranty" class="hover:text-prinx-600">Warranty information</Link>
                         <Link href="/pages/returns" class="hover:text-prinx-600">Returns & refunds</Link>

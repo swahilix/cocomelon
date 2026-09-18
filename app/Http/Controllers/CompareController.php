@@ -36,8 +36,36 @@ class CompareController extends Controller
                 ->sortBy(fn (Product $product) => $rank[$product->slug] ?? PHP_INT_MAX)
                 ->values();
 
+        $availableProducts = Product::query()
+            ->with(['brand:id,name', 'category:id,name,slug'])
+            ->withCount(['reviews as approved_reviews_count' => fn ($query) => $query->approved()])
+            ->withAvg(['reviews as approved_reviews_average' => fn ($query) => $query->approved()], 'rating')
+            ->active()
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Product $product): array => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'slug' => $product->slug,
+                'image_url' => $product->image_url,
+                'current_price' => $product->current_price,
+                'price' => (float) $product->price,
+                'in_stock' => $product->in_stock,
+                'stock_message' => $product->stock_message,
+                'brand' => $product->brand ? ['id' => $product->brand->id, 'name' => $product->brand->name] : null,
+                'category' => $product->category ? [
+                    'id' => $product->category->id,
+                    'name' => $product->category->name,
+                    'slug' => $product->category->slug,
+                ] : null,
+                'approved_reviews_count' => (int) $product->approved_reviews_count,
+                'approved_reviews_average' => (float) ($product->approved_reviews_average ?? 0),
+            ])
+            ->values();
+
         return Inertia::render('Store/Compare', [
             'products' => $products,
+            'availableProducts' => $availableProducts,
         ]);
     }
 }
