@@ -22,6 +22,8 @@ const sections = computed(() => [
             ['Dashboard', '/admin', 'home-2', ['manage_storefront']],
             ['Products', '/admin/products', 'box', ['manage_storefront']],
             ['Add stock', '/admin/stock/entry', 'box-add', ['adjust_stock', 'manage_purchases']],
+            ['Purchases', '/admin/purchases', 'shopping-cart', ['manage_purchases', 'view_costs']],
+            ['Purchase orders', '/admin/purchase-orders', 'document-text-2', ['manage_purchases']],
             ['Stock management', '/admin/stock', 'shop', ['view_inventory', 'manage_purchases']],
             ['Inventory', '/admin/stock/inventory', 'box', ['view_inventory']],
             ['Barcode printing', '/admin/barcodes', 'box', ['view_inventory', 'manage_storefront']],
@@ -69,6 +71,7 @@ const active = (url) => {
     if (url === '/admin/settings') return page.url.startsWith('/admin/settings') || urlInHub(page.url, adminSettings);
     if (url === '/admin') return page.url === '/admin';
     if (url === '/admin/stock') return page.url === '/admin/stock';
+    if (url === '/admin/purchases') return page.url.startsWith('/admin/purchases') || page.url.startsWith('/admin/stock/purchases/');
     if (url === '/admin/business-settings') return page.url === '/admin/business-settings';
     return page.url.startsWith(url);
 };

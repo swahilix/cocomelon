@@ -63,11 +63,39 @@ class StockEntryController extends Controller
 
         $mode = in_array($request->query('mode'), ['opening', 'purchase'], true) ? $request->query('mode') : null;
 
+        // Converting a purchase order: start a purchase with its items.
+        $purchaseOrder = null;
+        if ($request->integer('purchase_order') > 0) {
+            $order = DB::table('purchase_orders')->where('id', $request->integer('purchase_order'))->first();
+            if ($order && in_array($order->status, PurchaseOrderController::OPEN_STATUSES, true)) {
+                $purchaseOrder = [
+                    'id' => $order->id,
+                    'reference' => $order->reference,
+                    'supplier_id' => $order->supplier_id,
+                    'supplier_name' => $order->supplier_name,
+                    'lines' => DB::table('purchase_order_items')
+                        ->where('purchase_order_id', $order->id)
+                        ->orderBy('sort_order')
+                        ->orderBy('id')
+                        ->get()
+                        ->map(fn ($item) => [
+                            'product_id' => (int) $item->product_id,
+                            'product_variant_id' => $item->product_variant_id ? (int) $item->product_variant_id : '',
+                            'quantity' => (int) $item->quantity,
+                            'unit_cost' => $item->estimated_unit_cost !== null ? (float) $item->estimated_unit_cost : '',
+                        ])
+                        ->values(),
+                ];
+                $mode = 'purchase';
+            }
+        }
+
         return Inertia::render('Admin/Stock/Entry', [
             'products' => $products,
             'suppliers' => Supplier::active()->orderBy('name')->get(['id', 'name']),
             'initialProductId' => (int) $request->query('product', 0) ?: null,
             'initialMode' => $mode,
+            'purchaseOrder' => $purchaseOrder,
             'initialSupplierId' => (int) $request->query('supplier', 0) ?: null,
             'marketPriceEnabled' => $prices->enabled(),
             'can' => [

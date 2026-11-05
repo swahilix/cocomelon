@@ -11,6 +11,7 @@ const props = defineProps({
     initialProductId: { type: Number, default: null },
     initialMode: { type: String, default: null },
     initialSupplierId: { type: Number, default: null },
+    purchaseOrder: { type: Object, default: null },
     marketPriceEnabled: { type: Boolean, default: false },
     can: { type: Object, default: () => ({}) },
 });
@@ -45,19 +46,30 @@ const newLine = (productId = '') => {
     };
 };
 
+// Lines from a purchase order being converted, with current selling prices.
+const purchaseOrderLines = () => (props.purchaseOrder?.lines || [])
+    .filter((line) => productById(line.product_id))
+    .map((line) => {
+        const row = { ...newLine(line.product_id), product_variant_id: line.product_variant_id || '', quantity: line.quantity, unit_cost: line.unit_cost };
+        const variant = productById(line.product_id).variants.find((item) => Number(item.id) === Number(row.product_variant_id));
+        if (variant?.selling_price) row.selling_price = variant.selling_price;
+        return row;
+    });
+const orderLines = purchaseOrderLines();
+
 const form = useForm({
-    lines: [newLine(initialProduct && (mode.value !== 'opening' || openingPossible(initialProduct)) ? initialProduct.id : '')],
+    lines: orderLines.length ? orderLines : [newLine(initialProduct && (mode.value !== 'opening' || openingPossible(initialProduct)) ? initialProduct.id : '')],
     notes: '',
     publish: true,
     // purchase only
-    supplier_id: props.suppliers.some((supplier) => supplier.id === props.initialSupplierId) ? props.initialSupplierId : '',
-    one_time_supplier_name: '',
+    supplier_id: [props.purchaseOrder?.supplier_id, props.initialSupplierId].find((id) => id && props.suppliers.some((supplier) => supplier.id === id)) || '',
+    one_time_supplier_name: props.purchaseOrder && !props.purchaseOrder.supplier_id ? (props.purchaseOrder.supplier_name || '') : '',
     invoice_number: '',
     purchase_date: today,
     status: props.can.receive ? 'received' : 'ordered',
     payment_method: 'cash',
 });
-const oneTimeSupplier = ref(!props.suppliers.length);
+const oneTimeSupplier = ref(!props.suppliers.length || Boolean(props.purchaseOrder && !props.purchaseOrder.supplier_id && props.purchaseOrder.supplier_name));
 
 const productOptions = computed(() => (mode.value === 'opening' ? openingProducts.value : props.products));
 const variantOptions = (line) => {
@@ -124,6 +136,7 @@ const submit = () => {
         status: data.status,
         payment_method: data.payment_method,
         notes: data.notes,
+        purchase_order_id: props.purchaseOrder?.id || null,
         items: data.lines.map((line) => ({ ...line, product_variant_id: line.product_variant_id || null, selling_price: line.selling_price || null, discount_value: line.discount_value || null })),
     })).post('/admin/stock/purchases', { preserveScroll: true });
 };
@@ -139,11 +152,16 @@ const submit = () => {
                 <h1 class="section-title">Add stock</h1>
                 <p class="mt-2 max-w-2xl text-sm text-slate-500">Enter opening stock you already have, or a purchase from a supplier, for one or many products. Each line sets the quantity, what you paid, and the selling price.</p>
             </div>
-            <div class="flex gap-2"><Link href="/admin/products/create" class="btn-light"><Icon name="add-circle" :size="16" /> Add product</Link><Link href="/admin/stock?tab=purchases" class="btn-light"><Icon name="shopping-cart" :size="16" /> Purchase history</Link></div>
+            <div class="flex gap-2"><Link href="/admin/products/create" class="btn-light"><Icon name="add-circle" :size="16" /> Add product</Link><Link href="/admin/purchases" class="btn-light"><Icon name="shopping-cart" :size="16" /> Purchases</Link></div>
         </div>
 
+        <div v-if="purchaseOrder" class="mt-5 flex flex-wrap items-center justify-between gap-2 rounded-[10px] border border-prinx-200 bg-prinx-50 px-4 py-3 text-sm text-slate-700">
+            <span>Turning purchase order <Link :href="`/admin/purchase-orders/${purchaseOrder.id}`" class="font-semibold text-prinx-700 underline">{{ purchaseOrder.reference }}</Link> into a purchase. Check the quantities and enter the actual purchase prices and selling prices.</span>
+        </div>
+        <p v-if="form.errors.purchase_order_id" class="mt-3 rounded-[8px] bg-red-50 px-3 py-2 text-sm text-red-700">{{ form.errors.purchase_order_id }}</p>
+
         <div class="mt-5 grid max-w-xl grid-cols-2 gap-1 rounded-[10px] border border-slate-200 bg-white p-1.5">
-            <button v-if="can.opening" type="button" :class="['rounded-[8px] px-3 py-2.5 text-left transition', mode === 'opening' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100']" @click="setMode('opening')"><span class="block text-sm font-semibold">Opening stock</span><span :class="['block text-[11px]', mode === 'opening' ? 'text-slate-300' : 'text-slate-400']">Stock you already have · added now</span></button>
+            <button v-if="can.opening && !purchaseOrder" type="button" :class="['rounded-[8px] px-3 py-2.5 text-left transition', mode === 'opening' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100']" @click="setMode('opening')"><span class="block text-sm font-semibold">Opening stock</span><span :class="['block text-[11px]', mode === 'opening' ? 'text-slate-300' : 'text-slate-400']">Stock you already have · added now</span></button>
             <button v-if="can.purchase" type="button" :class="['rounded-[8px] px-3 py-2.5 text-left transition', mode === 'purchase' ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100']" @click="setMode('purchase')"><span class="block text-sm font-semibold">Purchase</span><span :class="['block text-[11px]', mode === 'purchase' ? 'text-slate-300' : 'text-slate-400']">Bought from a supplier</span></button>
         </div>
 

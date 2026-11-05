@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ProductReelController;
 use App\Http\Controllers\Admin\ProductIntelligenceController;
 use App\Http\Controllers\Admin\ProductStockController;
+use App\Http\Controllers\Admin\PurchaseOrderController;
 use App\Http\Controllers\Admin\StockEntryController;
 use App\Http\Controllers\Admin\ProductReviewController as AdminProductReviewController;
 use App\Http\Controllers\Admin\PurchaseController;
@@ -156,6 +157,20 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // Add stock: opening stock or purchases for any products, separate from product details.
     Route::get('stock/entry', [StockEntryController::class, 'show'])->middleware('permission:adjust_stock,manage_purchases')->name('stock.entry');
     Route::post('stock/opening', [StockEntryController::class, 'opening'])->middleware(['permission:adjust_stock', 'sensitive:stock.opening_posted,product,products,input:_none'])->name('stock.opening.store');
+
+    // Purchases list and purchase orders (items + quantities to buy, printed without prices).
+    Route::get('purchases', [PurchaseController::class, 'index'])->middleware('permission:manage_purchases,view_costs')->name('purchases.index');
+    Route::middleware('permission:manage_purchases')->prefix('purchase-orders')->name('purchase-orders.')->group(function (): void {
+        Route::get('/', [PurchaseOrderController::class, 'index'])->name('index');
+        Route::get('create', [PurchaseOrderController::class, 'create'])->name('create');
+        Route::post('/', [PurchaseOrderController::class, 'store'])->middleware('sensitive:purchase_order.created,purchase_order,purchase_orders,input:_none')->name('store');
+        Route::get('{purchaseOrder}', [PurchaseOrderController::class, 'show'])->whereNumber('purchaseOrder')->name('show');
+        Route::get('{purchaseOrder}/edit', [PurchaseOrderController::class, 'edit'])->whereNumber('purchaseOrder')->name('edit');
+        Route::put('{purchaseOrder}', [PurchaseOrderController::class, 'update'])->whereNumber('purchaseOrder')->middleware('sensitive:purchase_order.updated,purchase_order,purchase_orders,route:purchaseOrder')->name('update');
+        Route::post('{purchaseOrder}/sent', [PurchaseOrderController::class, 'markSent'])->whereNumber('purchaseOrder')->name('sent');
+        Route::post('{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel'])->whereNumber('purchaseOrder')->middleware('sensitive:purchase_order.cancelled,purchase_order,purchase_orders,route:purchaseOrder')->name('cancel');
+        Route::get('{purchaseOrder}/export', [PurchaseOrderController::class, 'export'])->whereNumber('purchaseOrder')->name('export');
+    });
 
     Route::get('stock', [StockController::class, 'index'])->middleware('permission:view_inventory,manage_purchases')->name('stock.index');
     Route::get('stock/inventory', InventoryController::class)->middleware('permission:view_inventory')->name('stock.inventory');
