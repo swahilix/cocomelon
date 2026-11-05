@@ -130,7 +130,13 @@ class StockController extends Controller
             'items.*.selling_price' => ['nullable', 'numeric', 'gt:0'],
             'items.*.discount_type' => ['nullable', 'in:none,amount,percent'],
             'items.*.discount_value' => ['nullable', 'numeric', 'min:0'],
+            'purchase_order_id' => ['nullable', 'integer', 'exists:purchase_orders,id'],
         ]);
+
+        $purchaseOrderId = filled($validated['purchase_order_id'] ?? null) ? (int) $validated['purchase_order_id'] : null;
+        if ($purchaseOrderId && ! in_array(DB::table('purchase_orders')->where('id', $purchaseOrderId)->value('status'), PurchaseOrderController::OPEN_STATUSES, true)) {
+            throw ValidationException::withMessages(['purchase_order_id' => 'This purchase order has already been converted or cancelled.']);
+        }
 
         $receiveNow = $validated['status'] === 'received';
         if ($receiveNow && ! $request->user()?->hasAnyPermission(['receive_purchases'])) {
@@ -142,7 +148,15 @@ class StockController extends Controller
         $supplierName = $supplier?->name ?: trim((string) ($validated['one_time_supplier_name'] ?? ''));
 
         try {
-            $purchaseId = DB::transaction(function () use ($validated, $request, $supplier, $supplierName, $lines, $receiveNow, $receiving): int {
+            $purchaseId = DB::transaction(function () use ($validated, $request, $supplier, $supplierName, $lines, $receiveNow, $receiving, $purchaseOrderId): int {
+                if ($purchaseOrderId) {
+                    // Lock the order so it cannot be converted twice at the same time.
+                    $order = DB::table('purchase_orders')->where('id', $purchaseOrderId)->lockForUpdate()->first();
+                    if (! in_array($order->status, PurchaseOrderController::OPEN_STATUSES, true)) {
+                        throw ValidationException::withMessages(['purchase_order_id' => 'This purchase order has already been converted or cancelled.']);
+                    }
+                }
+
                 $reference = $this->reference('PUR');
                 $subtotal = (float) collect($lines)->sum(fn ($line) => $line['quantity'] * $line['unit_cost']);
                 $additional = (float) ($validated['additional_cost'] ?? 0);
@@ -169,10 +183,20 @@ class StockController extends Controller
                     'payment_status' => 'unpaid',
                     'payment_method' => $validated['payment_method'],
                     'notes' => $validated['notes'] ?? null,
+                    'purchase_order_id' => $purchaseOrderId,
                     'created_by' => $request->user()?->id,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+
+                if ($purchaseOrderId) {
+                    DB::table('purchase_orders')->where('id', $purchaseOrderId)->update([
+                        'status' => 'converted',
+                        'stock_purchase_id' => $purchaseId,
+                        'converted_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
 
                 foreach ($lines as $line) {
                     DB::table('stock_purchase_items')->insert([

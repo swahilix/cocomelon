@@ -17,13 +17,74 @@ use Throwable;
 
 class PurchaseController extends Controller
 {
+    public function index(Request $request): Response
+    {
+        $filters = [
+            'search' => trim((string) $request->query('search', '')),
+            'status' => (string) $request->query('status', ''),
+            'payment_status' => (string) $request->query('payment_status', ''),
+            'supplier_id' => $request->integer('supplier_id') ?: '',
+            'from' => (string) $request->query('from', ''),
+            'to' => (string) $request->query('to', ''),
+        ];
+
+        $query = DB::table('stock_purchases')
+            ->leftJoin('suppliers', 'suppliers.id', '=', 'stock_purchases.supplier_id')
+            ->when($filters['search'] !== '', fn ($query) => $query->where(function ($inner) use ($filters): void {
+                $term = '%'.$filters['search'].'%';
+                $inner->where('stock_purchases.reference', 'like', $term)
+                    ->orWhere('stock_purchases.invoice_number', 'like', $term)
+                    ->orWhere('stock_purchases.supplier_name', 'like', $term)
+                    ->orWhere('suppliers.name', 'like', $term);
+            }))
+            ->when(in_array($filters['status'], ['draft', 'ordered', 'partially_received', 'received', 'cancelled'], true), fn ($query) => $query->where('stock_purchases.status', $filters['status']))
+            ->when(in_array($filters['payment_status'], ['unpaid', 'partially_paid', 'paid'], true), fn ($query) => $query->where('stock_purchases.payment_status', $filters['payment_status']))
+            ->when($filters['supplier_id'], fn ($query) => $query->where('stock_purchases.supplier_id', $filters['supplier_id']))
+            ->when($filters['from'] !== '', fn ($query) => $query->whereDate('stock_purchases.purchase_date', '>=', $filters['from']))
+            ->when($filters['to'] !== '', fn ($query) => $query->whereDate('stock_purchases.purchase_date', '<=', $filters['to']));
+
+        $totals = (clone $query)
+            ->where('stock_purchases.status', '!=', 'cancelled')
+            ->selectRaw('COUNT(*) as count, COALESCE(SUM(stock_purchases.total), 0) as total, COALESCE(SUM(stock_purchases.amount_paid), 0) as paid, COALESCE(SUM(stock_purchases.balance_due), 0) as balance')
+            ->first();
+
+        $purchases = $query
+            ->leftJoin('purchase_orders', 'purchase_orders.id', '=', 'stock_purchases.purchase_order_id')
+            ->select(
+                'stock_purchases.id', 'stock_purchases.reference', 'stock_purchases.invoice_number', 'stock_purchases.purchase_date',
+                'stock_purchases.status', 'stock_purchases.payment_status', 'stock_purchases.total', 'stock_purchases.amount_paid',
+                'stock_purchases.balance_due', 'stock_purchases.purchase_order_id',
+                'purchase_orders.reference as purchase_order_reference',
+                DB::raw('COALESCE(suppliers.name, stock_purchases.supplier_name) as display_supplier_name'),
+                DB::raw('(SELECT COALESCE(SUM(quantity), 0) FROM stock_purchase_items WHERE stock_purchase_items.stock_purchase_id = stock_purchases.id) as total_quantity'),
+            )
+            ->latest('stock_purchases.purchase_date')
+            ->latest('stock_purchases.id')
+            ->paginate(25)
+            ->withQueryString();
+
+        return Inertia::render('Admin/Purchases/Index', [
+            'purchases' => $purchases,
+            'filters' => $filters,
+            'totals' => [
+                'count' => (int) ($totals->count ?? 0),
+                'total' => (float) ($totals->total ?? 0),
+                'paid' => (float) ($totals->paid ?? 0),
+                'balance' => (float) ($totals->balance ?? 0),
+            ],
+            'suppliers' => DB::table('suppliers')->orderBy('name')->get(['id', 'name']),
+            'openOrders' => DB::table('purchase_orders')->whereIn('status', PurchaseOrderController::OPEN_STATUSES)->count(),
+        ]);
+    }
+
     public function show(int $purchase): Response
     {
         $record = DB::table('stock_purchases')
             ->leftJoin('suppliers', 'suppliers.id', '=', 'stock_purchases.supplier_id')
             ->leftJoin('users as creators', 'creators.id', '=', 'stock_purchases.created_by')
             ->where('stock_purchases.id', $purchase)
-            ->select('stock_purchases.*', 'suppliers.name as saved_supplier_name', 'creators.name as created_by_name')
+            ->leftJoin('purchase_orders', 'purchase_orders.id', '=', 'stock_purchases.purchase_order_id')
+            ->select('stock_purchases.*', 'suppliers.name as saved_supplier_name', 'creators.name as created_by_name', 'purchase_orders.reference as purchase_order_reference')
             ->first();
 
         abort_unless($record, 404);
