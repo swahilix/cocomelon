@@ -65,7 +65,7 @@ class MarketPriceService
             ->map(fn ($row) => [
                 'seller' => trim((string) ($row['seller'] ?? '')) ?: (string) parse_url($row['url'], PHP_URL_HOST),
                 'title' => Str::limit(trim((string) ($row['title'] ?? '')), 140, ''),
-                'price' => round((float) $row['price_tzs']),
+                'price' => (int) round((float) $row['price_tzs']),
                 'location' => trim((string) ($row['location'] ?? '')),
                 'condition' => trim((string) ($row['condition'] ?? '')),
                 'url' => (string) $row['url'],
@@ -79,22 +79,22 @@ class MarketPriceService
         return [
             'listings' => $listings->all(),
             // Recalculate from the listings we kept rather than trusting the model's arithmetic.
-            'low' => $prices->isNotEmpty() ? (float) $prices->min() : null,
-            'median' => $prices->isNotEmpty() ? (float) $prices->median() : null,
-            'high' => $prices->isNotEmpty() ? (float) $prices->max() : null,
+            'low' => $prices->isNotEmpty() ? (int) $prices->min() : null,
+            'median' => $prices->isNotEmpty() ? (int) round((float) $prices->median()) : null,
+            'high' => $prices->isNotEmpty() ? (int) $prices->max() : null,
             'suggested_price' => $prices->isNotEmpty() ? $this->suggested((float) ($result['data']['suggested_price'] ?? 0), (float) $prices->median(), (float) $prices->min(), (float) $prices->max()) : null,
             'notes' => trim((string) ($result['data']['notes'] ?? '')),
             'sources' => array_slice($result['sources'], 0, 10),
         ];
     }
 
-    private function suggested(float $fromModel, float $median, float $low, float $high): float
+    private function suggested(float $fromModel, float $median, float $low, float $high): int
     {
         // Keep the suggestion inside the observed range; fall back to the median.
         $value = $fromModel >= $low && $fromModel <= $high && $fromModel > 0 ? $fromModel : $median;
         $step = $value >= 100000 ? 5000 : 1000;
 
-        return (float) (round($value / $step) * $step);
+        return (int) (round($value / $step) * $step);
     }
 
     private function schema(): array

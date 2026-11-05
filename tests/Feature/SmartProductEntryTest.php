@@ -215,11 +215,11 @@ class SmartProductEntryTest extends TestCase
             ->postJson('/admin/market-price', ['product_id' => $product->id])
             ->assertOk()
             ->assertJsonCount(3, 'listings')
-            ->assertJsonPath('listings.0.price', 430000.0)
-            ->assertJsonPath('low', 430000.0)
-            ->assertJsonPath('high', 480000.0)
-            ->assertJsonPath('median', 455000.0)
-            ->assertJsonPath('suggested_price', 450000.0);
+            ->assertJsonPath('listings.0.price', 430000)
+            ->assertJsonPath('low', 430000)
+            ->assertJsonPath('high', 480000)
+            ->assertJsonPath('median', 455000)
+            ->assertJsonPath('suggested_price', 450000);
 
         $this->assertStringContainsString('Galaxy A15 128GB', $first->json('query'));
         $this->assertStringContainsString('Samsung', $first->json('query'));
