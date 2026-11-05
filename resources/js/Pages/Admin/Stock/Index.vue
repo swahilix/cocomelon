@@ -9,75 +9,19 @@ const page = usePage();
 const params = new URLSearchParams((page.url.split('?')[1] || '').split('#')[0]);
 const allowedTabs = ['overview', 'purchases', 'pos', 'expenses', 'movements'];
 const requestedTab = params.get('tab');
-const requestedProduct = Number(params.get('product') || 0);
-const requestedSupplier = Number(params.get('supplier') || 0);
 const tab = ref(allowedTabs.includes(requestedTab) ? requestedTab : 'overview');
 const today = new Date().toISOString().slice(0, 10);
 const money = (value) => new Intl.NumberFormat('en-TZ', { style: 'currency', currency: page.props.store.currency, maximumFractionDigits: 0 }).format(Number(value || 0));
-const initialPurchaseProduct = props.products.some((product) => Number(product.id) === requestedProduct) ? requestedProduct : '';
-const initialSupplier = props.suppliers.some((supplier) => Number(supplier.id) === requestedSupplier) ? requestedSupplier : '';
-const oneTimeSupplier = ref(false);
-function newPurchaseItem(productId = '') {
-    return { product_id: productId, product_variant_id: '', quantity: 1, unit_cost: 0, selling_price: '', discount_type: 'none', discount_value: '' };
-}
-
-const purchaseForm = useForm({
-    supplier_id: initialSupplier,
-    one_time_supplier_name: '',
-    invoice_number: '',
-    purchase_date: today,
-    expected_date: '',
-    status: 'received',
-    additional_cost: 0,
-    discount: 0,
-    tax: 0,
-    payment_method: 'cash',
-    notes: '',
-    items: [newPurchaseItem(initialPurchaseProduct)],
-});
 const expenseForm = useForm({ expense_date: today, category: 'Operations', description: '', amount: '', payment_method: 'cash', payee: '', notes: '' });
 const posForm = useForm({ customer_name: '', customer_phone: '', discount: 0, amount_paid: '', payment_method: 'cash', notes: '', items: [{ product_id: '', quantity: 1, unit_price: 0 }] });
 
-const addPurchaseItem = () => purchaseForm.items.push(newPurchaseItem());
 const addPosItem = () => posForm.items.push({ product_id: '', quantity: 1, unit_price: 0 });
-const removePurchaseItem = (index) => purchaseForm.items.length > 1 && purchaseForm.items.splice(index, 1);
 const removePosItem = (index) => posForm.items.length > 1 && posForm.items.splice(index, 1);
 const productById = (id) => props.products.find((product) => Number(product.id) === Number(id));
-const variantFor = (item) => productById(item.product_id)?.variants?.find((variant) => Number(variant.id) === Number(item.product_variant_id));
-const currentPriceFor = (item) => {
-    const product = productById(item.product_id);
-    if (!product) return null;
-    if (product.variants?.length) return variantFor(item)?.selling_price ?? null;
-    return product.selling_price > 0 ? product.selling_price : null;
-};
-const salePriceFor = (item) => {
-    const price = Number(item.selling_price || 0);
-    const value = Number(item.discount_value || 0);
-    if (!price || item.discount_type === 'none' || value <= 0) return null;
-    return item.discount_type === 'percent' ? Math.round(price * (1 - value / 100)) : price - value;
-};
-const onPurchaseProductChange = (item) => {
-    item.product_variant_id = '';
-    const price = currentPriceFor(item);
-    item.selling_price = price ?? '';
-};
-const onPurchaseVariantChange = (item) => {
-    const price = currentPriceFor(item);
-    if (price !== null) item.selling_price = price;
-};
-const lineError = (index, field) => purchaseForm.errors[`items.${index}.${field}`];
 const syncPosPrice = (item) => { const product = productById(item.product_id); if (product) item.unit_price = Number(product.price || 0); };
-const purchaseSubtotal = computed(() => purchaseForm.items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_cost || 0), 0));
-const purchaseTotal = computed(() => Math.max(0, purchaseSubtotal.value + Number(purchaseForm.additional_cost || 0) - Number(purchaseForm.discount || 0) + Number(purchaseForm.tax || 0)));
 const posSubtotal = computed(() => posForm.items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0));
 const posTotal = computed(() => Math.max(0, posSubtotal.value - Number(posForm.discount || 0)));
 const posChange = computed(() => Math.max(0, Number(posForm.amount_paid || 0) - posTotal.value));
-
-function setOneTimeSupplier(value) {
-    oneTimeSupplier.value = value;
-    if (value) purchaseForm.supplier_id = '';
-    else purchaseForm.one_time_supplier_name = '';
-}
 
 const purchaseStatusClass = (value) => ({
     draft: 'bg-slate-50 text-slate-600 border-slate-200',
@@ -88,7 +32,6 @@ const purchaseStatusClass = (value) => ({
 }[value] || 'bg-slate-50 text-slate-600 border-slate-200');
 const purchaseStatusLabel = (value) => String(value || 'draft').replaceAll('_', ' ');
 
-const submitPurchase = () => purchaseForm.post('/admin/stock/purchases');
 const submitExpense = () => expenseForm.post('/admin/stock/expenses', { preserveScroll: true, onSuccess: () => expenseForm.reset('description', 'amount', 'payee', 'notes') });
 const submitPos = () => posForm.post('/admin/stock/pos', { preserveScroll: true, onSuccess: () => posForm.reset('customer_name', 'customer_phone', 'discount', 'amount_paid', 'notes', 'items') });
 const tabs = [
@@ -132,47 +75,10 @@ const tabs = [
         </section>
 
         <section v-if="tab === 'purchases'" class="mt-6 grid gap-6 xl:grid-cols-[1.15fr_.85fr]">
-            <form class="card p-5" @submit.prevent="submitPurchase">
-                <div class="flex items-center justify-between"><div><h2 class="font-semibold">Create purchase</h2><p class="mt-1 text-xs text-slate-500">Enter quantity, cost and the selling price for each item. Mark it Received to add the stock now, or Ordered to receive it later.</p></div><Icon name="shopping-cart" :size="22" class="text-prinx-600" /></div>
-                <div v-if="initialPurchaseProduct" class="mt-4 flex items-center gap-2 rounded-[8px] border border-prinx-200 bg-prinx-50 px-3 py-2 text-xs font-semibold text-prinx-700"><Icon name="box" :size="15" /> Opened from low-stock inventory shortcut.</div>
-                <div class="mt-5 grid gap-3 sm:grid-cols-2">
-                    <div class="sm:col-span-2">
-                        <div class="flex items-center justify-between"><label class="label">Supplier</label><button type="button" class="text-xs font-semibold text-prinx-600 hover:text-prinx-700" @click="setOneTimeSupplier(!oneTimeSupplier)">{{ oneTimeSupplier ? 'Choose saved supplier' : 'Use one-time supplier' }}</button></div>
-                        <select v-if="!oneTimeSupplier" v-model="purchaseForm.supplier_id" class="input"><option value="">Select supplier</option><option v-for="supplier in suppliers" :key="supplier.id" :value="supplier.id">{{ supplier.name }}{{ supplier.contact_person ? ` · ${supplier.contact_person}` : '' }}</option></select>
-                        <input v-else v-model="purchaseForm.one_time_supplier_name" class="input" placeholder="One-time supplier/business name">
-                        <p v-if="purchaseForm.errors.supplier_id || purchaseForm.errors.one_time_supplier_name" class="mt-1 text-xs text-red-600">{{ purchaseForm.errors.supplier_id || purchaseForm.errors.one_time_supplier_name }}</p>
-                        <div class="mt-2 flex items-center gap-3 text-xs text-slate-500"><Link href="/admin/suppliers" class="inline-flex items-center gap-1 font-semibold text-prinx-600"><Icon name="add-circle" :size="14" /> Manage suppliers</Link><span>Saved suppliers provide purchase history and balance tracking.</span></div>
-                    </div>
-                    <div><label class="label">Invoice number</label><input v-model="purchaseForm.invoice_number" class="input" placeholder="Optional"></div>
-                    <div><label class="label">Purchase/order date</label><input v-model="purchaseForm.purchase_date" type="date" class="input"></div>
-                    <div><label class="label">Expected delivery</label><input v-model="purchaseForm.expected_date" type="date" class="input"></div>
-                    <div><label class="label">Status</label><select v-model="purchaseForm.status" data-native-select class="input"><option value="received">Received — add to stock now</option><option value="ordered">Ordered — not yet arrived</option><option value="draft">Draft</option></select><p class="mt-1 text-[11px] text-slate-400">{{ purchaseForm.status === 'received' ? 'Stock, cost and selling prices update as soon as you save.' : 'Stock and prices update when you receive it from the purchase page.' }}</p><p v-if="purchaseForm.errors.status" class="mt-1 text-xs text-red-600">{{ purchaseForm.errors.status }}</p></div>
-                    <div><label class="label">Preferred payment method</label><select v-model="purchaseForm.payment_method" class="input"><option value="cash">Cash</option><option value="mobile_money">Mobile money</option><option value="bank">Bank</option><option value="credit">Credit</option></select><p class="mt-1 text-[11px] text-slate-400">No payment is recorded until you post one from purchase details.</p></div>
-                </div>
-                <div class="mt-5 space-y-3">
-                    <div v-for="(item, index) in purchaseForm.items" :key="index" class="rounded-[10px] border border-slate-200 p-3">
-                        <div class="grid gap-2 sm:grid-cols-[1fr_1fr_40px]">
-                            <select v-model="item.product_id" class="input" :class="productById(item.product_id)?.variants?.length ? '' : 'sm:col-span-2'" @change="onPurchaseProductChange(item)"><option value="">Select product</option><option v-for="product in products" :key="product.id" :value="product.id">{{ product.name }} · {{ product.sku }} · Stock {{ product.stock_quantity }}</option></select>
-                            <select v-if="productById(item.product_id)?.variants?.length" v-model="item.product_variant_id" data-native-select class="input" @change="onPurchaseVariantChange(item)"><option value="">Choose variant</option><option v-for="variant in productById(item.product_id).variants" :key="variant.id" :value="variant.id">{{ variant.name }} · Stock {{ variant.stock_quantity }}</option></select>
-                            <button type="button" class="flex h-10 w-10 items-center justify-center rounded-[8px] text-red-500 hover:bg-red-50" @click="removePurchaseItem(index)"><Icon name="trash" :size="18" /></button>
-                        </div>
-                        <div class="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-[80px_1fr_1fr_.8fr_.9fr]">
-                            <div><label class="text-[10px] font-semibold text-slate-500">Quantity</label><input v-model.number="item.quantity" type="number" min="1" class="input"></div>
-                            <div><label class="text-[10px] font-semibold text-slate-500">Purchase price (each)</label><input v-model.number="item.unit_cost" type="number" min="0" step="0.01" class="input"></div>
-                            <div><label class="text-[10px] font-semibold text-slate-500">Selling price</label><input v-model.number="item.selling_price" type="number" min="0" step="0.01" class="input" :placeholder="currentPriceFor(item) ? `Keep ${money(currentPriceFor(item))}` : 'Required'"></div>
-                            <div><label class="text-[10px] font-semibold text-slate-500">Customer discount</label><select v-model="item.discount_type" data-native-select class="input"><option value="none">None</option><option value="amount">Amount</option><option value="percent">Percent</option></select></div>
-                            <div><label class="text-[10px] font-semibold text-slate-500">{{ item.discount_type === 'percent' ? 'Discount %' : 'Discount amount' }}</label><input v-model.number="item.discount_value" type="number" min="0" step="0.01" class="input" :disabled="item.discount_type === 'none'"></div>
-                        </div>
-                        <p v-if="salePriceFor(item) !== null" class="mt-2 text-[11px] text-emerald-700">Customers pay {{ money(salePriceFor(item)) }} instead of {{ money(item.selling_price) }}.</p>
-                        <p v-if="Number(item.selling_price) > 0 && Number(item.unit_cost) > 0 && Number(salePriceFor(item) ?? item.selling_price) <= Number(item.unit_cost)" class="mt-1 text-[11px] text-amber-700">Selling below purchase price.</p>
-                        <p v-for="field in ['product_variant_id', 'selling_price', 'discount_value']" v-show="lineError(index, field)" :key="field" class="mt-1 text-xs text-red-600">{{ lineError(index, field) }}</p>
-                    </div>
-                    <p v-if="purchaseForm.errors.items" class="text-xs text-red-600">{{ purchaseForm.errors.items }}</p>
-                    <button type="button" class="btn-light" @click="addPurchaseItem"><Icon name="add-circle" :size="16" /> Add item</button>
-                </div>
-                <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><div><label class="label">Other cost</label><input v-model.number="purchaseForm.additional_cost" type="number" min="0" step="0.01" class="input"></div><div><label class="label">Supplier discount</label><input v-model.number="purchaseForm.discount" type="number" min="0" step="0.01" class="input"></div><div><label class="label">Tax</label><input v-model.number="purchaseForm.tax" type="number" min="0" step="0.01" class="input"></div><div><label class="label">Notes</label><input v-model="purchaseForm.notes" class="input" placeholder="Remarks..."></div></div>
-                <div class="mt-5 flex items-center justify-between border-t border-slate-200 pt-4"><div><p class="text-xs text-slate-500">Purchase total</p><b class="text-xl">{{ money(purchaseTotal) }}</b></div><button class="btn-primary" :disabled="purchaseForm.processing"><Icon name="tick-circle" :size="17" /> {{ purchaseForm.status === 'received' ? 'Save & add to stock' : 'Save purchase' }}</button></div>
-            </form>
+            <div class="card h-fit p-5">
+                <div class="flex items-center justify-between"><div><h2 class="font-semibold">New purchase or opening stock</h2><p class="mt-1 text-xs text-slate-500">Purchases and opening stock are entered on the Add stock page: quantity, purchase price, selling price and customer discount for each product, with an option to mark the purchase as received.</p></div><Icon name="shopping-cart" :size="22" class="text-prinx-600" /></div>
+                <div class="mt-4 flex flex-wrap gap-2"><Link href="/admin/stock/entry?mode=purchase" class="btn-primary"><Icon name="add-circle" :size="16" /> New purchase</Link><Link href="/admin/stock/entry?mode=opening" class="btn-light"><Icon name="box-add" :size="16" /> Opening stock</Link></div>
+            </div>
             <div class="card overflow-hidden"><div class="border-b border-slate-200 px-5 py-4"><h2 class="font-semibold">Purchase history</h2><p class="mt-1 text-xs text-slate-500">Open a purchase to receive stock, post payments or return goods.</p></div><div class="max-h-[680px] overflow-auto divide-y divide-slate-100"><Link v-for="purchase in purchases" :key="purchase.id" :href="`/admin/stock/purchases/${purchase.id}`" class="block p-4 transition hover:bg-slate-50"><div class="flex justify-between gap-3"><div><div class="flex flex-wrap items-center gap-2"><p class="font-semibold text-slate-900">{{ purchase.reference }}</p><span :class="['inline-flex rounded-[7px] border px-2 py-0.5 text-[10px] font-semibold capitalize', purchaseStatusClass(purchase.status)]">{{ purchaseStatusLabel(purchase.status) }}</span></div><p class="mt-1 text-xs text-slate-500">{{ purchase.display_supplier_name || 'Supplier not specified' }} · {{ purchase.purchase_date }}</p><p class="mt-1 text-[11px] text-slate-400">Payment: {{ purchase.payment_status?.replace('_', ' ') || 'unpaid' }} · Balance {{ money(purchase.balance_due) }}</p></div><div class="text-right"><b>{{ money(purchase.total) }}</b><p class="mt-1 text-xs font-semibold text-prinx-600">Open →</p></div></div></Link><div v-if="!purchases.length" class="p-10 text-center text-sm text-slate-400">No purchases recorded.</div></div></div>
         </section>
 

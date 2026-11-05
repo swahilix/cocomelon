@@ -15,7 +15,9 @@ use App\Http\Controllers\Admin\MerchantController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ProductReelController;
+use App\Http\Controllers\Admin\ProductIntelligenceController;
 use App\Http\Controllers\Admin\ProductStockController;
+use App\Http\Controllers\Admin\StockEntryController;
 use App\Http\Controllers\Admin\ProductReviewController as AdminProductReviewController;
 use App\Http\Controllers\Admin\PurchaseController;
 use App\Http\Controllers\Admin\ServiceController as AdminServiceController;
@@ -142,10 +144,18 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         Route::delete('suppliers/{supplier}', [SupplierController::class, 'destroy'])->name('suppliers.destroy');
     });
 
+    // Smart product recognition and market price checks (suggestions only).
+    Route::post('products/lookup/barcode', [ProductIntelligenceController::class, 'barcode'])->middleware(['permission:manage_storefront', 'throttle:30,1'])->name('products.lookup.barcode');
+    Route::post('products/lookup/image', [ProductIntelligenceController::class, 'image'])->middleware(['permission:manage_storefront', 'throttle:10,1'])->name('products.lookup.image');
+    Route::post('market-price', [ProductIntelligenceController::class, 'marketPrice'])->middleware(['permission:manage_storefront,manage_purchases,adjust_stock', 'throttle:15,1'])->name('market-price');
+
     // Step 2 of product entry: opening stock, purchases and selling prices.
     Route::get('products/{product}/stock', [ProductStockController::class, 'show'])->middleware('permission:manage_storefront,manage_purchases,adjust_stock,view_inventory')->name('products.stock');
-    Route::post('products/{product}/opening-stock', [ProductStockController::class, 'openingStock'])->middleware(['permission:adjust_stock', 'sensitive:product.opening_stock,product,products,route:product'])->name('products.opening-stock');
     Route::post('products/{product}/price', [ProductStockController::class, 'updatePrice'])->middleware(['permission:manage_storefront', 'sensitive:product.price_updated,product,products,route:product'])->name('products.price');
+
+    // Add stock: opening stock or purchases for any products, separate from product details.
+    Route::get('stock/entry', [StockEntryController::class, 'show'])->middleware('permission:adjust_stock,manage_purchases')->name('stock.entry');
+    Route::post('stock/opening', [StockEntryController::class, 'opening'])->middleware(['permission:adjust_stock', 'sensitive:stock.opening_posted,product,products,input:_none'])->name('stock.opening.store');
 
     Route::get('stock', [StockController::class, 'index'])->middleware('permission:view_inventory,manage_purchases')->name('stock.index');
     Route::get('stock/inventory', InventoryController::class)->middleware('permission:view_inventory')->name('stock.inventory');

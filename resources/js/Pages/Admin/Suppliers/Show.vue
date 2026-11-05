@@ -18,7 +18,7 @@ const money = (value) => new Intl.NumberFormat('en-TZ', { style: 'currency', cur
                 <h1 class="mt-3 section-title">{{ supplier.name }}</h1>
                 <p class="mt-2 text-sm text-slate-500">{{ supplier.contact_person || 'No contact person' }} · {{ supplier.phone || supplier.email || 'No contact details' }}</p>
             </div>
-            <Link :href="`/admin/stock?tab=purchases&supplier=${supplier.id}`" class="btn-primary"><Icon name="shopping-cart" :size="17" /> New purchase</Link>
+            <Link :href="`/admin/stock/entry?mode=purchase&supplier=${supplier.id}`" class="btn-primary"><Icon name="shopping-cart" :size="17" /> New purchase</Link>
         </div>
 
         <div class="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Support\Gtin;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -45,7 +46,7 @@ class GtinController extends Controller
                 'regex:/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/',
                 Rule::unique('products', 'gtin')->ignore($product),
                 function (string $attribute, mixed $value, \Closure $fail): void {
-                    if (! $this->hasValidCheckDigit((string) $value)) {
+                    if (! Gtin::isValid((string) $value)) {
                         $fail('The scanned barcode is not a valid GTIN. Check the barcode and scan again.');
                     }
                 },
@@ -58,22 +59,5 @@ class GtinController extends Controller
         $product->update(['gtin' => $validated['gtin']]);
 
         return back()->with('success', 'GTIN saved for '.$product->name.'.');
-    }
-
-    private function hasValidCheckDigit(string $gtin): bool
-    {
-        if (! preg_match('/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/', $gtin)) {
-            return false;
-        }
-
-        $digits = array_map('intval', str_split($gtin));
-        $checkDigit = array_pop($digits);
-        $sum = 0;
-
-        foreach (array_reverse($digits) as $index => $digit) {
-            $sum += $digit * ($index % 2 === 0 ? 3 : 1);
-        }
-
-        return ((10 - ($sum % 10)) % 10) === $checkDigit;
     }
 }

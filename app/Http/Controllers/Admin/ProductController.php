@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Services\ImageOptimizationService;
 use App\Services\InventoryService;
+use App\Services\ProductIntelligence\OpenAiResponses;
 use App\Services\ProductPricingService;
 use App\Services\WarrantySmsService;
 use Illuminate\Http\RedirectResponse;
@@ -58,9 +59,14 @@ class ProductController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
-        return Inertia::render('Admin/Products/Form', $this->formData());
+        $saved = $request->integer('saved') ? Product::query()->find($request->integer('saved'), ['id', 'name', 'slug']) : null;
+
+        return Inertia::render('Admin/Products/Form', [
+            ...$this->formData(),
+            'savedProduct' => $saved ? ['id' => $saved->id, 'name' => $saved->name, 'slug' => $saved->slug] : null,
+        ]);
     }
 
     public function edit(Product $product): Response
@@ -95,9 +101,11 @@ class ProductController extends Controller
             return $product;
         });
 
+        // Products are entered on their own; stock and prices are added later
+        // from the Add stock page.
         return redirect()
-            ->route('admin.products.stock', $product)
-            ->with('success', 'Product details saved. Next, add opening stock or a purchase with its cost and selling price.');
+            ->route('admin.products.create', ['saved' => $product->id])
+            ->with('success', $product->name.' saved as a draft. Add its stock and price from Add stock.');
     }
 
     public function update(Request $request, Product $product, InventoryService $inventory, ProductPricingService $pricing): RedirectResponse
@@ -151,6 +159,10 @@ class ProductController extends Controller
             'categories' => Category::productType()->active()->orderBy('sort_order')->orderBy('name')->get(['id', 'name']),
             'brands' => Brand::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'aiFormatterEnabled' => (bool) config('services.openai.product_formatter_enabled') && filled(config('services.openai.api_key')),
+            'smartFill' => [
+                'barcode' => (bool) config('services.upcitemdb.enabled', true) || app(OpenAiResponses::class)->enabled(),
+                'ai' => app(OpenAiResponses::class)->enabled(),
+            ],
         ];
     }
 

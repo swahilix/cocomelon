@@ -1,10 +1,18 @@
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref } from 'vue';
 import { Link, useForm } from '@inertiajs/vue3';
 import AdminLayout from '../../../Layouts/AdminLayout.vue';
 import Icon from '../../../Components/Icon.vue';
+import ProductSmartFill from '../../../Components/ProductSmartFill.vue';
 
-const props = defineProps({ product: Object, categories: Array, brands: Array, aiFormatterEnabled: Boolean });
+const props = defineProps({
+    product: Object,
+    categories: Array,
+    brands: Array,
+    aiFormatterEnabled: Boolean,
+    savedProduct: { type: Object, default: null },
+    smartFill: { type: Object, default: () => ({ barcode: false, ai: false }) },
+});
 const p = props.product || {};
 const imageInput = ref(null);
 const isDraggingImages = ref(false);
@@ -178,6 +186,40 @@ const applySelectedImages = (files) => {
 };
 
 const chooseImages = () => imageInput.value?.click();
+
+// Fill the form from a Smart fill suggestion. "empty" only fills blank fields;
+// "all" replaces what is there.
+const applySuggestion = async ({ mode, suggestion, imageUrls, photo }) => {
+    const overwrite = mode === 'all';
+    const set = (field, value) => {
+        if (value === null || value === undefined || value === '') return;
+        if (overwrite || form[field] === '' || form[field] === null || form[field] === undefined) form[field] = value;
+    };
+
+    set('name', suggestion.name);
+    set('brand_id', suggestion.brand_id);
+    set('category_id', suggestion.category_id);
+    set('short_description', suggestion.short_description);
+    set('description', suggestion.description);
+    set('gtin', suggestion.gtin);
+    set('mpn', suggestion.model);
+
+    const specs = [...(suggestion.specifications || [])];
+    if (suggestion.color && !specs.some((spec) => /colou?r/i.test(spec.label))) specs.push({ label: 'Color', value: suggestion.color });
+    set('specifications_text', specs.map((spec) => `${spec.label}: ${spec.value}`).join('\n'));
+
+    if (photo) {
+        applySelectedImages([photo]);
+    } else if (imageUrls?.length && !p.primary_image && !selectedImagePreviews.value.length) {
+        set('primary_image_url', imageUrls[0]);
+        set('gallery_urls', imageUrls.slice(1).join('\n'));
+    }
+
+    // Searchable selects need a refresh after their value changes in code.
+    await nextTick();
+    const $ = window.jQuery;
+    if ($?.fn?.select2) document.querySelectorAll('.admin-shell select.select2-hidden-accessible').forEach((select) => $(select).trigger('change.select2'));
+};
 const selectImages = (event) => applySelectedImages(event.target.files);
 const dropImages = (event) => {
     isDraggingImages.value = false;
@@ -233,12 +275,21 @@ onBeforeUnmount(clearImagePreviews);
             <div>
                 <p class="section-kicker">Catalogue</p>
                 <h1 class="section-title">{{ p.id ? 'Edit product' : 'Add product' }}</h1>
-                <p class="mt-1 text-sm text-slate-500">{{ p.id ? 'Product details and specifications. Prices and stock are managed in Stock & pricing.' : 'Step 1 of 2: product details and specifications. After saving, add opening stock or a purchase with the cost and selling price.' }}</p>
+                <p class="mt-1 text-sm text-slate-500">{{ p.id ? 'Product details and specifications. Prices and stock are managed in Stock & pricing.' : 'Product details and specifications only. Stock and prices are added later from Add stock.' }}</p>
             </div>
             <div class="flex gap-2"><Link v-if="p.id" :href="`/admin/products/${p.slug}/stock`" class="btn-primary">Stock & pricing</Link><Link href="/admin/products" class="btn-light">Back</Link></div>
         </div>
 
-        <form class="mt-6 grid gap-5 lg:grid-cols-[1fr_340px]" @submit.prevent="submit">
+        <div v-if="savedProduct && !p.id" class="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            <span><strong>{{ savedProduct.name }}</strong> was saved as a draft. The form is ready for the next product.</span>
+            <span class="flex gap-3 text-xs font-semibold"><Link :href="`/admin/stock/entry?product=${savedProduct.id}`" class="text-emerald-900 underline">Add its stock & price</Link><Link :href="`/admin/products/${savedProduct.slug}/edit`" class="text-emerald-900 underline">Edit it</Link></span>
+        </div>
+
+        <div class="mt-6 lg:max-w-[calc(100%-360px)]">
+            <ProductSmartFill :categories="categories" :brands="brands" :barcode-enabled="smartFill.barcode" :ai-enabled="smartFill.ai" @apply="applySuggestion" />
+        </div>
+
+        <form class="mt-5 grid gap-5 lg:grid-cols-[1fr_340px]" @submit.prevent="submit">
             <div class="grid gap-5">
                 <section class="card p-5">
                     <h2 class="font-semibold">Product information</h2>
@@ -417,7 +468,7 @@ onBeforeUnmount(clearImagePreviews);
                     <label class="flex items-center gap-2 text-sm"><input v-model="form.track_stock" type="checkbox"> Track stock</label>
                     <label class="flex items-center gap-2 text-sm"><input v-model="form.featured" type="checkbox"> Featured</label>
                     <label class="flex items-center gap-2 text-sm"><input v-model="form.merchant_sync_enabled" type="checkbox"> Google Merchant sync</label>
-                    <button class="btn-primary" :disabled="form.processing">{{ form.processing ? 'Saving...' : (p.id ? 'Save product details' : 'Save & continue to stock') }}</button>
+                    <button class="btn-primary" :disabled="form.processing">{{ form.processing ? 'Saving...' : (p.id ? 'Save product details' : 'Save product') }}</button>
                 </div>
             </aside>
         </form>

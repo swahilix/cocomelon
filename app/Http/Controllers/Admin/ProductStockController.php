@@ -6,16 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Supplier;
-use App\Services\InventoryService;
+use App\Services\ProductIntelligence\MarketPriceService;
 use App\Services\ProductPricingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
-use RuntimeException;
 
 /**
  * Step 2 of product entry: opening stock, purchases and selling prices for one
@@ -23,7 +21,7 @@ use RuntimeException;
  */
 class ProductStockController extends Controller
 {
-    public function show(Request $request, Product $product): Response
+    public function show(Request $request, Product $product, MarketPriceService $prices): Response
     {
         $product->load(['variants' => fn ($query) => $query->orderBy('sort_order')->orderBy('id')]);
         $user = $request->user();
@@ -95,6 +93,7 @@ class ProductStockController extends Controller
                 ->limit(20)
                 ->get()
                 ->map(fn ($row) => [...(array) $row, 'variant_name' => $row->product_variant_id ? ($variantNames[$row->product_variant_id] ?? 'Removed variant') : null]),
+            'marketPriceEnabled' => $prices->enabled(),
             'can' => [
                 'opening' => (bool) $user?->hasAnyPermission(['adjust_stock']),
                 'purchase' => (bool) $user?->hasAnyPermission(['manage_purchases']),
@@ -103,76 +102,6 @@ class ProductStockController extends Controller
                 'view_costs' => (bool) $user?->hasAnyPermission(['view_costs', 'manage_purchases']),
             ],
         ]);
-    }
-
-    public function openingStock(Request $request, Product $product, InventoryService $inventory, ProductPricingService $pricing): RedirectResponse
-    {
-        $validated = $request->validate([
-            'lines' => ['required', 'array', 'min:1', 'max:50'],
-            'lines.*.product_variant_id' => ['nullable', 'integer'],
-            'lines.*.quantity' => ['required', 'integer', 'min:1', 'max:1000000'],
-            'lines.*.unit_cost' => ['required', 'numeric', 'min:0'],
-            'lines.*.selling_price' => ['required', 'numeric', 'gt:0'],
-            'lines.*.discount_type' => ['nullable', 'in:none,amount,percent'],
-            'lines.*.discount_value' => ['nullable', 'numeric', 'min:0'],
-            'notes' => ['nullable', 'string', 'max:1000'],
-            'publish' => ['boolean'],
-        ]);
-
-        $variants = $product->variants()->where('is_active', true)->get()->keyBy('id');
-        $lines = collect($validated['lines'])->values()->map(function (array $line, int $index) use ($product, $variants, $pricing): array {
-            $variant = $this->resolveVariant($product, $variants, $line['product_variant_id'] ?? null, "lines.$index.product_variant_id");
-            $selling = round((float) $line['selling_price'], 2);
-
-            return [
-                'variant' => $variant,
-                'quantity' => (int) $line['quantity'],
-                'unit_cost' => round((float) $line['unit_cost'], 2),
-                'selling_price' => $selling,
-                'sale_price' => $pricing->salePriceFor($selling, (string) ($line['discount_type'] ?? 'none'), isset($line['discount_value']) ? (float) $line['discount_value'] : null, "lines.$index.discount_value"),
-            ];
-        });
-
-        $duplicates = $lines->countBy(fn ($line) => $line['variant']?->id ?? 0)->filter(fn ($count) => $count > 1);
-        if ($duplicates->isNotEmpty()) {
-            throw ValidationException::withMessages(['lines' => 'Each variant can appear only once in opening stock.']);
-        }
-
-        $reference = 'OPEN-'.$product->id.'-'.now()->format('ymd-His').'-'.strtoupper(Str::random(3));
-
-        try {
-            DB::transaction(function () use ($lines, $product, $inventory, $pricing, $validated, $request, $reference): void {
-                foreach ($lines as $line) {
-                    $inventory->openingStock(
-                        $product,
-                        $line['variant'],
-                        $line['quantity'],
-                        $line['unit_cost'],
-                        $validated['notes'] ?? null,
-                        $request->user()?->id,
-                        $reference,
-                    );
-
-                    $pricing->apply(
-                        $product,
-                        $line['variant'],
-                        $line['selling_price'],
-                        $line['sale_price'],
-                        'opening_stock',
-                        $reference,
-                        $request->user()?->id,
-                    );
-                }
-
-                if (($validated['publish'] ?? false) && $product->fresh()->status === 'draft') {
-                    $product->fresh()->update(['status' => 'active']);
-                }
-            });
-        } catch (RuntimeException $exception) {
-            return back()->withErrors(['lines' => $exception->getMessage()]);
-        }
-
-        return back()->with('success', 'Opening stock added. Stock, cost and selling prices are updated.');
     }
 
     public function updatePrice(Request $request, Product $product, ProductPricingService $pricing): RedirectResponse

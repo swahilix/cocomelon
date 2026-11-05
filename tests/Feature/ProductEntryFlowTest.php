@@ -32,7 +32,7 @@ class ProductEntryFlowTest extends TestCase
         $this->category = Category::create(['name' => 'Phones', 'type' => 'product', 'is_active' => true]);
     }
 
-    public function test_step_one_saves_details_only_and_opens_stock_page(): void
+    public function test_products_are_saved_alone_without_price_or_stock(): void
     {
         $response = $this->actingAs($this->admin)->post('/admin/products', $this->details([
             'name' => 'Tecno Spark 20',
@@ -45,7 +45,7 @@ class ProductEntryFlowTest extends TestCase
         ]));
 
         $product = Product::query()->where('name', 'Tecno Spark 20')->firstOrFail();
-        $response->assertSessionHasNoErrors()->assertRedirect('/admin/products/'.$product->slug.'/stock');
+        $response->assertSessionHasNoErrors()->assertRedirect('/admin/products/create?saved='.$product->id);
 
         $this->assertSame(0.0, (float) $product->price);
         $this->assertSame(0, $product->stock_quantity);
@@ -55,9 +55,17 @@ class ProductEntryFlowTest extends TestCase
         $this->assertSame(0, DB::table('stock_movements')->count());
 
         $this->actingAs($this->admin)
-            ->get('/admin/products/'.$product->slug.'/stock')
+            ->get('/admin/products/create?saved='.$product->id)
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('Admin/Products/Stock')->where('product.opening_allowed', true));
+            ->assertInertia(fn (Assert $page) => $page->component('Admin/Products/Form')->where('savedProduct.id', $product->id));
+
+        $this->actingAs($this->admin)
+            ->get('/admin/stock/entry?product='.$product->id)
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/Stock/Entry')
+                ->where('initialProductId', $product->id)
+                ->where('products.0.opening_allowed', true));
     }
 
     public function test_product_cannot_be_published_before_it_has_a_price(): void
@@ -74,8 +82,9 @@ class ProductEntryFlowTest extends TestCase
         $product = $this->createProduct('Samsung A15');
 
         $this->actingAs($this->admin)
-            ->post('/admin/products/'.$product->slug.'/opening-stock', [
+            ->post('/admin/stock/opening', [
                 'lines' => [[
+                    'product_id' => $product->id,
                     'quantity' => 10,
                     'unit_cost' => 300000,
                     'selling_price' => 400000,
@@ -99,8 +108,8 @@ class ProductEntryFlowTest extends TestCase
 
         // Opening stock can only be entered once; further stock comes from purchases.
         $this->actingAs($this->admin)
-            ->post('/admin/products/'.$product->slug.'/opening-stock', [
-                'lines' => [['quantity' => 2, 'unit_cost' => 1, 'selling_price' => 2]],
+            ->post('/admin/stock/opening', [
+                'lines' => [['product_id' => $product->id, 'quantity' => 2, 'unit_cost' => 1, 'selling_price' => 2]],
             ])
             ->assertSessionHasErrors('lines');
         $this->assertSame(10, $product->fresh()->stock_quantity);
@@ -123,10 +132,10 @@ class ProductEntryFlowTest extends TestCase
         $this->assertSame(0, $small->stock_quantity);
 
         $this->actingAs($this->admin)
-            ->post('/admin/products/'.$product->slug.'/opening-stock', [
+            ->post('/admin/stock/opening', [
                 'lines' => [
-                    ['product_variant_id' => $small->id, 'quantity' => 3, 'unit_cost' => 2000000, 'selling_price' => 2500000, 'discount_type' => 'percent', 'discount_value' => 10],
-                    ['product_variant_id' => $large->id, 'quantity' => 2, 'unit_cost' => 2600000, 'selling_price' => 3200000],
+                    ['product_id' => $product->id, 'product_variant_id' => $small->id, 'quantity' => 3, 'unit_cost' => 2000000, 'selling_price' => 2500000, 'discount_type' => 'percent', 'discount_value' => 10],
+                    ['product_id' => $product->id, 'product_variant_id' => $large->id, 'quantity' => 2, 'unit_cost' => 2600000, 'selling_price' => 3200000],
                 ],
             ])
             ->assertSessionHasNoErrors();
@@ -141,7 +150,7 @@ class ProductEntryFlowTest extends TestCase
         // The parent shows the cheapest variant price.
         $this->assertSame(2500000.0, (float) $product->price);
         $this->assertSame(2250000.0, (float) $product->sale_price);
-        $this->assertDatabaseHas('stock_movements', ['product_variant_id' => $small->id, 'type' => 'opening_stock', 'quantity' => 3]);
+        $this->assertDatabaseHas('stock_movements', ['product_id' => $product->id, 'product_variant_id' => $small->id, 'type' => 'opening_stock', 'quantity' => 3]);
 
         // A variant line is required for products with variants.
         $this->actingAs($this->admin)
@@ -222,8 +231,8 @@ class ProductEntryFlowTest extends TestCase
     public function test_update_price_records_each_change(): void
     {
         $product = $this->createProduct('Charger');
-        $this->actingAs($this->admin)->post('/admin/products/'.$product->slug.'/opening-stock', [
-            'lines' => [['quantity' => 5, 'unit_cost' => 10000, 'selling_price' => 20000]],
+        $this->actingAs($this->admin)->post('/admin/stock/opening', [
+            'lines' => [['product_id' => $product->id, 'quantity' => 5, 'unit_cost' => 10000, 'selling_price' => 20000]],
         ])->assertSessionHasNoErrors();
 
         $this->actingAs($this->admin)
