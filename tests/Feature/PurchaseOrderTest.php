@@ -179,7 +179,9 @@ class PurchaseOrderTest extends TestCase
         $this->assertSame('converted', $order->status);
         $this->assertSame((int) $purchase->id, (int) $order->stock_purchase_id);
 
-        // The same order cannot be purchased twice.
+        // The same order cannot be purchased twice (a changed submission, so the
+        // duplicate-submission guard does not stop it first).
+        $payload['items'][0]['quantity'] = 5;
         $this->actingAs($this->admin)->post('/admin/stock/purchases', $payload)->assertSessionHasErrors('purchase_order_id');
         $this->assertSame(1, DB::table('stock_purchases')->count());
     }
