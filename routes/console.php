@@ -17,6 +17,7 @@ Schedule::call(function (): void {
 
 Schedule::command('merchant:sync --stale')->dailyAt('02:00')->withoutOverlapping();
 Schedule::command('queue:prune-failed --hours=168')->daily();
+Schedule::command('warranties:notify-expired')->dailyAt('09:00')->withoutOverlapping();
 
 
 Artisan::command('media:optimize-storefront-images', function (): void {
