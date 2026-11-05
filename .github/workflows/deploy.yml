@@ -1,0 +1,214 @@
+name: Deploy
+
+# Deploy-only workflow: builds the chosen ref and releases it to cPanel without
+# running the test suite. Start it from Actions → Deploy → Run workflow.
+# The Tests workflow also calls this file after tests pass on main.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or commit SHA to deploy
+        required: true
+        default: main
+        type: string
+  workflow_call:
+    inputs:
+      ref:
+        description: Branch, tag or commit SHA to deploy (defaults to the triggering commit)
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Never run two deploys at once, and never cancel one half-way through.
+    concurrency:
+      group: prinx-production-deploy
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout release
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Record release commit
+        id: release
+        run: |
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "Deploying $(git rev-parse --short HEAD): $(git log -1 --pretty=%s)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install production PHP dependencies
+        run: |
+          composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+          test -f vendor/autoload.php
+
+      - name: Build production assets
+        run: |
+          npm install
+          npm run build
+          test -f public/build/manifest.json
+
+      - name: Create deployment archive
+        shell: bash
+        run: |
+          rm -f /tmp/prinx-release.tar.gz prinx-release.tar.gz
+          tar \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='.env' \
+            --exclude='node_modules' \
+            --exclude='storage/logs/*' \
+            --exclude='storage/framework/cache/*' \
+            --exclude='storage/framework/sessions/*' \
+            --exclude='storage/framework/views/*' \
+            -czf /tmp/prinx-release.tar.gz .
+          mv /tmp/prinx-release.tar.gz prinx-release.tar.gz
+          ls -lh prinx-release.tar.gz
+
+      - name: Prepare deployment directory
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          script: |
+            set -e
+            if [ -z "${{ secrets.DEPLOY_PATH }}" ]; then
+              echo "DEPLOY_PATH secret is missing"
+              exit 1
+            fi
+            rm -f "$HOME/prinx-release.tar.gz"
+            echo "Configured deploy folder: $(basename "${{ secrets.DEPLOY_PATH }}")"
+
+      - name: Upload release to cPanel home
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: "prinx-release.tar.gz"
+          target: "./"
+          overwrite: true
+          debug: true
+
+      - name: Activate release
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          script: |
+            set -e
+            DEPLOY_DIR="${{ secrets.DEPLOY_PATH }}"
+            RELEASE="$HOME/prinx-release.tar.gz"
+
+            echo "Checking staged release: $RELEASE"
+            test -f "$RELEASE" || { echo "ERROR: release archive was not uploaded to $HOME"; exit 1; }
+
+            if [ ! -f "$DEPLOY_DIR/.env" ] || [ ! -f "$DEPLOY_DIR/artisan" ] || [ ! -f "$DEPLOY_DIR/composer.json" ]; then
+              target_name="$(basename "$DEPLOY_DIR")"
+              echo "Configured full path is not a Laravel root; resolving folder: $target_name"
+
+              matches=""
+              count=0
+              while IFS= read -r env_file; do
+                candidate="$(dirname "$env_file")"
+                if [ "$(basename "$candidate")" = "$target_name" ] && [ -f "$candidate/artisan" ] && [ -f "$candidate/composer.json" ]; then
+                  matches="$candidate"
+                  count=$((count + 1))
+                fi
+              done < <(find "$HOME" -maxdepth 5 -type f -name '.env' 2>/dev/null)
+
+              if [ "$count" -eq 1 ]; then
+                DEPLOY_DIR="$matches"
+                echo "Resolved unique Laravel app folder: $(basename "$DEPLOY_DIR")"
+              else
+                echo "ERROR: could not uniquely resolve Laravel app folder '$target_name' (matches=$count)."
+                echo "Laravel roots discovered:"
+                while IFS= read -r env_file; do
+                  candidate="$(dirname "$env_file")"
+                  if [ -f "$candidate/artisan" ] && [ -f "$candidate/composer.json" ]; then
+                    rel="${candidate#$HOME/}"
+                    printf '  relative=%s\n' "$rel"
+                  fi
+                done < <(find "$HOME" -maxdepth 5 -type f -name '.env' 2>/dev/null)
+                rm -f "$RELEASE"
+                exit 1
+              fi
+            fi
+
+            echo "Deploying into resolved folder: $(basename "$DEPLOY_DIR")"
+
+            # Remove the obsolete reconstructed migration before overlaying the
+            # canonical release. Production .env and storage remain untouched.
+            rm -f "$DEPLOY_DIR/database/migrations/2026_08_21_000800_add_commerce_operations.php"
+
+            tar -xzf "$RELEASE" -C "$DEPLOY_DIR"
+            rm -f "$RELEASE"
+
+            cd "$DEPLOY_DIR"
+            test -f artisan || { echo "ERROR: artisan missing after extraction"; exit 1; }
+            test -f composer.json || { echo "ERROR: composer.json missing after extraction"; exit 1; }
+            test -f vendor/autoload.php || { echo "ERROR: production vendor dependencies missing after extraction"; exit 1; }
+            test -f public/build/manifest.json || { echo "ERROR: Vite manifest missing after extraction"; exit 1; }
+            test -f .env || { echo "ERROR: production .env missing"; exit 1; }
+
+            PHP_BIN=""
+            for candidate in \
+              /opt/cpanel/ea-php83/root/usr/bin/php \
+              /opt/alt/php83/usr/bin/php \
+              /usr/local/bin/ea-php83 \
+              /usr/local/bin/php83 \
+              /usr/bin/php83 \
+              "$(command -v ea-php83 2>/dev/null || true)" \
+              "$(command -v alt-php83 2>/dev/null || true)" \
+              "$(command -v php83 2>/dev/null || true)" \
+              "$(command -v php 2>/dev/null || true)"; do
+              [ -n "$candidate" ] || continue
+              [ -x "$candidate" ] || continue
+              if "$candidate" -r 'exit(version_compare(PHP_VERSION, "8.3.0", ">=") ? 0 : 1);' >/dev/null 2>&1; then
+                PHP_BIN="$candidate"
+                break
+              fi
+            done
+
+            if [ -z "$PHP_BIN" ]; then
+              echo "ERROR: no PHP 8.3+ CLI binary was found on this cPanel account."
+              echo "Default CLI PHP is:"
+              php -v | head -1 || true
+              echo "Configure PHP 8.3 for the domain in cPanel and ensure its CLI binary is available."
+              exit 1
+            fi
+
+            echo "Deployment PHP runtime:"
+            "$PHP_BIN" -v | head -1
+
+            "$PHP_BIN" artisan optimize:clear
+            "$PHP_BIN" artisan migrate --force
+            "$PHP_BIN" artisan storage:link || true
+            "$PHP_BIN" artisan media:optimize-storefront-images --no-interaction || true
+            "$PHP_BIN" artisan config:cache
+            "$PHP_BIN" artisan route:cache
+            "$PHP_BIN" artisan view:cache
+
+            echo "Deployment complete: ${{ steps.release.outputs.sha }}"
