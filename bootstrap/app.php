@@ -32,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('web')->group(base_path('routes/software.php'));
             Route::middleware('web')->group(base_path('routes/historical.php'));
             Route::middleware('web')->group(base_path('routes/installments.php'));
+            Route::middleware('web')->group(base_path('routes/warranties.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {

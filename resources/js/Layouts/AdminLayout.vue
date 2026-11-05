@@ -40,6 +40,7 @@ const sections = computed(() => [
             ['Point of sale', '/admin/pos', 'shop', ['use_pos']],
             ['Customers', '/admin/customers', 'user-1', ['use_pos', 'manage_orders']],
             ['Installments', '/admin/installments', 'money-add', ['use_pos', 'manage_orders']],
+            ['Warranties', '/admin/warranties', 'shield-tick', ['use_pos', 'manage_orders']],
             ['Cash registers', '/admin/registers', 'money-add', ['manage_registers']],
             ['Sales', '/admin/sales', 'basket-1', ['use_pos', 'view_reports']],
             ['Expenses', '/admin/expenses', 'bulb', ['manage_expenses']],
