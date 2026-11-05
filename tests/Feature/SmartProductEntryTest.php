@@ -121,7 +121,7 @@ class SmartProductEntryTest extends TestCase
         $this->actingAs($this->admin)
             ->postJson('/admin/products/lookup/barcode', ['gtin' => self::BARCODE])
             ->assertStatus(422)
-            ->assertJsonPath('message', fn ($message) => str_contains($message, 'No product details were found') && str_contains($message, 'OPENAI_API_KEY'));
+            ->assertJsonPath('message', fn ($message) => str_contains($message, 'No product details were found') && str_contains($message, 'AI & product lookup'));
     }
 
     public function test_unknown_barcode_falls_back_to_ai_web_search_in_tanzania(): void
@@ -178,7 +178,7 @@ class SmartProductEntryTest extends TestCase
         $this->actingAs($this->admin)
             ->post('/admin/products/lookup/image', ['image' => UploadedFile::fake()->image('phone.jpg', 800, 800)], ['Accept' => 'application/json'])
             ->assertStatus(422)
-            ->assertJsonPath('message', fn ($message) => str_contains($message, 'OPENAI_API_KEY'));
+            ->assertJsonPath('message', fn ($message) => str_contains($message, 'AI & product lookup'));
 
         Http::assertNothingSent();
     }

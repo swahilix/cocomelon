@@ -135,7 +135,7 @@ const dismiss = () => reset();
                         <input ref="photoInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" :disabled="!aiEnabled || !!loading" @change="choosePhoto">
                     </label>
                 </div>
-                <p class="mt-1 text-[11px] text-slate-400">{{ aiEnabled ? 'Photograph the front, box or label. AI reads it and searches for the specs.' : 'Needs OPENAI_API_KEY on the server.' }}</p>
+                <p class="mt-1 text-[11px] text-slate-400">{{ aiEnabled ? 'Photograph the front, box or label. AI reads it and searches for the specs.' : 'Needs an OpenAI API key in Settings → AI & product lookup.' }}</p>
             </div>
         </div>
 

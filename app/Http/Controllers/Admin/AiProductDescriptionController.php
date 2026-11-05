@@ -18,7 +18,7 @@ class AiProductDescriptionController extends Controller
     {
         if (! config('services.openai.product_formatter_enabled') || blank(config('services.openai.api_key'))) {
             return response()->json([
-                'message' => 'AI description formatting is not configured. Add OPENAI_API_KEY and enable OPENAI_PRODUCT_FORMATTER_ENABLED on the server.',
+                'message' => 'AI description formatting is turned off. Add an OpenAI API key and switch on the formatter in Settings → AI & product lookup.',
             ], 422);
         }
 

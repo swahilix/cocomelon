@@ -64,7 +64,7 @@ class ProductRecognitionService
         if (! $suggestion) {
             $message = 'No product details were found for barcode '.$gtin.'.';
             if (! $this->ai->enabled()) {
-                $message .= ' Add OPENAI_API_KEY on the server to also search the web, or try identifying it from a photo.';
+                $message .= ' Add an OpenAI API key in Settings → AI & product lookup to also search the web.';
             } else {
                 $message .= ' Try identifying it from a photo instead.';
             }
