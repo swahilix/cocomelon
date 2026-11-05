@@ -11,6 +11,20 @@ const isDraggingImages = ref(false);
 const replaceMainImage = ref(false);
 const selectedImagePreviews = ref([]);
 
+// Older products stored warranty as free text ("12 months warranty"). Read a
+// duration from it so editing keeps the warranty.
+const parseWarranty = (text) => {
+    const match = String(text || '').toLowerCase().match(/(\d+)\s*(day|days|month|months|mwezi|miezi|year|years|yr|yrs|mwaka|miaka)/);
+    if (!match) return { value: '', unit: '' };
+    const word = match[2];
+    const unit = /^(day|days)$/.test(word) ? 'days' : /^(year|years|yr|yrs|mwaka|miaka)$/.test(word) ? 'years' : 'months';
+    return { value: Number(match[1]), unit };
+};
+const parsedWarranty = p.warranty_duration_value ? { value: '', unit: '' } : parseWarranty(p.warranty);
+const unparsedWarrantyText = !p.warranty_duration_value && p.warranty && !parsedWarranty.value ? p.warranty : '';
+const canPublish = Number(p.price || 0) > 0;
+const money = (value) => `TZS ${new Intl.NumberFormat('en-TZ', { maximumFractionDigits: 0 }).format(Number(value || 0))}`;
+
 const form = useForm({
     _method: p.id ? 'PATCH' : 'POST',
     category_id: p.category_id || '',
@@ -20,9 +34,6 @@ const form = useForm({
     sku: p.sku || '',
     short_description: p.short_description || '',
     description: p.description || '',
-    price: p.price || '',
-    sale_price: p.sale_price || '',
-    stock_quantity: p.stock_quantity ?? 0,
     low_stock_threshold: p.low_stock_threshold ?? 5,
     track_stock: p.track_stock ?? true,
     condition: p.condition || 'new',
@@ -37,7 +48,8 @@ const form = useForm({
     mpn: p.mpn || '',
     google_product_category: p.google_product_category || '',
     product_type: p.product_type || '',
-    warranty: p.warranty || '',
+    warranty_duration_value: p.warranty_duration_value || parsedWarranty.value,
+    warranty_duration_unit: p.warranty_duration_unit || parsedWarranty.unit,
     specifications_text: p.specifications ? Object.entries(p.specifications).map(([k, v]) => `${k}: ${v}`).join('\n') : '',
     meta_title: p.meta_title || '',
     meta_description: p.meta_description || '',
@@ -49,9 +61,9 @@ const form = useForm({
         color: variant.color || '',
         storage: variant.storage || '',
         size: variant.size || '',
-        price: variant.price || '',
-        sale_price: variant.sale_price || '',
-        stock_quantity: variant.stock_quantity ?? 0,
+        current_price: variant.price,
+        current_sale_price: variant.sale_price,
+        current_stock: variant.stock_quantity ?? 0,
         image_url: variant.image && /^https?:\/\//i.test(variant.image) ? variant.image : '',
         image_file: null,
         existing_image_url: variant.image_url || '',
@@ -70,7 +82,14 @@ const currentImages = computed(() => {
 const hasVariants = computed(() => form.variants.length > 0);
 const variantStockTotal = computed(() => form.variants
     .filter((variant) => variant.is_active)
-    .reduce((sum, variant) => sum + Number(variant.stock_quantity || 0), 0));
+    .reduce((sum, variant) => sum + Number(variant.current_stock || 0), 0));
+const hasWarranty = computed({
+    get: () => Boolean(form.warranty_duration_unit),
+    set: (value) => {
+        form.warranty_duration_value = value ? (form.warranty_duration_value || 1) : '';
+        form.warranty_duration_unit = value ? (form.warranty_duration_unit || 'years') : '';
+    },
+});
 
 const addVariant = () => {
     const suffix = String(form.variants.length + 1).padStart(2, '0');
@@ -81,9 +100,9 @@ const addVariant = () => {
         color: '',
         storage: '',
         size: '',
-        price: '',
-        sale_price: '',
-        stock_quantity: 0,
+        current_price: null,
+        current_sale_price: null,
+        current_stock: 0,
         image_url: '',
         image_file: null,
         existing_image_url: '',
@@ -103,7 +122,7 @@ const merchantIssues = computed(() => {
     if (p.id && !form.sku) issues.push('add SKU');
     if (!form.name) issues.push('add product name');
     if (!form.description) issues.push('add description');
-    if (!(Number(form.price) > 0)) issues.push('add a valid price');
+    if (!canPublish) issues.push('add a selling price in Stock & pricing');
     if (!p.primary_image && !form.primary_image && !form.primary_image_url) issues.push('add a main image');
     if (!form.gtin && !(form.brand_id && form.mpn)) issues.push('add GTIN or Brand + MPN');
     return issues;
@@ -214,8 +233,9 @@ onBeforeUnmount(clearImagePreviews);
             <div>
                 <p class="section-kicker">Catalogue</p>
                 <h1 class="section-title">{{ p.id ? 'Edit product' : 'Add product' }}</h1>
+                <p class="mt-1 text-sm text-slate-500">{{ p.id ? 'Product details and specifications. Prices and stock are managed in Stock & pricing.' : 'Step 1 of 2: product details and specifications. After saving, add opening stock or a purchase with the cost and selling price.' }}</p>
             </div>
-            <Link href="/admin/products" class="btn-light">Back</Link>
+            <div class="flex gap-2"><Link v-if="p.id" :href="`/admin/products/${p.slug}/stock`" class="btn-primary">Stock & pricing</Link><Link href="/admin/products" class="btn-light">Back</Link></div>
         </div>
 
         <form class="mt-6 grid gap-5 lg:grid-cols-[1fr_340px]" @submit.prevent="submit">
@@ -245,15 +265,18 @@ onBeforeUnmount(clearImagePreviews);
                             <select v-model="form.brand_id" name="brand_id" class="input"><option value="">No brand</option><option v-for="b in brands" :key="b.id" :value="b.id">{{ b.name }}</option></select>
                             <p v-if="form.errors.brand_id" class="error">{{ form.errors.brand_id }}</p>
                         </div>
-                        <div><label class="label">Price</label><input v-model="form.price" name="price" type="number" class="input"><p v-if="form.errors.price" class="error">{{ form.errors.price }}</p></div>
+                        <div><label class="label">Minimum stock alert</label><input v-model="form.low_stock_threshold" name="low_stock_threshold" type="number" min="0" class="input"><p class="mt-1 text-[11px] text-slate-500">You are alerted when stock falls to this quantity.</p><p v-if="form.errors.low_stock_threshold" class="error">{{ form.errors.low_stock_threshold }}</p></div>
                         <div>
-                            <label class="label">Sale price</label>
-                            <input v-model="form.sale_price" name="sale_price" type="number" class="input">
-                            <p class="mt-1 text-[11px] text-slate-500">Same as Price = no discount. Lower than Price = discounted product.</p>
-                            <p v-if="form.errors.sale_price" class="error">{{ form.errors.sale_price }}</p>
+                            <div class="flex items-center justify-between"><label class="label">Warranty</label><label class="flex items-center gap-1.5 text-xs text-slate-600"><input v-model="hasWarranty" type="checkbox"> Has warranty</label></div>
+                            <div v-if="hasWarranty" class="grid grid-cols-[1fr_1.2fr] gap-2"><input v-model.number="form.warranty_duration_value" type="number" min="1" class="input" aria-label="Warranty duration"><select v-model="form.warranty_duration_unit" data-native-select class="input" aria-label="Warranty unit"><option value="days">Days</option><option value="months">Months</option><option value="years">Years</option></select></div>
+                            <div v-else class="input flex items-center bg-slate-50 text-slate-400">No warranty</div>
+                            <p v-if="unparsedWarrantyText" class="mt-1 text-[11px] text-amber-700">Previous warranty text: “{{ unparsedWarrantyText }}”. Set a duration to keep a warranty.</p>
+                            <p v-if="form.errors.warranty_duration_value || form.errors.warranty_duration_unit" class="error">{{ form.errors.warranty_duration_value || form.errors.warranty_duration_unit }}</p>
                         </div>
-                        <div><label class="label">Stock</label><input v-model="form.stock_quantity" name="stock_quantity" type="number" class="input" :disabled="hasVariants"><p v-if="hasVariants" class="mt-1 text-[11px] text-slate-500">Derived from active variants: {{ variantStockTotal }}</p></div>
-                        <div><label class="label">Low stock alert</label><input v-model="form.low_stock_threshold" name="low_stock_threshold" type="number" class="input"></div>
+                        <div v-if="p.id" class="sm:col-span-2 flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+                            <div><span class="text-slate-500">Selling price</span> <strong class="ml-1">{{ canPublish ? money(p.current_price) : 'Not set' }}</strong><span class="mx-3 text-slate-300">|</span><span class="text-slate-500">Stock</span> <strong class="ml-1">{{ p.track_stock ? p.stock_quantity : 'Not tracked' }}</strong></div>
+                            <Link :href="`/admin/products/${p.slug}/stock`" class="text-xs font-semibold text-prinx-600">Add stock or change price →</Link>
+                        </div>
                         <div class="sm:col-span-2"><label class="label">Short description</label><textarea v-model="form.short_description" name="short_description" class="input" rows="3"></textarea></div>
                         <div class="sm:col-span-2"><label class="label">Description</label><textarea v-model="form.description" name="description" class="input" rows="10"></textarea><p v-if="form.errors.description" class="error">{{ form.errors.description }}</p></div>
                         <div class="sm:col-span-2"><label class="label">Specifications <span class="text-xs text-slate-400">one per line: Label: Value</span></label><textarea v-model="form.specifications_text" class="input font-mono" rows="7"></textarea></div>
@@ -290,9 +313,7 @@ onBeforeUnmount(clearImagePreviews);
                                 <div><label class="label">Color</label><input v-model="variant.color" class="input" placeholder="Black"></div>
                                 <div><label class="label">Storage</label><input v-model="variant.storage" class="input" placeholder="256 GB"></div>
                                 <div><label class="label">Size</label><input v-model="variant.size" class="input" placeholder="Large / 15 inch"></div>
-                                <div><label class="label">Regular price</label><input v-model="variant.price" type="number" min="0" class="input" :placeholder="`Uses base: ${form.price || 0}`"></div>
-                                <div><label class="label">Sale price</label><input v-model="variant.sale_price" type="number" min="0" class="input"><p v-if="form.errors[`variants.${index}.sale_price`]" class="error">{{ form.errors[`variants.${index}.sale_price`] }}</p></div>
-                                <div><label class="label">Stock *</label><input v-model.number="variant.stock_quantity" type="number" min="0" class="input"></div>
+                                <div class="sm:col-span-2 lg:col-span-1"><label class="label">Price & stock</label><div class="input flex items-center bg-slate-50 text-xs text-slate-600">{{ variant.id ? `${variant.current_price !== null && variant.current_price !== undefined ? money(variant.current_sale_price ?? variant.current_price) : 'No price'} · ${variant.current_stock} in stock` : 'Added in Stock & pricing' }}</div></div>
                                 <div class="sm:col-span-2"><label class="label">Variant image URL</label><input v-model="variant.image_url" type="url" class="input" placeholder="https://..."></div>
                                 <div class="sm:col-span-2"><label class="label">Or upload variant image</label><input type="file" accept="image/jpeg,image/png,image/webp,image/avif" class="input" @change="variant.image_file = $event.target.files[0] || null"><p v-if="form.errors[`variants.${index}.image_file`]" class="error">{{ form.errors[`variants.${index}.image_file`] }}</p></div>
                             </div>
@@ -305,7 +326,7 @@ onBeforeUnmount(clearImagePreviews);
                     </div>
 
                     <div v-if="form.variants.length" class="mt-4 rounded-[7px] border border-prinx-100 bg-prinx-50 px-4 py-3 text-xs text-prinx-800">
-                        Active variant stock total: <strong>{{ variantStockTotal }}</strong>. Product stock is synchronized to this total when saved.
+                        Active variant stock total: <strong>{{ variantStockTotal }}</strong>. Each variant's quantity, cost and selling price are entered in Stock & pricing.
                     </div>
                 </section>
 
@@ -383,7 +404,6 @@ onBeforeUnmount(clearImagePreviews);
                         <div><label class="label">Additional image URLs</label><textarea v-model="form.gallery_urls" class="input" rows="2" placeholder="One image URL per line"></textarea></div>
                         <div><label class="label">GTIN</label><input v-model.trim="form.gtin" class="input" placeholder="UPC / EAN / GTIN"></div>
                         <div><label class="label">MPN</label><input v-model.trim="form.mpn" class="input" placeholder="Manufacturer part number"></div>
-                        <div><label class="label">Warranty</label><input v-model="form.warranty" class="input"></div>
                         <div><label class="label">Product type</label><input v-model="form.product_type" class="input"></div>
                     </div>
                 </section>
@@ -392,12 +412,12 @@ onBeforeUnmount(clearImagePreviews);
             <aside class="card h-fit p-5">
                 <h2 class="font-semibold">Publishing</h2>
                 <div class="mt-4 grid gap-4">
-                    <div><label class="label">Status</label><select v-model="form.status" class="input"><option value="draft">Draft</option><option value="active">Active</option><option value="archived">Archived</option></select></div>
+                    <div><label class="label">Status</label><select v-model="form.status" data-native-select class="input"><option value="draft">Draft</option><option value="active" :disabled="!canPublish">Active{{ canPublish ? '' : ' (add a price first)' }}</option><option value="archived">Archived</option></select><p v-if="!canPublish" class="mt-1 text-[11px] text-slate-500">The product stays a draft until it has a selling price from opening stock, a purchase or Update price.</p><p v-if="form.errors.status" class="error">{{ form.errors.status }}</p></div>
                     <div><label class="label">Condition</label><select v-model="form.condition" class="input"><option value="new">New</option><option value="refurbished">Refurbished</option><option value="used">Used</option></select></div>
                     <label class="flex items-center gap-2 text-sm"><input v-model="form.track_stock" type="checkbox"> Track stock</label>
                     <label class="flex items-center gap-2 text-sm"><input v-model="form.featured" type="checkbox"> Featured</label>
                     <label class="flex items-center gap-2 text-sm"><input v-model="form.merchant_sync_enabled" type="checkbox"> Google Merchant sync</label>
-                    <button class="btn-primary" :disabled="form.processing">{{ form.processing ? 'Saving...' : 'Save product' }}</button>
+                    <button class="btn-primary" :disabled="form.processing">{{ form.processing ? 'Saving...' : (p.id ? 'Save product details' : 'Save & continue to stock') }}</button>
                 </div>
             </aside>
         </form>

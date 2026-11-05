@@ -49,11 +49,13 @@ class WarrantyController extends Controller
             'products' => Product::query()
                 ->active()
                 ->orderBy('name')
-                ->get(['id', 'name', 'sku'])
+                ->get(['id', 'name', 'sku', 'warranty_duration_value', 'warranty_duration_unit'])
                 ->map(fn (Product $product): array => [
                     'id' => $product->id,
                     'name' => $product->name,
                     'sku' => $product->sku,
+                    'warranty_value' => $product->warranty_duration_value,
+                    'warranty_unit' => $product->warranty_duration_unit,
                 ])
                 ->values(),
             'filters' => ['search' => $search, 'status' => $status],

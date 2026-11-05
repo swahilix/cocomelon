@@ -9,6 +9,8 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Services\ImageOptimizationService;
 use App\Services\InventoryService;
+use App\Services\ProductPricingService;
+use App\Services\WarrantySmsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -69,40 +71,42 @@ class ProductController extends Controller
         ]);
     }
 
-    public function store(Request $request, InventoryService $inventory): RedirectResponse
+    public function store(Request $request): RedirectResponse
     {
         $validated = $this->validated($request);
         $variants = $validated['variants'] ?? [];
-        $openingStock = (int) ($validated['stock_quantity'] ?? 0);
         $data = $this->prepareProductData($this->handleImages($request, $validated));
+
+        // Step 1 records product details only. Prices and stock are added in
+        // step 2 through opening stock or a purchase.
+        $data['price'] = 0;
+        $data['sale_price'] = null;
+        $data['sale_starts_at'] = null;
+        $data['sale_ends_at'] = null;
         $data['stock_quantity'] = 0;
 
-        DB::transaction(function () use ($data, $variants, $openingStock, $request, $inventory): void {
+        $product = DB::transaction(function () use ($data, $variants, $request): Product {
             $product = Product::create($data);
-            $variantStock = $this->syncVariants($request, $product, $variants);
 
-            if ($variantStock !== null) {
+            if ($this->syncVariants($request, $product, $variants) !== null) {
                 $product->forceFill(['track_stock' => true])->save();
-                if ($variantStock > 0) {
-                    $inventory->openingBalance($product, $variantStock, 'Opening stock derived from product variants.', $request->user()?->id);
-                }
-            } elseif ($product->track_stock && $openingStock > 0) {
-                $inventory->openingBalance($product, $openingStock, 'Initial stock entered when product was created.', $request->user()?->id);
             }
+
+            return $product;
         });
 
-        return redirect()->route('admin.products.create')->with('success', 'Product created successfully. The form is ready for the next product.');
+        return redirect()
+            ->route('admin.products.stock', $product)
+            ->with('success', 'Product details saved. Next, add opening stock or a purchase with its cost and selling price.');
     }
 
-    public function update(Request $request, Product $product, InventoryService $inventory): RedirectResponse
+    public function update(Request $request, Product $product, InventoryService $inventory, ProductPricingService $pricing): RedirectResponse
     {
         $validated = $this->validated($request, $product);
         $variants = $validated['variants'] ?? [];
         $data = $this->prepareProductData($this->handleImages($request, $validated, $product));
 
-        unset($data['stock_quantity']);
-
-        DB::transaction(function () use ($request, $product, $data, $variants, $inventory): void {
+        DB::transaction(function () use ($request, $product, $data, $variants, $inventory, $pricing): void {
             $product->update($data);
             $variantStock = $this->syncVariants($request, $product, $variants);
 
@@ -118,10 +122,12 @@ class ProductController extends Controller
                     'Parent stock synchronized to the sum of active product variants.',
                     $request->user()?->id,
                 );
+
+                $pricing->syncParentFromVariants($product);
             }
         });
 
-        return back()->with('success', 'Product updated successfully. Variant stock is reflected in the product inventory total.');
+        return back()->with('success', 'Product details updated. Use Stock & pricing to change prices or add stock.');
     }
 
     public function destroy(Product $product): RedirectResponse
@@ -154,7 +160,7 @@ class ProductController extends Controller
             $request->merge(['sku' => $this->generateSku()]);
         }
 
-        return $request->validate([
+        $validated = $request->validate([
             'category_id' => [
                 'required',
                 Rule::exists('categories', 'id')->where(fn ($query) => $query->where('type', 'product')->whereNull('deleted_at')),
@@ -165,11 +171,6 @@ class ProductController extends Controller
             'sku' => ['required', 'string', 'max:80', Rule::unique('products', 'sku')->ignore($product)],
             'short_description' => ['nullable', 'string', 'max:500'],
             'description' => ['required', 'string', 'max:30000'],
-            'price' => ['required', 'numeric', 'min:0'],
-            'sale_price' => ['nullable', 'numeric', 'min:0', 'lte:price'],
-            'sale_starts_at' => ['nullable', 'date'],
-            'sale_ends_at' => ['nullable', 'date', 'after:sale_starts_at'],
-            'stock_quantity' => ['required', 'integer', 'min:0'],
             'low_stock_threshold' => ['required', 'integer', 'min:0', 'max:1000000'],
             'track_stock' => ['boolean'],
             'condition' => ['required', 'in:new,refurbished,used'],
@@ -193,7 +194,8 @@ class ProductController extends Controller
             'video_url' => ['nullable', 'url', 'max:2048'],
             'shipping_price' => ['nullable', 'numeric', 'min:0'],
             'shipping_weight' => ['nullable', 'numeric', 'min:0'],
-            'warranty' => ['nullable', 'string', 'max:190'],
+            'warranty_duration_value' => ['nullable', 'integer', 'min:1', 'max:3650', 'required_with:warranty_duration_unit'],
+            'warranty_duration_unit' => ['nullable', 'in:days,months,years', 'required_with:warranty_duration_value'],
             'specifications_text' => ['nullable', 'string', 'max:10000'],
             'meta_title' => ['nullable', 'string', 'max:190'],
             'meta_description' => ['nullable', 'string', 'max:180'],
@@ -205,14 +207,27 @@ class ProductController extends Controller
             'variants.*.color' => ['nullable', 'string', 'max:100'],
             'variants.*.storage' => ['nullable', 'string', 'max:100'],
             'variants.*.size' => ['nullable', 'string', 'max:100'],
-            'variants.*.price' => ['nullable', 'numeric', 'min:0'],
-            'variants.*.sale_price' => ['nullable', 'numeric', 'min:0'],
-            'variants.*.stock_quantity' => ['required_with:variants', 'integer', 'min:0'],
             'variants.*.image_url' => ['nullable', 'url', 'max:2048'],
             'variants.*.image_file' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,avif', 'max:8192'],
             'variants.*.is_active' => ['nullable', 'boolean'],
             'variants.*.sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
+
+        if ($validated['status'] === 'active' && (! $product || (float) $product->price <= 0)) {
+            throw ValidationException::withMessages([
+                'status' => 'Add opening stock, a purchase or a price before publishing this product.',
+            ]);
+        }
+
+        $value = $validated['warranty_duration_value'] ?? null;
+        $unit = $validated['warranty_duration_unit'] ?? null;
+        $validated['warranty_duration_value'] = $value && $unit ? (int) $value : null;
+        $validated['warranty_duration_unit'] = $value && $unit ? $unit : null;
+        $validated['warranty'] = $value && $unit
+            ? app(WarrantySmsService::class)->durationLabel((int) $value, $unit).' warranty'
+            : null;
+
+        return $validated;
     }
 
     private function syncVariants(Request $request, Product $product, array $variants): ?int
@@ -259,16 +274,9 @@ class ProductController extends Controller
                 'color' => $row['color'] ?? null,
                 'storage' => $row['storage'] ?? null,
                 'size' => $row['size'] ?? null,
-                'price' => filled($row['price'] ?? null) ? (float) $row['price'] : null,
-                'sale_price' => filled($row['sale_price'] ?? null) ? (float) $row['sale_price'] : null,
-                'stock_quantity' => (int) ($row['stock_quantity'] ?? 0),
                 'is_active' => (bool) ($row['is_active'] ?? false),
                 'sort_order' => (int) ($row['sort_order'] ?? $index),
             ];
-
-            if ($payload['sale_price'] !== null && $payload['price'] !== null && $payload['sale_price'] > $payload['price']) {
-                throw ValidationException::withMessages(["variants.$index.sale_price" => 'Variant sale price cannot be greater than its regular price.']);
-            }
 
             if ($request->hasFile("variants.$index.image_file")) {
                 $oldImage = $variant?->image;
@@ -300,7 +308,9 @@ class ProductController extends Controller
                 if ($variant->trashed()) $variant->restore();
                 $variant->update($payload);
             } else {
-                $variant = ProductVariant::create($payload);
+                // New variants start without stock or price; both are added in
+                // Stock & pricing through opening stock or a purchase.
+                $variant = ProductVariant::create([...$payload, 'price' => null, 'sale_price' => null, 'stock_quantity' => 0]);
             }
 
             $kept[] = $variant->id;

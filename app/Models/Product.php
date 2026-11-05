@@ -19,7 +19,7 @@ class Product extends Model
         'price', 'sale_price', 'sale_starts_at', 'sale_ends_at', 'stock_quantity', 'average_cost', 'last_purchase_cost', 'low_stock_threshold', 'track_stock',
         'condition', 'status', 'featured', 'merchant_sync_enabled', 'primary_image', 'gallery',
         'gtin', 'mpn', 'google_product_category', 'product_type', 'item_group_id', 'color', 'size',
-        'gender', 'age_group', 'video_url', 'shipping_price', 'shipping_weight', 'warranty',
+        'gender', 'age_group', 'video_url', 'shipping_price', 'shipping_weight', 'warranty', 'warranty_duration_value', 'warranty_duration_unit',
         'meta_title', 'meta_description', 'merchant_last_synced_at', 'merchant_sync_status',
         'merchant_sync_error', 'sort_order'
     ];
@@ -31,7 +31,7 @@ class Product extends Model
             'shipping_weight' => 'decimal:3', 'stock_quantity' => 'integer', 'low_stock_threshold' => 'integer', 'track_stock' => 'boolean',
             'featured' => 'boolean', 'merchant_sync_enabled' => 'boolean', 'gallery' => 'array',
             'sale_starts_at' => 'datetime', 'sale_ends_at' => 'datetime',
-            'merchant_last_synced_at' => 'datetime', 'sort_order' => 'integer'
+            'merchant_last_synced_at' => 'datetime', 'sort_order' => 'integer', 'warranty_duration_value' => 'integer'
         ];
     }
 
