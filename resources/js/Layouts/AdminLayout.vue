@@ -4,11 +4,14 @@ import { computed, ref } from 'vue';
 import Flash from '../Components/Flash.vue';
 import Icon from '../Components/Icon.vue';
 import { useAdminSelect2 } from '../lib/useAdminSelect2';
+import { adminSettings, adminTools, canAccess, urlInHub } from '../lib/adminHubs';
 
 const open = ref(false);
 const page = usePage();
 const granted = computed(() => page.props.auth.permissions || []);
 const canAny = (permissions = []) => !permissions.length || permissions.some((permission) => granted.value.includes(permission));
+// A hub link is shown when the user can open at least one page inside it.
+const hubPermissions = (items) => (items.some((item) => canAccess(granted.value, item.permissions)) ? [] : ['__none__']);
 
 useAdminSelect2('.admin-shell');
 
@@ -18,20 +21,13 @@ const sections = computed(() => [
         items: [
             ['Dashboard', '/admin', 'home-2', ['manage_storefront']],
             ['Products', '/admin/products', 'box', ['manage_storefront']],
-            ['Reviews', '/admin/reviews', 'star-1', ['manage_storefront']],
-            ['GTIN scanner', '/admin/gtin', 'qr-code', ['manage_storefront']],
-            ['Software', '/admin/software', 'monitor', ['manage_storefront']],
             ['Stock management', '/admin/stock', 'shop', ['view_inventory', 'manage_purchases']],
-            ['Historical setup', '/admin/historical-data', 'history', ['manage_purchases', 'use_pos', 'view_reports']],
             ['Inventory', '/admin/stock/inventory', 'box', ['view_inventory']],
             ['Barcode printing', '/admin/barcodes', 'box', ['view_inventory', 'manage_storefront']],
             ['Suppliers', '/admin/suppliers', 'truck', ['manage_suppliers']],
-            ['Services', '/admin/services', 'setting-2', ['manage_services']],
-            ['Homepage carousel', '/admin/carousel', 'monitor', ['manage_storefront']],
-            ['Product reels', '/admin/reels', 'mobile', ['manage_storefront']],
-            ['Buying guides', '/admin/guides', 'document-text-2', ['manage_storefront']],
             ['Categories & brands', '/admin/catalog', 'shop', ['manage_storefront']],
             ['Coupons', '/admin/coupons', 'percentage-circle', ['manage_storefront']],
+            ['Tools', '/admin/tools', 'category', hubPermissions(adminTools)],
         ].filter((item) => canAny(item[3])),
     },
     {
@@ -59,9 +55,7 @@ const sections = computed(() => [
         label: 'System',
         items: [
             ['My account', '/admin/account', 'user-1', []],
-            ['Business settings', '/admin/business-settings', 'setting-2', ['manage_storefront']],
-            ['Map settings', '/admin/business-settings/maps', 'location', ['manage_storefront']],
-            ['Mail settings', '/admin/mail-settings', 'setting-2', ['mail.manage_mailboxes', 'mail.manage_settings']],
+            ['Settings', '/admin/settings', 'setting-2', hubPermissions(adminSettings)],
             ['Staff access', '/admin/access', 'shield-user', ['manage_staff']],
             ['Audit trail', '/admin/audit', 'hierarchy-2', ['manage_staff']],
             ['System monitoring', '/admin/system-monitor', 'monitor', ['view_system_monitor']],
@@ -70,6 +64,8 @@ const sections = computed(() => [
 ].filter((section) => section.items.length));
 
 const active = (url) => {
+    if (url === '/admin/tools') return page.url.startsWith('/admin/tools') || urlInHub(page.url, adminTools);
+    if (url === '/admin/settings') return page.url.startsWith('/admin/settings') || urlInHub(page.url, adminSettings);
     if (url === '/admin') return page.url === '/admin';
     if (url === '/admin/stock') return page.url === '/admin/stock';
     if (url === '/admin/business-settings') return page.url === '/admin/business-settings';

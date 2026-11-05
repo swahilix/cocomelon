@@ -81,6 +81,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::patch('account/profile', [AccountController::class, 'updateProfile'])->middleware('throttle:20,1')->name('account.profile');
     Route::patch('account/password', [AccountController::class, 'updatePassword'])->middleware('throttle:6,1')->name('account.password');
 
+    // Hub pages that group links to existing admin pages. Each card is shown
+    // only to staff who have permission to open the page it links to.
+    Route::inertia('tools', 'Admin/Tools/Index')->name('tools');
+    Route::inertia('settings', 'Admin/Settings/Index')->name('settings');
+
     Route::post('ai/format-product-description', AiProductDescriptionController::class)->middleware(['permission:manage_storefront', 'throttle:6,1'])->name('ai.format-product-description');
 
     Route::middleware('permission:manage_storefront')->group(function (): void {
