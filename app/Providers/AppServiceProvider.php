@@ -12,6 +12,7 @@ use App\Models\MailMessage;
 use App\Models\MailOutbox;
 use App\Models\Product;
 use App\Models\HeroSlide;
+use App\Services\AiSettings;
 use App\Services\ImageOptimizationService;
 use App\Observers\ProductObserver;
 use App\Policies\MailAccountPolicy;
@@ -37,6 +38,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Schema::defaultStringLength(191);
+        AiSettings::apply();
         Product::observe(ProductObserver::class);
 
         View::composer('app', function ($view): void {

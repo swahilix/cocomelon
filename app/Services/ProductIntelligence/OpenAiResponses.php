@@ -29,7 +29,7 @@ class OpenAiResponses
     public function json(string $instructions, array $content, string $schemaName, array $schema, bool $webSearch = false): array
     {
         if (! $this->enabled()) {
-            throw new RuntimeException('AI features are not set up. Add OPENAI_API_KEY on the server to use photo recognition and price checks.');
+            throw new RuntimeException('AI features are not set up. Add an OpenAI API key in Settings → AI & product lookup to use photo recognition and price checks.');
         }
 
         $payload = [
