@@ -50,6 +50,15 @@ const matchedCustomer = computed(() => normalizedPhone.value
     ? customers.value.find((customer) => customer.phone === normalizedPhone.value) || null
     : null);
 
+// Use the product's own warranty period when it has one.
+watch(() => form.product_id, (id) => {
+    const product = productById(id);
+    if (product?.warranty_value && product?.warranty_unit) {
+        form.duration_value = product.warranty_value;
+        form.duration_unit = product.warranty_unit;
+    }
+});
+
 watch(matchedCustomer, (customer) => {
     if (customer && !form.customer_name.trim()) form.customer_name = customer.name;
 });

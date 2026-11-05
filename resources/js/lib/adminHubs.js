@@ -6,7 +6,6 @@ export const adminTools = [
     { label: 'GTIN scanner', href: '/admin/gtin', icon: 'qr-code', permissions: ['manage_storefront'], description: 'Scan barcodes to look up and attach GTINs to products.' },
     { label: 'Reviews', href: '/admin/reviews', icon: 'star-1', permissions: ['manage_storefront'], description: 'Moderate and respond to customer product reviews.' },
     { label: 'Software', href: '/admin/software', icon: 'code-1', permissions: ['manage_storefront'], description: 'Manage the software solutions listed on the store.' },
-    { label: 'Historical setup', href: '/admin/historical-data', icon: 'history', permissions: ['manage_purchases', 'use_pos', 'view_reports'], description: 'Import past purchases and sales without touching live stock.' },
     { label: 'Services', href: '/admin/services', icon: 'setting-3', permissions: ['manage_services'], description: 'Publish repair and installation services.' },
     { label: 'Homepage carousel', href: '/admin/carousel', icon: 'gallery-add', permissions: ['manage_storefront'], description: 'Edit the slides and banners on the storefront home page.' },
     { label: 'Product reels', href: '/admin/reels', icon: 'video-play', permissions: ['manage_storefront'], description: 'Upload short product videos for the storefront.' },

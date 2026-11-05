@@ -6,10 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Supplier;
 use App\Services\InventoryService;
+use App\Services\ProductPricingService;
+use App\Services\PurchaseReceivingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use RuntimeException;
@@ -23,7 +26,7 @@ class StockController extends Controller
         $monthStart = now()->startOfMonth()->toDateString();
 
         $products = Product::query()
-            ->with(['category:id,name', 'brand:id,name'])
+            ->with(['category:id,name', 'brand:id,name', 'variants' => fn ($query) => $query->where('is_active', true)->orderBy('sort_order')])
             ->select([
                 'id', 'category_id', 'brand_id', 'name', 'sku', 'stock_quantity', 'average_cost', 'last_purchase_cost', 'low_stock_threshold',
                 'track_stock', 'price', 'sale_price', 'primary_image',
@@ -61,6 +64,16 @@ class StockController extends Controller
                         'created_at' => $lastMovement->created_at,
                     ] : null,
                     'has_movements' => (bool) $lastMovement,
+                    'selling_price' => (float) $product->price,
+                    'sale_price' => $product->sale_price !== null ? (float) $product->sale_price : null,
+                    'variants' => $product->variants->map(fn ($variant) => [
+                        'id' => $variant->id,
+                        'name' => $variant->display_name,
+                        'sku' => $variant->sku,
+                        'stock_quantity' => (int) $variant->stock_quantity,
+                        'selling_price' => $variant->price !== null ? (float) $variant->price : null,
+                        'sale_price' => $variant->sale_price !== null ? (float) $variant->sale_price : null,
+                    ])->values(),
                 ];
             });
 
@@ -95,7 +108,7 @@ class StockController extends Controller
         ]);
     }
 
-    public function purchase(Request $request): RedirectResponse
+    public function purchase(Request $request, ProductPricingService $pricing, PurchaseReceivingService $receiving): RedirectResponse
     {
         $validated = $request->validate([
             'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id', 'required_without:one_time_supplier_name'],
@@ -103,7 +116,7 @@ class StockController extends Controller
             'invoice_number' => ['nullable', 'string', 'max:100'],
             'purchase_date' => ['required', 'date'],
             'expected_date' => ['nullable', 'date', 'after_or_equal:purchase_date'],
-            'status' => ['required', 'in:draft,ordered'],
+            'status' => ['required', 'in:draft,ordered,received'],
             'additional_cost' => ['nullable', 'numeric', 'min:0'],
             'discount' => ['nullable', 'numeric', 'min:0'],
             'tax' => ['nullable', 'numeric', 'min:0'],
@@ -111,67 +124,144 @@ class StockController extends Controller
             'notes' => ['nullable', 'string', 'max:2000'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
+            'items.*.product_variant_id' => ['nullable', 'integer'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
             'items.*.unit_cost' => ['required', 'numeric', 'min:0'],
+            'items.*.selling_price' => ['nullable', 'numeric', 'gt:0'],
+            'items.*.discount_type' => ['nullable', 'in:none,amount,percent'],
+            'items.*.discount_value' => ['nullable', 'numeric', 'min:0'],
         ]);
 
+        $receiveNow = $validated['status'] === 'received';
+        if ($receiveNow && ! $request->user()?->hasAnyPermission(['receive_purchases'])) {
+            throw ValidationException::withMessages(['status' => 'You do not have permission to receive purchases. Save it as Ordered and ask someone who can receive stock.']);
+        }
+
+        $lines = $this->purchaseLines($validated['items'], $pricing);
         $supplier = ! empty($validated['supplier_id']) ? Supplier::active()->findOrFail($validated['supplier_id']) : null;
         $supplierName = $supplier?->name ?: trim((string) ($validated['one_time_supplier_name'] ?? ''));
 
-        $purchaseId = DB::transaction(function () use ($validated, $request, $supplier, $supplierName): int {
-            $reference = $this->reference('PUR');
-            $subtotal = (float) collect($validated['items'])->sum(fn ($item) => $item['quantity'] * $item['unit_cost']);
-            $additional = (float) ($validated['additional_cost'] ?? 0);
-            $discount = min((float) ($validated['discount'] ?? 0), $subtotal + $additional);
-            $tax = (float) ($validated['tax'] ?? 0);
-            $total = max(0, $subtotal + $additional - $discount + $tax);
+        try {
+            $purchaseId = DB::transaction(function () use ($validated, $request, $supplier, $supplierName, $lines, $receiveNow, $receiving): int {
+                $reference = $this->reference('PUR');
+                $subtotal = (float) collect($lines)->sum(fn ($line) => $line['quantity'] * $line['unit_cost']);
+                $additional = (float) ($validated['additional_cost'] ?? 0);
+                $discount = min((float) ($validated['discount'] ?? 0), $subtotal + $additional);
+                $tax = (float) ($validated['tax'] ?? 0);
+                $total = max(0, $subtotal + $additional - $discount + $tax);
 
-            $purchaseId = DB::table('stock_purchases')->insertGetId([
-                'reference' => $reference,
-                'supplier_id' => $supplier?->id,
-                'supplier_name' => $supplierName,
-                'invoice_number' => $validated['invoice_number'] ?? null,
-                'purchase_date' => $validated['purchase_date'],
-                'status' => $validated['status'],
-                'expected_date' => $validated['expected_date'] ?? null,
-                'received_date' => null,
-                'subtotal' => $subtotal,
-                'discount' => $discount,
-                'tax' => $tax,
-                'additional_cost' => $additional,
-                'total' => $total,
-                'amount_paid' => 0,
-                'balance_due' => $total,
-                'payment_status' => 'unpaid',
-                'payment_method' => $validated['payment_method'],
-                'notes' => $validated['notes'] ?? null,
-                'created_by' => $request->user()?->id,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            foreach ($validated['items'] as $item) {
-                $lineTotal = (float) $item['quantity'] * (float) $item['unit_cost'];
-                DB::table('stock_purchase_items')->insert([
-                    'stock_purchase_id' => $purchaseId,
-                    'product_id' => $item['product_id'],
-                    'quantity' => $item['quantity'],
-                    'quantity_received' => 0,
-                    'quantity_returned' => 0,
-                    'unit_cost' => $item['unit_cost'],
-                    'discount' => 0,
-                    'tax' => 0,
-                    'line_total' => $lineTotal,
+                $purchaseId = DB::table('stock_purchases')->insertGetId([
+                    'reference' => $reference,
+                    'supplier_id' => $supplier?->id,
+                    'supplier_name' => $supplierName,
+                    'invoice_number' => $validated['invoice_number'] ?? null,
+                    'purchase_date' => $validated['purchase_date'],
+                    'status' => $receiveNow ? 'ordered' : $validated['status'],
+                    'expected_date' => $validated['expected_date'] ?? null,
+                    'received_date' => null,
+                    'subtotal' => $subtotal,
+                    'discount' => $discount,
+                    'tax' => $tax,
+                    'additional_cost' => $additional,
+                    'total' => $total,
+                    'amount_paid' => 0,
+                    'balance_due' => $total,
+                    'payment_status' => 'unpaid',
+                    'payment_method' => $validated['payment_method'],
+                    'notes' => $validated['notes'] ?? null,
+                    'created_by' => $request->user()?->id,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+
+                foreach ($lines as $line) {
+                    DB::table('stock_purchase_items')->insert([
+                        'stock_purchase_id' => $purchaseId,
+                        'product_id' => $line['product_id'],
+                        'product_variant_id' => $line['product_variant_id'],
+                        'quantity' => $line['quantity'],
+                        'quantity_received' => 0,
+                        'quantity_returned' => 0,
+                        'unit_cost' => $line['unit_cost'],
+                        'selling_price' => $line['selling_price'],
+                        'sale_price' => $line['sale_price'],
+                        'discount' => 0,
+                        'tax' => 0,
+                        'line_total' => $line['quantity'] * $line['unit_cost'],
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
+                if ($receiveNow) {
+                    $receiving->receiveAll($purchaseId, $validated['purchase_date'], 'Received when the purchase was entered.', $request->user()?->id);
+                }
+
+                return $purchaseId;
+            });
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (RuntimeException $exception) {
+            return back()->withErrors(['items' => $exception->getMessage()]);
+        }
+
+        $message = $receiveNow
+            ? 'Purchase saved and received. Stock, cost and selling prices are updated.'
+            : 'Purchase saved. Stock and selling prices will update when it is received.';
+
+        return $request->boolean('stay')
+            ? back()->with('success', $message)
+            : redirect()->route('admin.stock.purchases.show', $purchaseId)->with('success', $message);
+    }
+
+    /**
+     * Validate each purchase line against its product and variants and work out
+     * the customer sale price from the discount.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function purchaseLines(array $items, ProductPricingService $pricing): array
+    {
+        $products = Product::query()
+            ->with(['variants' => fn ($query) => $query->where('is_active', true)])
+            ->whereIn('id', collect($items)->pluck('product_id')->unique()->all())
+            ->get()
+            ->keyBy('id');
+
+        return collect($items)->values()->map(function (array $item, int $index) use ($products, $pricing): array {
+            $product = $products->get((int) $item['product_id']);
+            $variantId = (int) ($item['product_variant_id'] ?? 0);
+            $variant = null;
+
+            if ($product->variants->isNotEmpty()) {
+                $variant = $product->variants->firstWhere('id', $variantId);
+                if (! $variant) {
+                    throw ValidationException::withMessages(["items.$index.product_variant_id" => "Choose which variant of {$product->name} you are buying."]);
+                }
+            } elseif ($variantId > 0) {
+                throw ValidationException::withMessages(["items.$index.product_variant_id" => "{$product->name} has no variants."]);
             }
 
-            return $purchaseId;
-        });
+            $currentPrice = $variant ? $variant->price : ($product->price > 0 ? $product->price : null);
+            $sellingPrice = filled($item['selling_price'] ?? null) ? round((float) $item['selling_price'], 2) : null;
 
-        return redirect()->route('admin.stock.purchases.show', $purchaseId)
-            ->with('success', 'Purchase created successfully. Stock will update only when received.');
+            if ($sellingPrice === null && $currentPrice === null) {
+                throw ValidationException::withMessages(["items.$index.selling_price" => 'Enter a selling price for '.($variant?->display_name ?? $product->name).'.']);
+            }
+
+            $salePrice = $sellingPrice !== null
+                ? $pricing->salePriceFor($sellingPrice, (string) ($item['discount_type'] ?? 'none'), isset($item['discount_value']) ? (float) $item['discount_value'] : null, "items.$index.discount_value")
+                : null;
+
+            return [
+                'product_id' => $product->id,
+                'product_variant_id' => $variant?->id,
+                'quantity' => (int) $item['quantity'],
+                'unit_cost' => round((float) $item['unit_cost'], 2),
+                'selling_price' => $sellingPrice,
+                'sale_price' => $salePrice,
+            ];
+        })->all();
     }
 
     public function adjustment(Request $request, InventoryService $inventory): RedirectResponse

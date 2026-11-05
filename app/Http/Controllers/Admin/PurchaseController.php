@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Services\InventoryService;
+use App\Services\PurchaseReceivingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,9 +30,15 @@ class PurchaseController extends Controller
 
         $items = DB::table('stock_purchase_items')
             ->join('products', 'products.id', '=', 'stock_purchase_items.product_id')
+            ->leftJoin('product_variants', 'product_variants.id', '=', 'stock_purchase_items.product_variant_id')
             ->where('stock_purchase_items.stock_purchase_id', $purchase)
             ->select(
                 'stock_purchase_items.*',
+                'product_variants.label as variant_label',
+                'product_variants.color as variant_color',
+                'product_variants.storage as variant_storage',
+                'product_variants.size as variant_size',
+                'product_variants.sku as variant_sku',
                 'products.name as product_name',
                 'products.sku',
                 'products.primary_image',
@@ -43,6 +50,7 @@ class PurchaseController extends Controller
             ->map(function ($item): object {
                 $item->remaining_quantity = max(0, (int) $item->quantity - (int) $item->quantity_received);
                 $item->returnable_quantity = max(0, (int) $item->quantity_received - (int) $item->quantity_returned);
+                $item->variant_name = collect([$item->variant_label, $item->variant_color, $item->variant_storage, $item->variant_size])->filter()->implode(' · ') ?: null;
                 return $item;
             });
 
@@ -102,7 +110,7 @@ class PurchaseController extends Controller
         return back()->with('success', 'Purchase status updated successfully.');
     }
 
-    public function receive(Request $request, int $purchase, InventoryService $inventory): RedirectResponse
+    public function receive(Request $request, int $purchase, PurchaseReceivingService $receiving): RedirectResponse
     {
         $validated = $request->validate([
             'received_date' => ['required', 'date'],
@@ -113,85 +121,12 @@ class PurchaseController extends Controller
         ]);
 
         try {
-            DB::transaction(function () use ($validated, $request, $purchase, $inventory): void {
-                $record = DB::table('stock_purchases')->where('id', $purchase)->lockForUpdate()->first();
-                if (! $record) throw new RuntimeException('Purchase was not found.');
-                if ($record->status === 'cancelled') throw new RuntimeException('A cancelled purchase cannot receive stock.');
-                if ($record->status === 'received') throw new RuntimeException('This purchase has already been fully received.');
-
-                $selected = collect($validated['items'])->filter(fn ($item) => (int) $item['quantity'] > 0);
-                if ($selected->isEmpty()) throw new RuntimeException('Enter at least one quantity to receive.');
-
-                $receiptReference = $this->reference('RCV');
-                $receiptId = DB::table('stock_purchase_receipts')->insertGetId([
-                    'stock_purchase_id' => $purchase,
-                    'reference' => $receiptReference,
-                    'received_date' => $validated['received_date'],
-                    'notes' => $validated['notes'] ?? null,
-                    'created_by' => $request->user()?->id,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-
-                foreach ($selected as $submitted) {
-                    $item = DB::table('stock_purchase_items')
-                        ->where('id', $submitted['purchase_item_id'])
-                        ->where('stock_purchase_id', $purchase)
-                        ->lockForUpdate()
-                        ->first();
-                    if (! $item) throw new RuntimeException('One of the purchase items was not found.');
-
-                    $quantity = (int) $submitted['quantity'];
-                    $remaining = (int) $item->quantity - (int) $item->quantity_received;
-                    if ($quantity > $remaining) {
-                        throw new RuntimeException("Cannot receive {$quantity} units. Only {$remaining} remain for this item.");
-                    }
-
-                    $product = Product::query()->findOrFail($item->product_id);
-
-                    DB::table('stock_purchase_receipt_items')->insert([
-                        'stock_purchase_receipt_id' => $receiptId,
-                        'stock_purchase_item_id' => $item->id,
-                        'product_id' => $product->id,
-                        'quantity' => $quantity,
-                        'unit_cost' => $item->unit_cost,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-
-                    DB::table('stock_purchase_items')->where('id', $item->id)->update([
-                        'quantity_received' => (int) $item->quantity_received + $quantity,
-                        'updated_at' => now(),
-                    ]);
-
-                    $inventory->increase(
-                        $product,
-                        $quantity,
-                        'purchase_receipt',
-                        $receiptReference,
-                        (float) $item->unit_cost,
-                        $record->supplier_name,
-                        $request->user()?->id,
-                        'stock_purchase_receipt',
-                        $receiptId,
-                        'Purchase stock received',
-                    );
-                }
-
-                $items = DB::table('stock_purchase_items')->where('stock_purchase_id', $purchase)->get();
-                $allReceived = $items->every(fn ($item) => (int) $item->quantity_received >= (int) $item->quantity);
-
-                DB::table('stock_purchases')->where('id', $purchase)->update([
-                    'status' => $allReceived ? 'received' : 'partially_received',
-                    'received_date' => $allReceived ? $validated['received_date'] : null,
-                    'updated_at' => now(),
-                ]);
-            });
+            $receiving->receive($purchase, $validated['items'], $validated['received_date'], $validated['notes'] ?? null, $request->user()?->id);
         } catch (Throwable $exception) {
             return back()->withErrors(['receive' => $exception->getMessage()]);
         }
 
-        return back()->with('success', 'Purchase receipt posted and stock updated successfully.');
+        return back()->with('success', 'Purchase receipt posted. Stock and selling prices were updated.');
     }
 
     public function payment(Request $request, int $purchase): RedirectResponse
@@ -240,7 +175,7 @@ class PurchaseController extends Controller
         return back()->with('success', 'Purchase payment recorded successfully.');
     }
 
-    public function returnItems(Request $request, int $purchase, InventoryService $inventory): RedirectResponse
+    public function returnItems(Request $request, int $purchase, InventoryService $inventory, PurchaseReceivingService $receiving): RedirectResponse
     {
         $validated = $request->validate([
             'return_date' => ['required', 'date'],
@@ -253,7 +188,7 @@ class PurchaseController extends Controller
         ]);
 
         try {
-            DB::transaction(function () use ($validated, $request, $purchase, $inventory): void {
+            DB::transaction(function () use ($validated, $request, $purchase, $inventory, $receiving): void {
                 $record = DB::table('stock_purchases')->where('id', $purchase)->lockForUpdate()->first();
                 if (! $record) throw new RuntimeException('Purchase was not found.');
                 if ($record->status === 'cancelled') throw new RuntimeException('A cancelled purchase cannot post supplier returns.');
@@ -302,9 +237,10 @@ class PurchaseController extends Controller
                 foreach ($returnRows as [$item, $quantity, $lineCredit]) {
                     $product = Product::query()->findOrFail($item->product_id);
 
-                    $inventory->decrease(
+                    $inventory->changeStock(
                         $product,
-                        $quantity,
+                        $receiving->variantFor($item, $product),
+                        -$quantity,
                         'purchase_return',
                         $returnReference,
                         (float) $item->unit_cost,

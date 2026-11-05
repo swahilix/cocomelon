@@ -25,7 +25,7 @@ class EnsurePermission
             $purchaseId = (int) $request->route('purchase');
             if ($purchaseId > 0 && DB::table('stock_purchases')->where('id', $purchaseId)->where('is_historical', true)->exists()) {
                 return back()->withErrors([
-                    'return' => 'This is a historical purchase. Correct it from Historical setup so today\'s physical stock is not changed.',
+                    'return' => 'This is a historical purchase. It is kept for reference only, so it cannot change today\'s physical stock.',
                 ]);
             }
         }
@@ -34,7 +34,7 @@ class EnsurePermission
             $saleId = (int) $request->route('sale');
             if ($saleId > 0 && DB::table('pos_sales')->where('id', $saleId)->where('is_historical', true)->exists()) {
                 return back()->withErrors([
-                    'sale' => 'This is a historical sale. Correct it from Historical setup so current stock and today\'s cash register are not changed.',
+                    'sale' => 'This is a historical sale. It is kept for reference only, so it cannot change current stock or today\'s cash register.',
                 ]);
             }
         }

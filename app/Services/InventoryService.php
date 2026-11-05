@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\Product;
+use App\Models\ProductVariant;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 
 class InventoryService
@@ -77,6 +79,116 @@ class InventoryService
         );
     }
 
+    /**
+     * First stock for a product (or one of its variants), with its unit cost.
+     * Allowed only while that product/variant has no stock and no stock history.
+     */
+    public function openingStock(
+        Product $product,
+        ?ProductVariant $variant,
+        int $quantity,
+        float $unitCost,
+        ?string $notes = null,
+        ?int $userId = null,
+        ?string $reference = null,
+    ): object {
+        if ($quantity < 1) {
+            throw new RuntimeException('Opening stock quantity must be at least 1.');
+        }
+
+        if ($variant) {
+            $hasHistory = (int) $variant->stock_quantity > 0
+                || ($this->movementsHaveVariantColumn() && DB::table('stock_movements')->where('product_variant_id', $variant->id)->exists());
+
+            if ($hasHistory) {
+                throw new RuntimeException("{$variant->display_name} already has stock. Use a purchase or a stock adjustment instead of opening stock.");
+            }
+        } else {
+            $hasHistory = (int) $product->stock_quantity > 0
+                || DB::table('stock_movements')->where('product_id', $product->id)->where('affects_stock', true)->exists();
+
+            if ($hasHistory) {
+                throw new RuntimeException("{$product->name} already has stock. Use a purchase or a stock adjustment instead of opening stock.");
+            }
+        }
+
+        return $this->changeStock(
+            $product,
+            $variant,
+            $quantity,
+            'opening_stock',
+            $reference ?: 'OPEN-'.$product->id.'-'.now()->format('ymd-His'),
+            $unitCost,
+            $notes,
+            $userId,
+            'opening_stock',
+            null,
+            'Opening stock',
+        );
+    }
+
+    /**
+     * Add or remove stock for a product, keeping a variant's own quantity in step
+     * with the parent product total when a variant is given.
+     */
+    public function changeStock(
+        Product|int $product,
+        ?ProductVariant $variant,
+        int $delta,
+        string $type,
+        ?string $reference = null,
+        ?float $unitCost = null,
+        ?string $notes = null,
+        ?int $userId = null,
+        ?string $sourceType = null,
+        ?int $sourceId = null,
+        ?string $reason = null,
+    ): object {
+        if ($delta === 0) {
+            throw new RuntimeException('Stock movement quantity cannot be zero.');
+        }
+
+        return DB::transaction(function () use ($product, $variant, $delta, $type, $reference, $unitCost, $notes, $userId, $sourceType, $sourceId, $reason): object {
+            $productModel = $this->lockedProduct($product);
+
+            if ($variant) {
+                $lockedVariant = ProductVariant::query()->lockForUpdate()->findOrFail($variant->id);
+
+                if ((int) $lockedVariant->product_id !== (int) $productModel->id) {
+                    throw new RuntimeException('That variant does not belong to this product.');
+                }
+
+                $variantAfter = (int) $lockedVariant->stock_quantity + $delta;
+                if ($variantAfter < 0) {
+                    throw new RuntimeException("Not enough stock for {$lockedVariant->display_name}. Available: {$lockedVariant->stock_quantity}.");
+                }
+
+                $lockedVariant->stock_quantity = $variantAfter;
+                $lockedVariant->save();
+
+                // Variant stock is always counted in the parent product total.
+                if (! $productModel->track_stock) {
+                    $productModel->track_stock = true;
+                }
+            }
+
+            return $this->mutateLocked(
+                $productModel,
+                $delta,
+                $type,
+                $reference,
+                $unitCost,
+                $notes,
+                $userId,
+                $sourceType,
+                $sourceId,
+                $reason,
+                null,
+                $variant?->id,
+            );
+        });
+    }
+
     public function reverse(int $movementId, ?string $notes = null, ?int $userId = null): object
     {
         return DB::transaction(function () use ($movementId, $notes, $userId): object {
@@ -87,7 +199,7 @@ class InventoryService
             }
 
             if (! (bool) ($movement->affects_stock ?? true) || (bool) ($movement->is_historical ?? false)) {
-                throw new RuntimeException('Historical reference-only movements cannot be reversed because they never changed current stock. Correct the source record in Historical setup instead.');
+                throw new RuntimeException('Historical reference-only movements cannot be reversed because they never changed current stock. Post a stock adjustment instead.');
             }
 
             if ($movement->type === 'reversal' || $movement->reversal_of_id !== null) {
@@ -180,6 +292,7 @@ class InventoryService
         ?int $sourceId,
         ?string $reason,
         ?int $reversalOfId = null,
+        ?int $variantId = null,
     ): object {
         $before = (int) $product->stock_quantity;
         $after = $product->track_stock ? $before + $delta : $before;
@@ -191,7 +304,7 @@ class InventoryService
         if ($product->track_stock && $unitCost !== null) {
             $oldAverage = (float) $product->average_cost;
             $movementCost = max(0, $unitCost);
-            $costedInboundTypes = ['purchase_receipt', 'purchase', 'pos_return', 'pos_void', 'online_order_cancellation'];
+            $costedInboundTypes = ['purchase_receipt', 'purchase', 'opening_stock', 'pos_return', 'pos_void', 'online_order_cancellation'];
 
             if ($delta > 0 && in_array($type, $costedInboundTypes, true)) {
                 $newAverage = ($before <= 0 || $oldAverage <= 0)
@@ -216,10 +329,13 @@ class InventoryService
 
         if ($product->track_stock && $delta !== 0) {
             $product->stock_quantity = $after;
+        }
+
+        if ($product->isDirty()) {
             $product->save();
         }
 
-        $id = DB::table('stock_movements')->insertGetId([
+        $movement = [
             'product_id' => $product->id,
             'direction' => $delta === 0 ? 'adjustment' : ($delta > 0 ? 'in' : 'out'),
             'type' => $type,
@@ -236,9 +352,22 @@ class InventoryService
             'created_by' => $userId,
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ];
+
+        if ($variantId !== null && $this->movementsHaveVariantColumn()) {
+            $movement['product_variant_id'] = $variantId;
+        }
+
+        $id = DB::table('stock_movements')->insertGetId($movement);
 
         return DB::table('stock_movements')->find($id);
+    }
+
+    private function movementsHaveVariantColumn(): bool
+    {
+        static $has = null;
+
+        return $has ??= Schema::hasColumn('stock_movements', 'product_variant_id');
     }
 
     private function lockedProduct(Product|int $product): Product
