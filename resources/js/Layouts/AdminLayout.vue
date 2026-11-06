@@ -42,6 +42,7 @@ const sections = computed(() => [
             ['Warranties', '/admin/warranties', 'shield-tick', ['use_pos', 'manage_orders']],
             ['Cash registers', '/admin/registers', 'money-add', ['manage_registers']],
             ['Sales', '/admin/sales', 'basket-1', ['use_pos', 'view_reports']],
+            ['Record past sale', '/admin/sales/past', 'calendar-add', ['use_pos']],
             ['Expenses', '/admin/expenses', 'bulb', ['manage_expenses']],
             ['Profit & costing', '/admin/profit', 'percentage-circle', ['view_profit_reports']],
             ['Reports', '/admin/reports', 'document-text-2', ['view_reports']],
@@ -71,6 +72,7 @@ const active = (url) => {
     if (url === '/admin/settings') return page.url.startsWith('/admin/settings') || urlInHub(page.url, adminSettings);
     if (url === '/admin') return page.url === '/admin';
     if (url === '/admin/stock') return page.url === '/admin/stock';
+    if (url === '/admin/sales') return page.url === '/admin/sales' || page.url.startsWith('/admin/sales?') || page.url.startsWith('/admin/sales/pos') || page.url.startsWith('/admin/sales/online');
     if (url === '/admin/purchases') return page.url.startsWith('/admin/purchases') || page.url.startsWith('/admin/stock/purchases/');
     if (url === '/admin/business-settings') return page.url === '/admin/business-settings';
     return page.url.startsWith(url);
