@@ -3,7 +3,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import SeoHead from '../../Components/SeoHead.vue';
-import ProductRating from '../../Components/ProductRating.vue';
+import ProductCard from '../../Components/ProductCard.vue';
 
 defineProps({
     categories: { type: Array, default: () => [] },
@@ -36,11 +36,6 @@ const schema = computed(() => ({
     },
     sameAs: store.value.same_as?.length ? store.value.same_as : undefined,
 }));
-const money = (value) => new Intl.NumberFormat('en-TZ', {
-    style: 'currency',
-    currency: store.value.currency || 'TZS',
-    maximumFractionDigits: 0,
-}).format(Number(value || 0));
 </script>
 
 <template>
@@ -92,13 +87,8 @@ const money = (value) => new Intl.NumberFormat('en-TZ', {
 
             <section v-if="products.length" class="container-shell pb-7">
                 <h2 class="text-[20px] font-semibold text-slate-950">Latest products available from Prinx Tech</h2>
-                <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                    <Link v-for="product in products" :key="product.id" :href="`/products/${product.slug}`" class="rounded-[8px] border border-slate-200 bg-white p-3 hover:border-prinx-200">
-                        <img :src="product.image_url" :alt="product.name" class="h-32 w-full object-contain">
-                        <strong class="mt-2 line-clamp-2 block text-[10px] leading-4 text-slate-800">{{ product.name }}</strong>
-                        <ProductRating class="mt-1 text-[9px]" :rating="product.approved_reviews_average || 0" :count="product.approved_reviews_count || 0" />
-                        <span class="mt-2 block text-[10px] font-semibold text-prinx-600">{{ money(product.current_price) }}</span>
-                    </Link>
+                <div class="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
+                    <ProductCard v-for="product in products" :key="product.id" :product="product" />
                 </div>
             </section>
 

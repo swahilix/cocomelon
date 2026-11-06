@@ -3,6 +3,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import AppLayout from '../../../Layouts/AppLayout.vue';
 import SeoHead from '../../../Components/SeoHead.vue';
+import ProductCard from '../../../Components/ProductCard.vue';
 
 const props = defineProps({
     guide: Object,
@@ -24,11 +25,6 @@ const schema = computed(() => ({
     publisher: { '@type': 'Organization', name: page.props.store.name, url: page.props.store.url },
     mainEntityOfPage: `${page.props.store.url}/guides/${props.guide.slug}`,
 }));
-const money = (value) => new Intl.NumberFormat('en-TZ', {
-    style: 'currency',
-    currency: page.props.store.currency || 'TZS',
-    maximumFractionDigits: 0,
-}).format(Number(value || 0));
 </script>
 
 <template>
@@ -71,12 +67,8 @@ const money = (value) => new Intl.NumberFormat('en-TZ', {
 
                 <section v-if="relatedProducts.length" class="mt-8">
                     <h2 class="text-[18px] font-semibold text-slate-950">Products mentioned in this guide</h2>
-                    <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                        <Link v-for="product in relatedProducts" :key="product.id" :href="`/products/${product.slug}`" class="overflow-hidden rounded-[8px] border border-slate-200 bg-white p-3 hover:border-prinx-200">
-                            <img :src="product.image_url" :alt="product.name" class="h-28 w-full object-contain">
-                            <p class="mt-2 line-clamp-2 text-[10px] font-semibold leading-4 text-slate-800">{{ product.name }}</p>
-                            <strong class="mt-2 block text-[10px] text-prinx-600">{{ money(product.current_price) }}</strong>
-                        </Link>
+                    <div class="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
+                        <ProductCard v-for="product in relatedProducts" :key="product.id" :product="product" />
                     </div>
                 </section>
 

@@ -2,6 +2,7 @@
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import AppLayout from '../../Layouts/AppLayout.vue';
+import ProductCard from '../../Components/ProductCard.vue';
 import ProductRating from '../../Components/ProductRating.vue';
 import SeoHead from '../../Components/SeoHead.vue';
 
@@ -119,32 +120,17 @@ const clearSelection = () => {
                             </div>
                         </div>
 
-                        <div v-if="filteredProducts.length" class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-                            <article
+                        <div v-if="filteredProducts.length" class="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 xl:grid-cols-4 xl:gap-4">
+                            <ProductCard
                                 v-for="product in filteredProducts"
                                 :key="product.id"
-                                :class="['group flex min-w-0 flex-col overflow-hidden rounded-[8px] border bg-white transition', isSelected(product) ? 'border-prinx-500 ring-1 ring-prinx-100' : 'border-slate-200 hover:border-prinx-200']"
-                            >
-                                <Link :href="`/products/${product.slug}`" class="flex h-[150px] items-center justify-center bg-white p-3">
-                                    <img :src="product.image_url" :alt="product.name" class="h-full w-full object-contain" loading="lazy" decoding="async">
-                                </Link>
-
-                                <div class="flex flex-1 flex-col p-3">
-                                    <Link :href="`/products/${product.slug}`" class="line-clamp-2 min-h-[32px] text-[10px] font-semibold leading-4 text-slate-800 hover:text-prinx-600">{{ product.name }}</Link>
-                                    <ProductRating class="mt-1 text-[9px]" :rating="product.approved_reviews_average || 0" :count="product.approved_reviews_count || 0" />
-                                    <strong class="mt-2 text-[10px] text-slate-900">{{ money(product.current_price) }}</strong>
-                                    <p class="mt-1 text-[9px]" :class="product.in_stock ? 'text-emerald-600' : 'text-red-500'">{{ product.stock_message || (product.in_stock ? 'In Stock' : 'Out of Stock') }}</p>
-
-                                    <button
-                                        type="button"
-                                        :class="['mt-3 h-9 rounded-[6px] border px-3 text-[10px] font-semibold transition', isSelected(product) ? 'border-prinx-500 bg-prinx-50 text-prinx-700' : 'border-slate-200 bg-white text-slate-700 hover:border-prinx-300 hover:text-prinx-600']"
-                                        :disabled="!isSelected(product) && selectedSlugs.length >= 4"
-                                        @click="toggleProduct(product)"
-                                    >
-                                        {{ isSelected(product) ? 'Selected' : 'Select to compare' }}
-                                    </button>
-                                </div>
-                            </article>
+                                :product="product"
+                                compare
+                                :selected="isSelected(product)"
+                                :select-disabled="selectedSlugs.length >= 4"
+                                sizes="(max-width: 639px) 48vw, (max-width: 1279px) 30vw, 220px"
+                                @toggle-compare="toggleProduct"
+                            />
                         </div>
 
                         <div v-else class="mt-4 rounded-[8px] border border-dashed border-slate-300 bg-white px-5 py-12 text-center">

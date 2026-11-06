@@ -13,7 +13,13 @@ const props = defineProps({
     metric: { type: String, default: '' },
     sizes: { type: String, default: '(max-width: 639px) 48vw, (max-width: 1279px) 25vw, 240px' },
     eager: { type: Boolean, default: false },
+    // Compare page: the cart button becomes a "Select to compare" toggle.
+    compare: { type: Boolean, default: false },
+    selected: { type: Boolean, default: false },
+    selectDisabled: { type: Boolean, default: false },
 });
+
+const emit = defineEmits(['toggle-compare']);
 
 const STYLES = ['clean', 'trust', 'compact', 'premium'];
 
@@ -91,7 +97,7 @@ function toggleWishlist() {
 </script>
 
 <template>
-    <article class="pc" :class="`pc--${design}`">
+    <article class="pc" :class="[`pc--${design}`, { 'is-selected': compare && selected }]">
         <!-- A · Clean & minimal -->
         <div v-if="design === 'clean'" class="pc-card">
             <div class="pc-photo">
@@ -115,11 +121,16 @@ function toggleWishlist() {
                         <s v-if="onSale" class="pc-was">{{ money(regularPrice) }}</s>
                         <span v-else-if="lowStock" class="pc-low">Only {{ unitsLeft }} left</span>
                     </div>
-                    <button type="button" class="pc-round" :disabled="!inStock || busy" :aria-label="actionLabel" :title="hasOptions ? 'Choose options' : 'Add to cart'" @click="addToCart">
+                    <button v-if="!compare" type="button" class="pc-round" :disabled="!inStock || busy" :aria-label="actionLabel" :title="hasOptions ? 'Choose options' : 'Add to cart'" @click="addToCart">
                         <svg v-if="hasOptions" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
                         <svg v-else viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 11.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.5L20.5 8H6.2" /><circle cx="10" cy="20" r="1.3" /><circle cx="17" cy="20" r="1.3" /></svg>
                     </button>
                 </div>
+                <button v-if="compare" type="button" class="pc-compare" :class="{ 'is-selected': selected }" :aria-pressed="selected" :disabled="!selected && selectDisabled" @click="emit('toggle-compare', product)">
+                    <svg v-if="selected" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" /></svg>
+                    <svg v-else viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                    {{ selected ? 'Selected' : (selectDisabled ? '4 selected (max)' : 'Select to compare') }}
+                </button>
             </div>
         </div>
 
@@ -153,13 +164,18 @@ function toggleWishlist() {
                     </template>
                 </div>
                 <span v-if="metric" class="pc-metric">{{ metric }}</span>
-                <button type="button" class="pc-cta" :class="{ 'is-options': hasOptions && inStock }" :disabled="!inStock || busy" :aria-label="actionLabel" @click="addToCart">
+                <button v-if="!compare" type="button" class="pc-cta" :class="{ 'is-options': hasOptions && inStock }" :disabled="!inStock || busy" :aria-label="actionLabel" @click="addToCart">
                     <template v-if="!inStock">Out of stock</template>
                     <template v-else-if="hasOptions">Choose options</template>
                     <template v-else>
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 11.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.5L20.5 8H6.2" /><circle cx="10" cy="20" r="1.3" /><circle cx="17" cy="20" r="1.3" /></svg>
                         Add to cart
                     </template>
+                </button>
+                <button v-if="compare" type="button" class="pc-compare" :class="{ 'is-selected': selected }" :aria-pressed="selected" :disabled="!selected && selectDisabled" @click="emit('toggle-compare', product)">
+                    <svg v-if="selected" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" /></svg>
+                    <svg v-else viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                    {{ selected ? 'Selected' : (selectDisabled ? '4 selected (max)' : 'Select to compare') }}
                 </button>
             </div>
         </div>
@@ -174,7 +190,7 @@ function toggleWishlist() {
                 <button type="button" class="pc-fav" :class="{ 'is-on': wished }" :aria-pressed="wished" :aria-label="wished ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`" @click="toggleWishlist">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 9.2c0 5.4-8.5 10-8.5 10s-8.5-4.6-8.5-10A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8Z" /></svg>
                 </button>
-                <button type="button" class="pc-plus" :disabled="!inStock || busy" :aria-label="actionLabel" :title="hasOptions ? 'Choose options' : 'Add to cart'" @click="addToCart">
+                <button v-if="!compare" type="button" class="pc-plus" :disabled="!inStock || busy" :aria-label="actionLabel" :title="hasOptions ? 'Choose options' : 'Add to cart'" @click="addToCart">
                     <svg v-if="hasOptions" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
                     <svg v-else viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
                 </button>
@@ -190,6 +206,11 @@ function toggleWishlist() {
                 <span v-if="!inStock" class="pc-out">Out of stock</span>
                 <span v-if="metric" class="pc-metric">{{ metric }}</span>
                 <span v-if="reviewCount" class="pc-stars" :aria-label="ratingLabel"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L10 14.8l-5.2 2.8 1-5.8L1.5 7.7l5.9-.8z" /></svg><b>{{ rating }}</b><span>({{ reviewCount }})</span></span>
+                <button v-if="compare" type="button" class="pc-compare" :class="{ 'is-selected': selected }" :aria-pressed="selected" :disabled="!selected && selectDisabled" @click="emit('toggle-compare', product)">
+                    <svg v-if="selected" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" /></svg>
+                    <svg v-else viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                    {{ selected ? 'Selected' : (selectDisabled ? '4 selected (max)' : 'Select to compare') }}
+                </button>
             </div>
         </div>
 
@@ -215,7 +236,7 @@ function toggleWishlist() {
                         <strong class="pc-price">{{ money(price) }}</strong>
                         <s v-if="onSale" class="pc-was">{{ money(regularPrice) }}</s>
                     </div>
-                    <button type="button" class="pc-pill" :disabled="!inStock || busy" :aria-label="actionLabel" @click="addToCart">
+                    <button v-if="!compare" type="button" class="pc-pill" :disabled="!inStock || busy" :aria-label="actionLabel" @click="addToCart">
                         <template v-if="!inStock">Sold out</template>
                         <template v-else>
                             <span>{{ hasOptions ? 'Options' : 'Add' }}</span>
@@ -223,6 +244,11 @@ function toggleWishlist() {
                         </template>
                     </button>
                 </div>
+                <button v-if="compare" type="button" class="pc-compare" :class="{ 'is-selected': selected }" :aria-pressed="selected" :disabled="!selected && selectDisabled" @click="emit('toggle-compare', product)">
+                    <svg v-if="selected" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" /></svg>
+                    <svg v-else viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                    {{ selected ? 'Selected' : (selectDisabled ? '4 selected (max)' : 'Select to compare') }}
+                </button>
             </div>
         </div>
     </article>
@@ -254,6 +280,18 @@ function toggleWishlist() {
 .pc .pc-fav.is-on svg { fill: currentColor; }
 .pc-tag { position: absolute; z-index: 1; font-size: 11px; font-weight: 700; line-height: 1.2; white-space: nowrap; pointer-events: none; }
 button:disabled { cursor: not-allowed; }
+
+/* Compare page ----------------------------------------------------------- */
+.pc.is-selected .pc-card { box-shadow: 0 0 0 2px #ff4d0a, 0 10px 24px -14px rgba(238, 53, 0, .45); }
+.pc-compare { display: flex; height: 38px; margin-top: 10px; flex-shrink: 0; align-items: center; justify-content: center; gap: 6px; border: 1.5px solid #e2e8f0; border-radius: 10px; background: #fff; font-size: 12.5px; font-weight: 600; color: #334155; transition: border-color .15s ease, background-color .15s ease, color .15s ease; }
+.pc-compare svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.pc-compare:hover:not(:disabled) { border-color: #ffa270; color: #ee3500; }
+.pc-compare.is-selected { border-color: #ff4d0a; background: #ff4d0a; color: #fff; }
+.pc-compare.is-selected:hover { border-color: #ee3500; background: #ee3500; color: #fff; }
+.pc-compare:disabled { border-color: #f1f5f9; background: #f8fafc; color: #94a3b8; }
+.pc--trust .pc-compare, .pc--compact .pc-compare { margin-top: auto; }
+.pc--compact .pc-stars + .pc-compare { margin-top: 8px; }
+.pc--premium .pc-compare { border-radius: 999px; }
 button:focus-visible, .pc-name:focus-visible { outline: 2px solid #ff4d0a; outline-offset: 2px; }
 
 /* A · Clean & minimal ---------------------------------------------------- */
