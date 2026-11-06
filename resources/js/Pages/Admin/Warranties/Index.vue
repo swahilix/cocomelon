@@ -1,6 +1,6 @@
 <script setup>
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import AdminLayout from '../../../Layouts/AdminLayout.vue';
 
 const props = defineProps({
@@ -117,7 +117,32 @@ const loadCustomers = async () => {
     }
 };
 
-onMounted(loadCustomers);
+// The Add warranty form opens as a popup.
+const showForm = ref(false);
+const onKeydown = (event) => {
+    // Escape closes an open product dropdown first, then the popup.
+    if (event.key !== 'Escape' || !showForm.value || form.processing) return;
+    if (document.querySelector('.select2-container--open')) return;
+    closeForm();
+};
+const openForm = async () => {
+    showForm.value = true;
+    document.body.style.overflow = 'hidden';
+    await refreshSelects();
+};
+const closeForm = () => {
+    showForm.value = false;
+    document.body.style.overflow = '';
+};
+
+onMounted(() => {
+    loadCustomers();
+    window.addEventListener('keydown', onKeydown);
+});
+onBeforeUnmount(() => {
+    window.removeEventListener('keydown', onKeydown);
+    document.body.style.overflow = '';
+});
 
 const submit = () => form.post('/admin/warranties', {
     preserveScroll: true,
@@ -126,6 +151,7 @@ const submit = () => form.post('/admin/warranties', {
         form.reset();
         refreshSelects();
         loadCustomers();
+        closeForm();
     },
 });
 
@@ -175,7 +201,10 @@ const customerError = computed(() => form.errors.customer_name || form.errors.cu
                     <h1 class="mt-1 text-[24px] font-semibold tracking-[-.025em] text-slate-950">Warranties</h1>
                     <p class="mt-1 text-[12px] text-slate-500">Register a product warranty for a customer. They receive a thank-you SMS and the warranty details, and another SMS when the warranty ends.</p>
                 </div>
-                <Link href="/admin/customers" class="inline-flex h-9 items-center justify-center rounded-[6px] border border-slate-200 bg-white px-3.5 text-[11px] font-semibold text-slate-700 hover:border-prinx-300 hover:text-prinx-600">Manage customers</Link>
+                <div class="flex gap-2">
+                    <Link href="/admin/customers" class="inline-flex h-9 items-center justify-center rounded-[6px] border border-slate-200 bg-white px-3.5 text-[11px] font-semibold text-slate-700 hover:border-prinx-300 hover:text-prinx-600">Manage customers</Link>
+                    <button type="button" class="inline-flex h-9 items-center justify-center gap-1.5 rounded-[6px] bg-prinx-500 px-3.5 text-[11px] font-semibold text-white transition hover:bg-prinx-600" @click="openForm"><span class="text-base leading-none">+</span> Add warranty</button>
+                </div>
             </div>
 
             <div class="grid grid-cols-2 gap-2 lg:grid-cols-4">
@@ -185,8 +214,12 @@ const customerError = computed(() => form.errors.customer_name || form.errors.cu
                 <div class="rounded-[8px] border border-slate-200 bg-white p-3"><p class="text-[9px] font-semibold uppercase tracking-[.1em] text-slate-400">Ended</p><strong class="mt-1 block text-xl font-semibold text-slate-500">{{ summary.expired || 0 }}</strong></div>
             </div>
 
-            <section class="rounded-[9px] border border-slate-200 bg-white">
-                <div class="border-b border-slate-100 px-4 py-3"><h2 class="text-sm font-semibold text-slate-950">Add warranty</h2><p class="mt-1 text-[11px] text-slate-500">If the phone number is not already in Customers, the customer is saved there automatically.</p></div>
+            <div v-show="showForm" class="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-slate-950/55 p-3 sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="add-warranty-title" @click.self="!form.processing && closeForm()">
+            <section class="w-full max-w-5xl rounded-[12px] border border-slate-200 bg-white shadow-2xl">
+                <div class="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
+                    <div><h2 id="add-warranty-title" class="text-sm font-semibold text-slate-950">Add warranty</h2><p class="mt-1 text-[11px] text-slate-500">If the phone number is not already in Customers, the customer is saved there automatically.</p></div>
+                    <button type="button" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] text-lg leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Close" :disabled="form.processing" @click="closeForm">×</button>
+                </div>
                 <form class="warranty-form grid gap-4 p-4 xl:grid-cols-[1.1fr_1fr_.75fr]" @submit.prevent="submit">
                     <div class="space-y-3">
                         <label class="block"><span class="mb-1 block text-[10px] font-semibold text-slate-600">Product</span><select v-model="form.product_id" class="h-9 w-full rounded-[6px] border border-slate-200 bg-white px-2 text-[11px] outline-none focus:border-prinx-400" required><option value="">Choose product</option><option v-for="product in products" :key="product.id" :value="product.id">{{ product.name }}{{ product.sku ? ` · ${product.sku}` : '' }}</option></select></label>
@@ -233,6 +266,7 @@ const customerError = computed(() => form.errors.customer_name || form.errors.cu
                     </div>
                 </form>
             </section>
+            </div>
 
             <section class="overflow-hidden rounded-[9px] border border-slate-200 bg-white">
                 <div class="flex flex-col gap-3 border-b border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 class="text-sm font-semibold text-slate-950">Registered warranties</h2><p class="mt-1 text-[11px] text-slate-500">Green messages were delivered to the SMS provider. Click a message to send it again.</p></div><form class="flex flex-wrap gap-2" @submit.prevent="applyFilters"><input v-model="filterForm.search" class="h-8 w-48 rounded-[6px] border border-slate-200 px-2 text-[11px]" placeholder="Customer, phone, product, S/N"><select v-model="filterForm.status" data-native-select class="h-8 rounded-[6px] border border-slate-200 bg-white px-2 text-[11px]"><option value="">All</option><option value="active">Active</option><option value="expiring">Ending in 30 days</option><option value="expired">Ended</option></select><button class="h-8 rounded-[6px] bg-slate-950 px-3 text-[11px] font-semibold text-white">Filter</button></form></div>
@@ -255,7 +289,7 @@ const customerError = computed(() => form.errors.customer_name || form.errors.cu
                         </tbody>
                     </table>
                 </div>
-                <div v-else class="px-4 py-10 text-center text-xs text-slate-500">No warranties found.</div>
+                <div v-else class="px-4 py-10 text-center text-xs text-slate-500">No warranties found. <button type="button" class="font-semibold text-prinx-600 hover:underline" @click="openForm">Add a warranty</button></div>
             </section>
         </div>
     </AdminLayout>
