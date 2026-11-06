@@ -25,7 +25,8 @@ const design = computed(() => {
     return STYLES.includes(chosen) ? chosen : 'clean';
 });
 const currency = computed(() => page.props.store?.currency || 'TZS');
-const money = (value) => `${currency.value} ${Math.round(Number(value || 0)).toLocaleString('en-US')}`;
+const amount = (value) => Math.round(Number(value || 0)).toLocaleString('en-US');
+const money = (value) => `${currency.value} ${amount(value)}`;
 
 const href = computed(() => `/products/${props.product.slug}`);
 const regularPrice = computed(() => Number(props.product.price || 0));
@@ -138,7 +139,7 @@ function toggleWishlist() {
                 <span v-if="reviewCount" class="pc-stars" :aria-label="ratingLabel"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L10 14.8l-5.2 2.8 1-5.8L1.5 7.7l5.9-.8z" /></svg><b>{{ rating }}</b><span>({{ reviewCount }})</span></span>
                 <div class="pc-prices">
                     <strong class="pc-price">{{ money(price) }}</strong>
-                    <s v-if="onSale" class="pc-was">{{ money(regularPrice) }}</s>
+                    <s v-if="onSale" class="pc-was" :aria-label="`Was ${money(regularPrice)}`">{{ amount(regularPrice) }}</s>
                 </div>
                 <div class="pc-meta">
                     <span class="pc-dot" :class="{ 'is-low': lowStock, 'is-out': !inStock }" aria-hidden="true"></span>
@@ -291,8 +292,9 @@ button:focus-visible, .pc-name:focus-visible { outline: 2px solid #ff4d0a; outli
 .pc--trust .pc-fav { right: 8px; top: 8px; width: 32px; height: 32px; border-radius: 8px; color: #64748b; }
 .pc--trust .pc-body { gap: 6px; padding: 12px; }
 .pc--trust .pc-name { min-height: 40px; font-size: 14px; line-height: 20px; color: #1e293b; }
-.pc--trust .pc-prices { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
-.pc--trust .pc-price { font-size: 18px; color: #ee3500; }
+.pc--trust .pc-prices { flex-direction: row; flex-wrap: nowrap; align-items: baseline; gap: 6px; }
+.pc--trust .pc-price { flex-shrink: 0; font-size: 17px; font-weight: 600; color: #ee3500; letter-spacing: 0; }
+.pc--trust .pc-was { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .pc--trust .pc-meta { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: 2px 6px; font-size: 11.5px; color: #475569; }
 .pc--trust .pc-dot { display: inline-block; width: 7px; height: 7px; flex-shrink: 0; border-radius: 999px; background: #22c55e; }
 .pc--trust .pc-dot.is-low { background: #f59e0b; }
@@ -312,7 +314,8 @@ button:focus-visible, .pc-name:focus-visible { outline: 2px solid #ff4d0a; outli
     .pc--trust .pc-photo { padding: 12px; }
     .pc--trust .pc-body { padding: 10px; }
     .pc--trust .pc-name { font-size: 13px; line-height: 18px; min-height: 36px; }
-    .pc--trust .pc-price { font-size: 16px; }
+    .pc--trust .pc-price { font-size: 15px; }
+    .pc--trust .pc-was { font-size: 11px; }
     .pc--trust .pc-meta { font-size: 11px; }
     .pc--trust .pc-cta { height: 38px; font-size: 13px; }
     .pc--trust .pc-cta svg { display: none; }

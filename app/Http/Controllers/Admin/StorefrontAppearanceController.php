@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Support\ProductCardStyle;
+use App\Support\StorefrontFont;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,22 +26,33 @@ class StorefrontAppearanceController extends Controller
                 ->values()
                 ->all(),
             'sampleProducts' => $this->sampleProducts(),
+            'fontsAvailable' => StorefrontFont::available(),
+            'storefrontFont' => StorefrontFont::current(),
+            'fonts' => StorefrontFont::forAdmin(),
+            'fontsStylesheet' => StorefrontFont::stylesheet(...StorefrontFont::keys()),
         ]);
     }
 
     public function update(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'product_card_style' => ['required', 'string', Rule::in(ProductCardStyle::keys())],
+            'product_card_style' => ['sometimes', 'required', 'string', Rule::in(ProductCardStyle::keys())],
+            'storefront_font' => ['sometimes', 'required', 'string', Rule::in(StorefrontFont::keys())],
         ], [
             'product_card_style.in' => 'Choose one of the card designs shown.',
+            'storefront_font.in' => 'Choose one of the fonts shown.',
         ]);
 
-        if (! ProductCardStyle::available()) {
-            throw ValidationException::withMessages(['product_card_style' => 'Run the latest database migrations before changing the card design.']);
+        if ($validated === []) {
+            throw ValidationException::withMessages(['product_card_style' => 'Choose a card design or a font to save.']);
         }
 
-        $payload = ['product_card_style' => $validated['product_card_style'], 'updated_at' => now()];
+        if ((isset($validated['product_card_style']) && ! ProductCardStyle::available())
+            || (isset($validated['storefront_font']) && ! StorefrontFont::available())) {
+            throw ValidationException::withMessages(['product_card_style' => 'Run the latest database migrations before changing the storefront appearance.']);
+        }
+
+        $payload = [...$validated, 'updated_at' => now()];
 
         if (DB::table('business_settings')->where('id', 1)->exists()) {
             DB::table('business_settings')->where('id', 1)->update($payload);
@@ -48,7 +60,12 @@ class StorefrontAppearanceController extends Controller
             DB::table('business_settings')->insert(['id' => 1, ...$payload, 'created_at' => now()]);
         }
 
-        return back()->with('success', 'Product card design saved. The store now uses "'.ProductCardStyle::OPTIONS[$validated['product_card_style']]['name'].'".');
+        $saved = collect([
+            isset($validated['product_card_style']) ? 'card design "'.ProductCardStyle::OPTIONS[$validated['product_card_style']]['name'].'"' : null,
+            isset($validated['storefront_font']) ? 'font "'.StorefrontFont::OPTIONS[$validated['storefront_font']]['name'].'"' : null,
+        ])->filter()->implode(' and ');
+
+        return back()->with('success', 'Saved. The store now uses the '.$saved.'.');
     }
 
     /**

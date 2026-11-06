@@ -14,7 +14,8 @@ export default {
                 soft: '0 14px 40px rgba(17, 24, 39, 0.08)',
                 glow: '0 18px 55px rgba(255, 77, 10, 0.18)'
             },
-            fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+            // --store-font is set per page from the font chosen in Settings → Storefront appearance.
+            fontFamily: { sans: ['var(--store-font)'] },
         },
     },
     plugins: [],
