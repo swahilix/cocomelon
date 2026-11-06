@@ -3,6 +3,7 @@ import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import SeoHead from '../../Components/SeoHead.vue';
+import ProductCard from '../../Components/ProductCard.vue';
 import ProductRating from '../../Components/ProductRating.vue';
 
 const props = defineProps({
@@ -103,12 +104,6 @@ const reset = () => {
 };
 
 const money = (value) => `TZS ${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(Number(value || 0))}`;
-const discount = (product) => {
-    const regular = Number(product.price || 0);
-    const current = Number(product.current_price || 0);
-    if (!regular || current >= regular) return 0;
-    return Math.max(1, Math.round(((regular - current) / regular) * 100));
-};
 const addToCart = (product) => {
     if (Number(product.active_variants_count || 0) > 0) {
         router.visit(`/products/${product.slug}`);
@@ -233,27 +228,8 @@ const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label 
                         </div>
                     </div>
 
-                    <div v-if="products.data.length && viewMode === 'grid'" class="grid grid-cols-2 gap-[10px] sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                        <article v-for="product in products.data" :key="product.id" class="group min-w-0 overflow-hidden rounded-[8px] border border-slate-200 bg-white transition hover:border-prinx-200 hover:shadow-[0_10px_24px_rgba(15,23,42,.06)]">
-                            <Link :href="`/products/${product.slug}`" class="relative block h-[156px] overflow-hidden bg-white p-3">
-                                <img :src="product.image_url" :alt="product.name" class="h-full w-full object-contain transition duration-300 group-hover:scale-[1.025]" loading="lazy" decoding="async">
-                                <span v-if="discount(product)" class="absolute right-2 top-2 rounded-[10px] bg-prinx-50 px-2 py-1 text-[9px] font-semibold text-prinx-700">-{{ discount(product) }}%</span>
-                            </Link>
-                            <div class="px-3 pb-3">
-                                <Link :href="`/products/${product.slug}`" class="line-clamp-1 block min-h-[16px] text-[10px] font-semibold text-slate-800 transition group-hover:text-prinx-600">{{ product.name }}</Link>
-                                <ProductRating class="mt-1 text-[9px]" :rating="product.approved_reviews_average || 0" :count="product.approved_reviews_count || 0" />
-                                <div class="mt-2 flex min-h-[28px] flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                                    <strong class="text-[10px] font-semibold text-slate-800">{{ money(product.current_price) }}</strong>
-                                    <span v-if="Number(product.current_price) < Number(product.price)" class="text-[9px] text-slate-400 line-through">{{ money(product.price) }}</span>
-                                </div>
-                                <div class="mt-2 flex gap-2">
-                                    <button type="button" class="h-[30px] min-w-0 flex-1 rounded-[5px] border border-prinx-300 bg-white px-2 text-[9px] font-semibold text-prinx-600 transition hover:bg-prinx-500 hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400" :disabled="!product.in_stock" @click="addToCart(product)">{{ Number(product.active_variants_count || 0) > 0 ? 'Select options' : 'Add to Cart' }}</button>
-                                    <button type="button" class="flex h-8 w-8 min-h-8 min-w-8 shrink-0 items-center justify-center rounded-[5px] border border-slate-200 bg-white text-slate-600 transition hover:border-prinx-300 hover:text-prinx-600" :aria-label="`Add ${product.name} to wishlist`">
-                                        <svg viewBox="0 0 24 24" class="h-[16px] w-[16px] fill-none stroke-current" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 9.2c0 5.4-8.5 10-8.5 10s-8.5-4.6-8.5-10A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8Z"/></svg>
-                                    </button>
-                                </div>
-                            </div>
-                        </article>
+                    <div v-if="products.data.length && viewMode === 'grid'" class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5 xl:gap-4">
+                        <ProductCard v-for="(product, index) in products.data" :key="product.id" :product="product" :eager="index < 4" />
                     </div>
 
                     <div v-else-if="products.data.length" class="space-y-2">

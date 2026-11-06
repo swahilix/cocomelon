@@ -15,6 +15,7 @@ export const adminTools = [
 export const adminSettings = [
     { label: 'Business settings', href: '/admin/business-settings', icon: 'shop', permissions: ['manage_storefront'], description: 'Business details, receipts, SMS provider, payments and fulfilment.' },
     { label: 'AI & product lookup', href: '/admin/business-settings/ai', icon: 'magic-star', permissions: ['manage_storefront'], description: 'OpenAI key for photo recognition, barcode search and market prices; barcode database.' },
+    { label: 'Storefront appearance', href: '/admin/business-settings/storefront', icon: 'shop', permissions: ['manage_storefront'], description: 'Choose the product card design used on the shop page, homepage and wishlist.' },
     { label: 'Map settings', href: '/admin/business-settings/maps', icon: 'location', permissions: ['manage_storefront'], description: 'Google Maps key and store location.' },
     { label: 'Mail settings', href: '/admin/mail-settings', icon: 'sms', permissions: ['mail.manage_mailboxes', 'mail.manage_settings'], description: 'Business mailboxes, IMAP/SMTP connections and staff access.' },
     { label: 'Reset data', href: '/admin/system/reset', icon: 'trash', permissions: ['manage_staff'], description: 'Administrators only: back up, then clear sales, orders, stock, purchases, expenses, installments, payments and the Trash.' },

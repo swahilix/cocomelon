@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Category;
+use App\Support\ProductCardStyle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -185,6 +186,7 @@ class HandleInertiaRequests extends Middleware
                 'payment_methods' => $paymentMethods,
                 'payment_safety_note' => $paymentSafetyNote,
                 'payment_strip_url' => $paymentStripUrl,
+                'product_card_style' => ProductCardStyle::current($business ?? (object) []),
                 'social' => $social,
                 'same_as' => $databaseProfiles !== [] ? $databaseProfiles : config('store.social_profiles'),
                 'image_credit' => config('store.image_credit'),
