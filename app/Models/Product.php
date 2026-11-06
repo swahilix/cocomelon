@@ -95,7 +95,7 @@ class Product extends Model
 
     public function getImageUrlAttribute(): string
     {
-        if (!$this->primary_image) return asset('assets/accessory.svg');
+        if (!$this->primary_image) return asset('assets/product-placeholder.svg');
         if (Str::startsWith($this->primary_image, ['http://', 'https://', '/'])) return $this->primary_image;
         return Storage::disk('public')->url($this->primary_image);
     }

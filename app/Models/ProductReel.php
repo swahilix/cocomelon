@@ -108,7 +108,7 @@ class ProductReel extends Model
             return $this->product->image_url;
         }
 
-        return asset($this->item_type === 'service' ? 'assets/repair.svg' : 'assets/accessory.svg');
+        return asset($this->item_type === 'service' ? 'assets/repair.svg' : 'assets/product-placeholder.svg');
     }
 
     private function storageUrl(string $path): string
