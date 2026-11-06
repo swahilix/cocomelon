@@ -74,7 +74,15 @@ class DataResetController extends Controller
         $validated = $request->validate([
             'confirmation' => ['required', 'string'],
             'password' => ['required', 'string'],
+            'reset_transactions' => ['boolean'],
+            'empty_trash' => ['boolean'],
         ]);
+
+        $resetTransactions = (bool) ($validated['reset_transactions'] ?? true);
+        $emptyTrash = (bool) ($validated['empty_trash'] ?? false);
+        if (! $resetTransactions && ! $emptyTrash) {
+            throw ValidationException::withMessages(['confirmation' => 'Choose what to reset: transactions, the Trash, or both.']);
+        }
 
         if (trim($validated['confirmation']) !== 'RESET') {
             throw ValidationException::withMessages(['confirmation' => 'Type RESET in capital letters to confirm.']);
@@ -93,7 +101,7 @@ class DataResetController extends Controller
         @set_time_limit(300);
 
         try {
-            $deleted = $reset->reset();
+            $result = $reset->run($resetTransactions, $emptyTrash);
         } catch (Throwable $exception) {
             report($exception);
 
@@ -101,13 +109,27 @@ class DataResetController extends Controller
         }
 
         Cache::forget($this->backupKey($request));
-        $audit->record($request, 'system.data_reset', 'system', null, 'Data reset', null, null, [
+        $audit->record($request, $resetTransactions ? 'system.data_reset' : 'system.trash_emptied', 'system', null, 'Data reset', null, null, [
             'backup' => $backup,
-            'deleted' => $deleted,
-            'reset' => $before['reset'],
+            'reset_transactions' => $resetTransactions,
+            'empty_trash' => $emptyTrash,
+            'deleted' => $result['deleted'],
+            'trash' => $result['trash'],
+            'reset' => $resetTransactions ? $before['reset'] : null,
         ]);
 
-        return redirect()->route('admin.system.reset.show')->with('success', 'All sales, orders, stock, purchases, expenses, installments and payments were cleared. You can now enter previous purchases and past sales.');
+        $messages = [];
+        if ($resetTransactions) {
+            $messages[] = 'All sales, orders, stock, purchases, expenses, installments and payments were cleared.';
+        }
+        if ($emptyTrash) {
+            $deletedItems = collect($result['trash'])->sum('deleted');
+            $kept = collect($result['trash'])->sum('kept');
+            $messages[] = "Trash emptied: {$deletedItems} item".($deletedItems === 1 ? '' : 's').' permanently deleted'
+                .($kept ? ", {$kept} kept because ".($kept === 1 ? 'it is' : 'they are').' still used (for example by a warranty or another product).' : '.');
+        }
+
+        return redirect()->route('admin.system.reset.show')->with('success', implode(' ', $messages));
     }
 
     private function authorizeAdministrator(Request $request): void
