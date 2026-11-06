@@ -27,12 +27,13 @@ const form = reactive({
     category: props.filters.category || props.selectedCategory?.slug || '',
     brand: props.filters.brand || '',
     in_stock: !!props.filters.in_stock,
+    deals: ['1', 'true', 1, true].includes(props.filters.deals),
     min_price: props.filters.min_price || '',
     max_price: props.filters.max_price || '',
     sort: props.filters.sort || '',
 });
 
-const hasSecondaryFilters = computed(() => !!(form.search || form.category || form.brand || form.in_stock || form.min_price || form.max_price || form.sort));
+const hasSecondaryFilters = computed(() => !!(form.search || form.category || form.brand || form.in_stock || form.deals || form.min_price || form.max_price || form.sort));
 const title = computed(() => props.selectedCategory
     ? (props.selectedCategory.meta_title || `${props.selectedCategory.name} in ${city.value} | Prinx Tech`)
     : `Electronics & Tech in ${city.value} | Prinx Tech`);
@@ -82,6 +83,7 @@ const apply = () => {
         category: form.category || undefined,
         brand: form.brand || undefined,
         in_stock: form.in_stock || undefined,
+        deals: form.deals ? 1 : undefined,
         min_price: form.min_price || undefined,
         max_price: form.max_price || undefined,
         sort: form.sort || undefined,
@@ -99,7 +101,7 @@ const selectBrand = (brand) => {
 };
 
 const reset = () => {
-    Object.assign(form, { search: '', category: '', brand: '', in_stock: false, min_price: '', max_price: '', sort: '' });
+    Object.assign(form, { search: '', category: '', brand: '', in_stock: false, deals: false, min_price: '', max_price: '', sort: '' });
     router.get('/shop');
 };
 
@@ -127,7 +129,7 @@ const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label 
 
             <div class="mt-3 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                    <h1 class="text-[30px] font-semibold leading-none tracking-[-.025em] text-slate-950">{{ selectedCategory ? `${selectedCategory.name} in ${city}` : `Electronics & Tech in ${city}` }}</h1>
+                    <h1 class="text-[30px] font-semibold leading-none tracking-[-.025em] text-slate-950">{{ form.deals ? `Deals${selectedCategory ? ` on ${selectedCategory.name}` : ''} in ${city}` : (selectedCategory ? `${selectedCategory.name} in ${city}` : `Electronics & Tech in ${city}`) }}</h1>
                     <p class="mt-2 max-w-3xl text-[12px] leading-5 text-slate-500">{{ description }}</p>
                 </div>
                 <div class="flex min-h-[64px] w-full items-center gap-3 rounded-[8px] bg-prinx-50 px-5 lg:w-[370px]">
@@ -194,6 +196,7 @@ const pageUrl = (pageNumber) => props.products.links?.find((link) => link.label 
                             <button type="button" class="mt-2 w-full rounded-[6px] border border-prinx-200 bg-prinx-50 px-3 py-2 text-[10px] font-semibold text-prinx-700" @click="apply">Apply price</button>
                         </div>
 
+                        <button type="button" class="flex w-full items-center justify-between border-b border-slate-100 px-4 py-3 text-[10px] font-semibold text-slate-700" :aria-pressed="form.deals" @click="form.deals = !form.deals; apply()"><span>Deals only</span><span :class="form.deals ? 'text-prinx-600' : 'text-slate-400'">{{ form.deals ? 'On sale' : '⌄' }}</span></button>
                         <button type="button" class="flex w-full items-center justify-between border-b border-slate-100 px-4 py-3 text-[10px] font-semibold text-slate-700" @click="form.in_stock = !form.in_stock; apply()"><span>Availability</span><span :class="form.in_stock ? 'text-prinx-600' : 'text-slate-400'">{{ form.in_stock ? 'In stock' : '⌄' }}</span></button>
 
                         <div class="px-4 py-3 text-[10px] leading-4 text-slate-500">Color, storage and size options are shown on each product page when available.</div>

@@ -426,6 +426,13 @@ class StorefrontController extends Controller
             ->when($categorySlug, fn ($query) => $query->whereHas('category', fn ($category) => $category->where('slug', $categorySlug)->where('type', 'product')->where('is_active', true)))
             ->when($request->filled('brand'), fn ($query) => $query->whereHas('brand', fn ($brand) => $brand->where('slug', $request->brand)))
             ->when($request->boolean('in_stock'), fn ($query) => $query->where(fn ($stock) => $stock->where('track_stock', false)->orWhere('stock_quantity', '>', 0)))
+            // Deals: only products with a sale price that is running right now.
+            ->when($request->boolean('deals'), fn ($query) => $query
+                ->whereNotNull('sale_price')
+                ->where('sale_price', '>', 0)
+                ->whereColumn('sale_price', '<', 'price')
+                ->where(fn ($starts) => $starts->whereNull('sale_starts_at')->orWhere('sale_starts_at', '<=', now()))
+                ->where(fn ($ends) => $ends->whereNull('sale_ends_at')->orWhere('sale_ends_at', '>=', now())))
             ->when($request->filled('min_price'), fn ($query) => $query->where('price', '>=', (float) $request->min_price))
             ->when($request->filled('max_price'), fn ($query) => $query->where('price', '<=', (float) $request->max_price));
 
@@ -453,7 +460,7 @@ class StorefrontController extends Controller
                 ->get(),
             'selectedCategory' => $selectedCategory,
             'filters' => [
-                ...$request->only('search', 'brand', 'in_stock', 'min_price', 'max_price', 'sort'),
+                ...$request->only('search', 'brand', 'in_stock', 'deals', 'min_price', 'max_price', 'sort'),
                 'category' => $categorySlug,
             ],
         ]);
