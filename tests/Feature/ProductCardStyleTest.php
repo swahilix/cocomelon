@@ -79,4 +79,43 @@ class ProductCardStyleTest extends TestCase
 
         $this->assertNull(DB::table('business_settings')->where('id', 1)->value('product_card_style'));
     }
+
+    public function test_admin_can_switch_the_store_font_and_the_store_loads_it(): void
+    {
+        $this->actingAs($this->admin)
+            ->get('/admin/business-settings/storefront')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('fontsAvailable', true)
+                ->where('storefrontFont', 'inter')
+                ->has('fonts', 5));
+
+        $this->actingAs($this->admin)
+            ->put('/admin/business-settings/storefront', ['storefront_font' => 'plus-jakarta-sans'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('plus-jakarta-sans', DB::table('business_settings')->where('id', 1)->value('storefront_font'));
+        // Saving only the font leaves the card design alone.
+        $this->assertNull(DB::table('business_settings')->where('id', 1)->value('product_card_style'));
+
+        $this->actingAs($this->admin)
+            ->get('/wishlist')
+            ->assertOk()
+            ->assertSee('family=Plus+Jakarta+Sans', false)
+            ->assertSee("html:root{--store-font:'Plus Jakarta Sans'", false);
+
+        // The admin panel keeps its own font.
+        $this->actingAs($this->admin)
+            ->get('/admin/business-settings/storefront')
+            ->assertDontSee('html:root{--store-font', false);
+    }
+
+    public function test_unknown_fonts_are_rejected(): void
+    {
+        $this->actingAs($this->admin)
+            ->put('/admin/business-settings/storefront', ['storefront_font' => 'comic-sans'])
+            ->assertSessionHasErrors('storefront_font');
+
+        $this->assertNull(DB::table('business_settings')->where('id', 1)->value('storefront_font'));
+    }
 }

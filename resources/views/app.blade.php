@@ -60,6 +60,16 @@
         <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
     @endif
+    @unless (request()->is('admin*'))
+        @php($storeFont = \App\Support\StorefrontFont::current())
+        @php($storeFontCss = \App\Support\StorefrontFont::stylesheet($storeFont))
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="preload" as="style" href="{{ $storeFontCss }}">
+        <link rel="stylesheet" href="{{ $storeFontCss }}" media="print" onload="this.media='all'">
+        <noscript><link rel="stylesheet" href="{{ $storeFontCss }}"></noscript>
+        <style>html:root{--store-font:{!! \App\Support\StorefrontFont::stack($storeFont) !!}}</style>
+    @endunless
     @if (!empty($heroPreload['url']))
         <link
             rel="preload"
