@@ -20,6 +20,7 @@ class PosDocumentController extends Controller
     {
         $type = $request->string('type')->toString();
         $search = trim((string) $request->string('search'));
+        $today = now()->toDateString();
 
         $documents = DB::table('pos_documents')
             ->leftJoin('users', 'users.id', '=', 'pos_documents.created_by')
@@ -29,19 +30,31 @@ class PosDocumentController extends Controller
                     ->orWhere('pos_documents.customer_name', 'like', "%{$search}%")
                     ->orWhere('pos_documents.customer_phone', 'like', "%{$search}%");
             }))
-            ->select('pos_documents.*', 'users.name as created_by_name')
+            ->select(
+                'pos_documents.id', 'pos_documents.type', 'pos_documents.reference', 'pos_documents.customer_name',
+                'pos_documents.customer_phone', 'pos_documents.document_date', 'pos_documents.valid_until',
+                'pos_documents.due_date', 'pos_documents.total', 'pos_documents.status', 'pos_documents.created_at',
+                'users.name as created_by_name',
+                DB::raw('(SELECT COALESCE(SUM(quantity), 0) FROM pos_document_items WHERE pos_document_items.pos_document_id = pos_documents.id) as item_count'),
+            )
             ->latest('pos_documents.id')
-            ->limit(200)
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
+
+        $quotations = DB::table('pos_documents')->where('type', 'quotation');
+        $invoices = DB::table('pos_documents')->where('type', 'invoice');
 
         return Inertia::render('Admin/Pos/Documents/Index', [
             'documents' => $documents,
             'filters' => ['type' => $type, 'search' => $search],
+            'today' => $today,
             'summary' => [
-                'quotations' => DB::table('pos_documents')->where('type', 'quotation')->count(),
-                'invoices' => DB::table('pos_documents')->where('type', 'invoice')->count(),
-                'quotation_value' => (float) DB::table('pos_documents')->where('type', 'quotation')->sum('total'),
-                'invoice_value' => (float) DB::table('pos_documents')->where('type', 'invoice')->sum('total'),
+                'quotations' => (clone $quotations)->count(),
+                'quotation_value' => (float) (clone $quotations)->sum('total'),
+                'quotations_valid' => (clone $quotations)->where(fn ($query) => $query->whereNull('valid_until')->orWhere('valid_until', '>=', $today))->count(),
+                'invoices' => (clone $invoices)->count(),
+                'invoice_value' => (float) (clone $invoices)->sum('total'),
+                'invoices_this_month' => (float) (clone $invoices)->where('document_date', '>=', now()->startOfMonth()->toDateString())->sum('total'),
             ],
         ]);
     }
