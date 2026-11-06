@@ -1,7 +1,7 @@
 <script setup>
 import axios from 'axios';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import PosLayout from '../../../Layouts/PosLayout.vue';
 import Icon from '../../../Components/Icon.vue';
 import MobileBarcodeScanner from '../../../Components/MobileBarcodeScanner.vue';
@@ -76,7 +76,25 @@ const filteredProducts = computed(() => props.products.filter((item) => {
 }));
 const subtotal = computed(() => form.items.reduce((sum, item) => sum + Number(item.quantity) * Number(item.unit_price), 0));
 const total = computed(() => Math.max(0, subtotal.value - Number(form.discount || 0)));
-const change = computed(() => isCashPayment.value ? Math.max(0, Number(form.amount_paid || 0) - total.value) : 0);
+// An empty "Amount paid" means the customer pays the exact total.
+const paidAmount = computed(() => (form.amount_paid === '' || form.amount_paid === null ? total.value : Number(form.amount_paid || 0)));
+const change = computed(() => isCashPayment.value ? Math.max(0, paidAmount.value - total.value) : 0);
+const shortBy = computed(() => Math.max(0, total.value - paidAmount.value));
+// Exact total plus the next round cash amounts a customer is likely to hand over.
+const quickAmounts = computed(() => {
+    const amount = Math.ceil(total.value);
+    const values = new Set([amount]);
+    [1000, 5000, 10000, 50000].forEach((step) => {
+        const rounded = Math.ceil(amount / step) * step;
+        if (rounded > amount) values.add(rounded);
+    });
+    return [...values].sort((a, b) => a - b).slice(0, 4);
+});
+const showPay = ref(false);
+const payAmountInput = ref(null);
+const canCheckout = computed(() => !showNewCustomer.value && form.items.length > 0 && Boolean(props.currentRegister) && !form.processing);
+const paymentErrorKeys = ['amount_paid', 'payment_method_id', 'payment_reference', 'notes'];
+const paymentErrors = computed(() => paymentErrorKeys.map((key) => form.errors[key]).filter(Boolean));
 const cartCount = computed(() => form.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0));
 
 function product(id) {
@@ -242,12 +260,53 @@ async function saveCustomer() {
 }
 
 function completeSale() {
-    if (showNewCustomer.value) return;
+    if (!canCheckout.value) return;
+    if (!form.payment_method_id) {
+        openPay();
+        return;
+    }
+    if (shortBy.value > 0) {
+        openPay();
+        return;
+    }
+    if (form.amount_paid === '' || form.amount_paid === null) form.amount_paid = total.value;
     form.post('/admin/pos', {
         preserveScroll: true,
-        onError: () => { form._operation_id = newOperationId(); },
+        onSuccess: () => { showPay.value = false; },
+        onError: (errors) => {
+            form._operation_id = newOperationId();
+            if (Object.keys(errors).some((key) => paymentErrorKeys.includes(key))) showPay.value = true;
+        },
     });
 }
+
+function openPay() {
+    if (!canCheckout.value) return;
+    if (!form.payment_method_id) form.payment_method_id = cashMethod.value?.id || '';
+    showPay.value = true;
+    nextTick(() => {
+        payAmountInput.value?.focus();
+        payAmountInput.value?.select();
+    });
+}
+
+function closePay() {
+    if (form.processing) return;
+    showPay.value = false;
+}
+
+function choosePaymentMethod(method) {
+    form.payment_method_id = method.id;
+    if (!method.is_cash) form.amount_paid = '';
+    nextTick(() => payAmountInput.value?.focus());
+}
+
+function onKeydown(event) {
+    if (event.key === 'Escape' && showPay.value) closePay();
+}
+
+onMounted(() => window.addEventListener('keydown', onKeydown));
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 
 function createDocument(type) {
     if (showNewCustomer.value || !form.items.length || documentProcessing.value) return;
@@ -274,14 +333,6 @@ function createDocument(type) {
     });
 }
 
-function payExactCash() {
-    if (showNewCustomer.value || !form.items.length || !props.currentRegister || !cashMethod.value || form.processing) return;
-    form.payment_method_id = cashMethod.value.id;
-    form.amount_paid = total.value;
-    form.payment_reference = '';
-    completeSale();
-}
-
 function holdSale() {
     if (showNewCustomer.value || !form.items.length || !props.currentRegister || form.processing) return;
     form.post('/admin/pos/hold', { preserveScroll: true });
@@ -301,6 +352,7 @@ function clearSale() {
     form.amount_paid = '';
     form.discount = 0;
     form._operation_id = newOperationId();
+    showPay.value = false;
     scanSearch.value = '';
     scanError.value = '';
     documentError.value = '';
@@ -408,25 +460,17 @@ function clearSale() {
                         <div class="px-3 py-2 text-right"><p class="text-[10px] font-semibold uppercase tracking-[.08em] text-prinx-600">Grand total</p><b class="mt-0.5 block text-lg text-prinx-600">{{ money(total) }}</b></div>
                     </div>
 
-                    <div class="grid gap-2 p-2.5 md:grid-cols-[minmax(170px,220px)_150px_1fr_auto]">
-                        <select v-model="form.payment_method_id" class="input"><option v-for="method in paymentMethods" :key="method.id" :value="method.id">{{ method.name }}</option></select>
-                        <input v-model.number="form.amount_paid" type="number" min="0" step="0.01" class="input" placeholder="Amount paid">
-                        <input v-if="!isCashPayment" v-model="form.payment_reference" class="input" placeholder="Transaction / payment reference">
-                        <div v-else class="flex h-9 items-center justify-between rounded-[8px] border border-slate-200 bg-white px-3 text-xs"><span class="text-slate-400">Change</span><b class="ml-4">{{ money(change) }}</b></div>
-                        <div v-if="selectedPaymentMethod && !isCashPayment && (selectedPaymentMethod.account_number || selectedPaymentMethod.account_name)" class="rounded-[7px] bg-prinx-50 px-2.5 py-2 text-[10px] text-prinx-800 md:col-span-4"><b>{{ selectedPaymentMethod.name }}</b><span v-if="selectedPaymentMethod.account_number"> · {{ selectedPaymentMethod.account_number }}</span><span v-if="selectedPaymentMethod.account_name"> · {{ selectedPaymentMethod.account_name }}</span></div>
-                        <input v-model="form.notes" class="input md:col-span-3" placeholder="Sale / document note (optional)">
-
-                        <div class="grid grid-cols-2 gap-2 md:col-span-4">
-                            <button type="button" class="flex h-9 items-center justify-center gap-1.5 rounded-[8px] border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 disabled:opacity-50" :disabled="showNewCustomer || !form.items.length || documentProcessing" @click="createDocument('quotation')"><Icon name="document-text" :size="15" />Generate quotation</button>
-                            <button type="button" class="flex h-9 items-center justify-center gap-1.5 rounded-[8px] border border-prinx-200 bg-prinx-50 px-3 text-xs font-semibold text-prinx-700 transition hover:bg-prinx-100 disabled:opacity-50" :disabled="showNewCustomer || !form.items.length || documentProcessing" @click="createDocument('invoice')"><Icon name="receipt-item" :size="15" />Generate invoice</button>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-2 md:col-span-4">
-                            <button type="button" class="flex h-10 items-center justify-center gap-1.5 rounded-[8px] bg-rose-700 px-3 text-xs font-semibold text-white transition hover:bg-rose-800 disabled:opacity-50" :disabled="showNewCustomer || !form.items.length || !currentRegister || form.processing" @click="holdSale"><Icon name="pause-circle" :size="16" />Hold</button>
-                            <button type="button" class="flex h-10 items-center justify-center gap-1.5 rounded-[8px] bg-emerald-600 px-3 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50" :disabled="showNewCustomer || !form.items.length || !currentRegister || !cashMethod || form.processing" @click="payExactCash"><Icon name="wallet" :size="16" />Exact cash</button>
-                            <button type="submit" class="flex h-10 items-center justify-center gap-1.5 rounded-[8px] bg-prinx-500 px-3 text-xs font-semibold text-white transition hover:bg-prinx-600 disabled:cursor-not-allowed disabled:opacity-50" :disabled="showNewCustomer || !form.items.length || !currentRegister || !form.payment_method_id || form.processing"><Icon :name="form.processing ? 'refresh-2' : 'tick-circle'" :size="16" />{{ form.processing ? 'Processing...' : 'Complete sale' }}</button>
-                        </div>
+                    <div class="grid grid-cols-5 gap-1.5 p-2">
+                        <button type="button" class="flex h-9 min-w-0 items-center justify-center gap-1.5 rounded-[5px] px-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-45 border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50" :disabled="!canCheckout" title="Hold this sale and serve the next customer" @click="holdSale"><Icon name="pause-circle" :size="15" class="shrink-0 text-amber-600 max-[420px]:hidden" /><span class="truncate">Hold</span></button>
+                        <button type="button" class="flex h-9 min-w-0 items-center justify-center gap-1.5 rounded-[5px] px-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-45 border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50" :disabled="showNewCustomer || !form.items.length || documentProcessing" title="Generate a quotation" @click="createDocument('quotation')"><Icon name="document-text" :size="15" class="shrink-0 text-blue-600 max-[420px]:hidden" /><span class="truncate">Quote</span></button>
+                        <button type="button" class="flex h-9 min-w-0 items-center justify-center gap-1.5 rounded-[5px] px-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-45 border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50" :disabled="showNewCustomer || !form.items.length || documentProcessing" title="Generate an invoice" @click="createDocument('invoice')"><Icon name="receipt-item" :size="15" class="shrink-0 text-prinx-600 max-[420px]:hidden" /><span class="truncate">Invoice</span></button>
+                        <button type="button" class="flex h-9 min-w-0 items-center justify-center gap-1.5 rounded-[5px] px-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-45 bg-slate-900 text-white hover:bg-slate-800" :disabled="!canCheckout" title="Choose payment method, amount and note" @click="openPay"><Icon name="wallet" :size="15" class="shrink-0 max-[420px]:hidden" /><span class="truncate">Pay</span></button>
+                        <button type="submit" class="flex h-9 min-w-0 items-center justify-center gap-1.5 rounded-[5px] px-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-45 bg-prinx-500 text-white hover:bg-prinx-600" :disabled="!canCheckout" :title="`Complete now: ${selectedPaymentMethod?.name || 'Cash'}, ${money(paidAmount)}`"><Icon :name="form.processing ? 'refresh-2' : 'tick-circle'" :size="15" class="shrink-0 max-[420px]:hidden" /><span class="truncate">{{ form.processing ? 'Saving…' : 'Complete' }}</span></button>
                     </div>
+                    <p v-if="form.items.length && (form.payment_method_id !== cashMethod?.id || form.amount_paid !== '' || form.notes)" class="-mt-1 px-2.5 pb-2 text-[10px] text-slate-500">
+                        Payment: <b class="font-semibold text-slate-700">{{ selectedPaymentMethod?.name || 'Not set' }}</b> · {{ money(paidAmount) }}<template v-if="change"> · change {{ money(change) }}</template><template v-if="form.notes"> · note added</template>
+                        <button type="button" class="ml-1 font-semibold text-prinx-600 hover:underline" @click="openPay">Edit</button>
+                    </p>
                 </form>
             </section>
 
@@ -446,6 +490,87 @@ function clearSale() {
                     <div v-if="!filteredProducts.length" class="flex min-h-48 flex-col items-center justify-center text-center"><Icon name="search-normal" :size="28" class="text-slate-300" /><p class="mt-2 text-sm font-semibold text-slate-500">No matching items</p><p class="mt-1 text-xs text-slate-400">Change the category, brand or search term.</p></div>
                 </div>
             </aside>
+        </div>
+
+        <div v-if="showPay" class="fixed inset-0 z-[95] flex items-end justify-center bg-slate-950/50 sm:items-center sm:p-4" @click.self="closePay">
+            <form class="flex max-h-[100dvh] w-full max-w-[440px] flex-col overflow-hidden rounded-t-[8px] bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[8px]" role="dialog" aria-modal="true" aria-labelledby="pos-pay-title" @submit.prevent="completeSale">
+                <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-2.5">
+                    <div class="min-w-0">
+                        <h2 id="pos-pay-title" class="text-sm font-semibold text-slate-950">Payment</h2>
+                        <p class="truncate text-[11px] text-slate-500">{{ cartCount }} unit{{ cartCount === 1 ? '' : 's' }} · {{ form.customer_name || 'Walk-in customer' }}</p>
+                    </div>
+                    <button type="button" class="flex h-8 w-8 items-center justify-center rounded-[5px] text-slate-500 transition hover:bg-slate-100 hover:text-slate-800" aria-label="Close payment" :disabled="form.processing" @click="closePay"><Icon name="close-circle" :size="17" /></button>
+                </div>
+
+                <div class="flex items-end justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
+                    <div>
+                        <p class="text-[10px] font-semibold uppercase tracking-[.08em] text-slate-500">Amount due</p>
+                        <p v-if="Number(form.discount || 0) > 0" class="mt-0.5 text-[11px] text-slate-500">After {{ money(form.discount) }} discount</p>
+                    </div>
+                    <p class="text-2xl font-semibold tabular-nums tracking-tight text-slate-950">{{ money(total) }}</p>
+                </div>
+
+                <div class="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
+                    <div>
+                        <p class="mb-1.5 text-[11px] font-semibold text-slate-600">Payment method</p>
+                        <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-3" role="radiogroup" aria-label="Payment method">
+                            <button
+                                v-for="method in paymentMethods"
+                                :key="method.id"
+                                type="button"
+                                role="radio"
+                                :aria-checked="Number(form.payment_method_id) === Number(method.id)"
+                                class="flex h-9 min-w-0 items-center justify-center gap-1.5 rounded-[5px] border px-2 text-xs font-semibold transition"
+                                :class="Number(form.payment_method_id) === Number(method.id) ? 'border-prinx-500 bg-prinx-50 text-prinx-700' : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'"
+                                @click="choosePaymentMethod(method)"
+                            >
+                                <Icon :name="method.is_cash ? 'money-add' : 'card'" :size="14" class="shrink-0" />
+                                <span class="truncate">{{ method.name }}</span>
+                            </button>
+                        </div>
+                        <p v-if="selectedPaymentMethod && !isCashPayment && (selectedPaymentMethod.account_number || selectedPaymentMethod.account_name)" class="mt-1.5 rounded-[5px] bg-slate-50 px-2.5 py-1.5 text-[11px] text-slate-600">
+                            Pay to <b class="font-semibold text-slate-800">{{ selectedPaymentMethod.account_number }}</b><span v-if="selectedPaymentMethod.account_name"> · {{ selectedPaymentMethod.account_name }}</span>
+                        </p>
+                    </div>
+
+                    <div>
+                        <label for="pos-amount-paid" class="mb-1.5 block text-[11px] font-semibold text-slate-600">Amount paid</label>
+                        <input id="pos-amount-paid" ref="payAmountInput" v-model.number="form.amount_paid" type="number" min="0" step="0.01" inputmode="decimal" class="h-9 w-full rounded-[5px] border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-prinx-500 focus:ring-2 focus:ring-prinx-100 h-10 text-right text-base font-semibold tabular-nums" :placeholder="String(Math.ceil(total))">
+                        <div v-if="isCashPayment" class="mt-1.5 flex flex-wrap gap-1.5">
+                            <button v-for="(amount, index) in quickAmounts" :key="amount" type="button" class="h-7 rounded-[4px] border px-2 text-[11px] font-semibold tabular-nums transition" :class="Number(paidAmount) === amount ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'" @click="form.amount_paid = amount">{{ index === 0 ? 'Exact' : money(amount) }}</button>
+                        </div>
+                    </div>
+
+                    <div v-if="isCashPayment" class="flex h-10 items-center justify-between rounded-[5px] px-3 text-sm" :class="shortBy > 0 ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-800'">
+                        <span class="font-medium">{{ shortBy > 0 ? 'Short by' : 'Change' }}</span>
+                        <b class="font-semibold tabular-nums">{{ money(shortBy > 0 ? shortBy : change) }}</b>
+                    </div>
+                    <p v-else-if="shortBy > 0" class="rounded-[5px] bg-red-50 px-3 py-2 text-xs font-medium text-red-700">Amount paid is {{ money(shortBy) }} less than the total.</p>
+
+                    <div v-if="!isCashPayment">
+                        <label for="pos-payment-reference" class="mb-1.5 block text-[11px] font-semibold text-slate-600">Transaction reference</label>
+                        <input id="pos-payment-reference" v-model="form.payment_reference" class="h-9 w-full rounded-[5px] border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-prinx-500 focus:ring-2 focus:ring-prinx-100" placeholder="e.g. M-Pesa or bank transaction ID">
+                    </div>
+
+                    <div>
+                        <label for="pos-sale-note" class="mb-1.5 block text-[11px] font-semibold text-slate-600">Note <span class="font-normal text-slate-400">(optional, also used on quotes and invoices)</span></label>
+                        <input id="pos-sale-note" v-model="form.notes" class="h-9 w-full rounded-[5px] border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-prinx-500 focus:ring-2 focus:ring-prinx-100" placeholder="Sale / document note">
+                    </div>
+
+                    <div v-if="paymentErrors.length || form.errors.pos" class="rounded-[5px] border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                        <p v-for="message in [...paymentErrors, form.errors.pos].filter(Boolean)" :key="message">{{ message }}</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-[1fr_2fr] gap-2 border-t border-slate-200 bg-slate-50 px-4 py-2.5">
+                    <button type="button" class="h-10 rounded-[5px] border border-slate-300 bg-white text-xs font-semibold text-slate-700 transition hover:bg-slate-100" :disabled="form.processing" @click="closePay">Cancel</button>
+                    <button type="submit" class="flex h-10 items-center justify-center gap-1.5 rounded-[5px] bg-prinx-500 px-3 text-xs font-semibold text-white transition hover:bg-prinx-600 disabled:cursor-not-allowed disabled:opacity-50" :disabled="!canCheckout || !form.payment_method_id || shortBy > 0">
+                        <Icon :name="form.processing ? 'refresh-2' : 'tick-circle'" :size="15" />
+                        <span class="whitespace-nowrap">{{ form.processing ? 'Saving…' : 'Complete sale' }}</span>
+                        <span v-if="!form.processing" class="whitespace-nowrap tabular-nums max-[400px]:hidden">· {{ money(total) }}</span>
+                    </button>
+                </div>
+            </form>
         </div>
 
         <MobileBarcodeScanner
