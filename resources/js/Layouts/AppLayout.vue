@@ -11,6 +11,7 @@ const user = computed(() => page.props.auth?.user);
 const cartCount = computed(() => page.props.cartCount || 0);
 const wishlistCount = computed(() => page.props.wishlistCount || 0);
 const productCategories = computed(() => page.props.navigationCategories || []);
+const serviceCategories = computed(() => page.props.navigationServiceCategories || []);
 const store = computed(() => page.props.store || {});
 const whatsappHref = computed(() => {
     const digits = String(store.value.whatsapp || '').replace(/\D/g, '');
@@ -35,7 +36,22 @@ const submitSearch = () => {
     router.get('/shop', query ? { search: query } : {}, { preserveState: false });
 };
 const logout = () => router.post('/logout');
-const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(url));
+const path = computed(() => String(page.url || '').split('?')[0]);
+const query = computed(() => new URLSearchParams(String(page.url || '').split('?')[1] || ''));
+const active = (url) => path.value === url || (url !== '/' && path.value.startsWith(`${url}/`));
+const onDeals = computed(() => path.value === '/shop' && ['1', 'true'].includes(query.value.get('deals') || ''));
+const onNewArrivals = computed(() => path.value === '/shop' && query.value.get('sort') === 'newest' && !onDeals.value);
+
+// Main menu: shopping destinations only, most important first. About and
+// Contact live in the top bar and footer; Compare is an icon by the cart.
+const mainNav = computed(() => [
+    { label: 'Shop', href: '/shop', current: (active('/shop') || active('/products')) && !onDeals.value && !onNewArrivals.value },
+    { label: 'Deals', href: '/shop?deals=1', current: onDeals.value, badge: 'Sale' },
+    { label: 'New Arrivals', href: '/shop?sort=newest', current: onNewArrivals.value },
+    { label: 'Services', href: '/services', current: active('/services'), children: serviceCategories.value.map((category) => ({ label: category.name, href: `/services/category/${category.slug}` })) },
+    { label: 'Software', href: '/software', current: active('/software') },
+    { label: 'Buying Guides', href: '/guides', current: active('/guides') },
+]);
 </script>
 
 <template>
@@ -43,6 +59,22 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
         <Flash />
 
         <header class="relative z-50 border-b border-slate-200 bg-white">
+            <div class="hidden border-b border-slate-100 bg-slate-50 lg:block">
+                <div class="container-shell flex h-[34px] items-center justify-between gap-6 text-[11px] text-slate-600">
+                    <p class="truncate">
+                        <span v-if="store.delivery_enabled">Delivery{{ store.delivery_area ? ` in ${store.delivery_area}` : '' }}: <strong class="font-semibold text-slate-800">{{ store.delivery_eta || 'available' }}</strong></span>
+                        <span v-else-if="store.pickup_enabled"><strong class="font-semibold text-slate-800">Store pickup available</strong></span>
+                        <span v-else>Order assistance available</span>
+                        <span class="mx-2 text-slate-300" aria-hidden="true">|</span>Original products with warranty
+                    </p>
+                    <nav class="flex shrink-0 items-center gap-5" aria-label="Help and company">
+                        <a v-if="whatsappHref" :href="whatsappHref" target="_blank" rel="noopener" class="font-medium text-emerald-700 transition hover:text-emerald-800">WhatsApp us</a>
+                        <Link href="/pages/about" class="transition hover:text-slate-900">About us</Link>
+                        <Link href="/pages/contact" class="transition hover:text-slate-900">Contact us</Link>
+                    </nav>
+                </div>
+            </div>
+
             <div class="hidden border-b border-slate-100 lg:block">
                 <div class="container-shell grid h-[92px] grid-cols-[180px_180px_minmax(300px,1fr)_240px_auto] items-center gap-5">
                     <Link href="/" class="flex min-w-0 items-center">
@@ -87,6 +119,10 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                             <svg viewBox="0 0 24 24" class="h-[22px] w-[22px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path stroke-linecap="round" d="M5 20c.7-4.2 3-6.3 7-6.3s6.3 2.1 7 6.3"/></svg>
                         </Link>
 
+                        <Link href="/compare" class="relative flex h-11 w-11 items-center justify-center rounded-full text-slate-900 transition hover:bg-amber-50 hover:text-amber-700" :class="active('/compare') ? 'bg-amber-50 text-amber-700' : ''" title="Compare products" aria-label="Compare products">
+                            <svg viewBox="0 0 24 24" class="h-[22px] w-[22px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M7 4 3.5 7.5 7 11M3.5 7.5H15M17 13l3.5 3.5L17 20M20.5 16.5H9"/></svg>
+                        </Link>
+
                         <Link :href="user ? '/wishlist' : '/login'" class="relative flex h-11 w-11 items-center justify-center rounded-full text-slate-900 transition hover:bg-amber-50 hover:text-amber-700" title="Wishlist" aria-label="Wishlist">
                             <svg viewBox="0 0 24 24" class="h-[22px] w-[22px] fill-none stroke-current" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 9.2c0 5.4-8.5 10-8.5 10s-8.5-4.6-8.5-10A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8Z"/></svg>
                             <span v-if="wishlistCount" class="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#f7b900] px-1 text-[9px] font-bold text-slate-950">{{ wishlistCount }}</span>
@@ -100,51 +136,27 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                 </div>
             </div>
 
-            <div class="hidden border-b border-slate-100 bg-white lg:block">
-                <div class="container-shell flex h-[56px] items-center justify-between gap-6">
-                    <nav class="flex h-full min-w-0 items-stretch gap-7 whitespace-nowrap text-[13px] font-semibold text-slate-700" aria-label="Main navigation">
-                        <Link href="/" :class="['relative flex items-center transition-colors hover:text-amber-600', active('/') ? 'text-amber-600' : '']">
-                            Home
-                            <span v-if="active('/')" class="absolute inset-x-0 bottom-0 h-[2px] bg-[#f7b900]"></span>
-                        </Link>
-                        <Link href="/shop" :class="['relative flex items-center transition-colors hover:text-amber-600', active('/shop') || active('/products') ? 'text-amber-600' : '']">
-                            Shop
-                            <span v-if="active('/shop') || active('/products')" class="absolute inset-x-0 bottom-0 h-[2px] bg-[#f7b900]"></span>
-                        </Link>
-                        <Link href="/compare" :class="['relative flex items-center transition-colors hover:text-amber-600', active('/compare') ? 'text-amber-600' : '']">
-                            Compare
-                            <span v-if="active('/compare')" class="absolute inset-x-0 bottom-0 h-[2px] bg-[#f7b900]"></span>
-                        </Link>
-                        <Link href="/software" :class="['relative flex items-center transition-colors hover:text-amber-600', active('/software') ? 'text-amber-600' : '']">
-                            Software
-                            <span v-if="active('/software')" class="absolute inset-x-0 bottom-0 h-[2px] bg-[#f7b900]"></span>
-                        </Link>
-                        <Link href="/services" :class="['relative flex items-center transition-colors hover:text-amber-600', active('/services') ? 'text-amber-600' : '']">
-                            Services
-                            <span v-if="active('/services')" class="absolute inset-x-0 bottom-0 h-[2px] bg-[#f7b900]"></span>
-                        </Link>
-                        <Link href="/shop" class="relative flex items-center transition-colors hover:text-amber-600">
-                            Offers
-                        </Link>
-                        <Link href="/guides" :class="['relative flex items-center transition-colors hover:text-amber-600', active('/guides') ? 'text-amber-600' : '']">
-                            Guides
-                            <span v-if="active('/guides')" class="absolute inset-x-0 bottom-0 h-[2px] bg-[#f7b900]"></span>
-                        </Link>
-                        <Link href="/pages/about" :class="['relative flex items-center transition-colors hover:text-amber-600', active('/pages/about') ? 'text-amber-600' : '']">
-                            About Us
-                            <span v-if="active('/pages/about')" class="absolute inset-x-0 bottom-0 h-[2px] bg-[#f7b900]"></span>
-                        </Link>
-                        <Link href="/pages/contact" :class="['relative flex items-center transition-colors hover:text-amber-600', active('/pages/contact') ? 'text-amber-600' : '']">
-                            Contact Us
-                            <span v-if="active('/pages/contact')" class="absolute inset-x-0 bottom-0 h-[2px] bg-[#f7b900]"></span>
-                        </Link>
+            <div class="hidden bg-white lg:block">
+                <div class="container-shell flex h-[50px] items-center justify-between gap-6">
+                    <nav class="flex h-full min-w-0 items-stretch gap-8 whitespace-nowrap text-[14px] font-medium text-slate-700" aria-label="Main navigation">
+                        <div v-for="item in mainNav" :key="item.label" class="group relative flex">
+                            <Link
+                                :href="item.href"
+                                class="relative flex items-center gap-1.5 transition-colors hover:text-prinx-600"
+                                :class="item.current ? 'text-prinx-600' : ''"
+                                :aria-current="item.current ? 'page' : undefined"
+                            >
+                                {{ item.label }}
+                                <span v-if="item.badge" class="rounded-[4px] bg-prinx-500 px-1.5 py-[2px] text-[9px] font-semibold uppercase leading-none tracking-[.04em] text-white">{{ item.badge }}</span>
+                                <svg v-if="item.children?.length" viewBox="0 0 20 20" class="h-3.5 w-3.5 fill-current text-slate-400 transition group-hover:rotate-180 group-focus-within:rotate-180" aria-hidden="true"><path d="M5.2 7.4a1 1 0 0 1 1.4 0L10 10.8l3.4-3.4a1 1 0 1 1 1.4 1.4l-4.1 4.1a1 1 0 0 1-1.4 0L5.2 8.8a1 1 0 0 1 0-1.4Z"/></svg>
+                                <span v-if="item.current" class="absolute inset-x-0 bottom-0 h-[2px] rounded-t-full bg-prinx-600"></span>
+                            </Link>
+                            <div v-if="item.children?.length" class="invisible absolute left-0 top-full z-50 w-[240px] translate-y-1 rounded-[6px] border border-slate-200 bg-white py-1.5 opacity-0 shadow-[0_14px_40px_rgba(15,23,42,.12)] transition group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                                <Link v-for="child in item.children" :key="child.href" :href="child.href" class="block px-4 py-2 text-[13px] text-slate-600 transition hover:bg-prinx-50 hover:text-prinx-700">{{ child.label }}</Link>
+                                <Link :href="item.href" class="mt-1 block border-t border-slate-100 px-4 pb-1 pt-2.5 text-[12px] font-semibold text-prinx-600 hover:text-prinx-700">All {{ item.label.toLowerCase() }} →</Link>
+                            </div>
+                        </div>
                     </nav>
-
-                    <div class="shrink-0 border-l border-slate-200 pl-5 text-[11px] font-medium text-slate-500">
-                        <span v-if="store.delivery_enabled">Delivery: <strong class="font-semibold text-slate-800">{{ store.delivery_eta || 'available' }}</strong></span>
-                        <span v-else-if="store.pickup_enabled"><strong class="font-semibold text-slate-800">Store pickup available</strong></span>
-                        <span v-else>Order assistance available</span>
-                    </div>
                 </div>
             </div>
 
@@ -174,23 +186,28 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
 
                 <div v-if="open" id="mobile-navigation" class="border-t border-slate-100 bg-white">
                     <div class="container-shell max-h-[calc(100vh-120px)] overflow-y-auto py-3">
-                        <div class="grid grid-cols-2 gap-2 text-[13px] font-medium">
-                            <Link href="/" class="rounded-[8px] border border-slate-200 px-3 py-3">Home</Link>
-                            <Link href="/shop" class="rounded-[8px] border border-slate-200 px-3 py-3">Shop</Link>
-                            <Link href="/compare" class="rounded-[8px] border border-slate-200 px-3 py-3">Compare Products</Link>
-                            <Link href="/software" class="rounded-[8px] border border-slate-200 px-3 py-3">Software</Link>
-                            <Link href="/services" class="rounded-[8px] border border-slate-200 px-3 py-3">Services</Link>
-                            <Link href="/guides" class="rounded-[8px] border border-slate-200 px-3 py-3">Buying Guides</Link>
-                            <Link href="/pages/about" class="rounded-[8px] border border-slate-200 px-3 py-3">About</Link>
-                            <Link href="/pages/contact" class="rounded-[8px] border border-slate-200 px-3 py-3">Contact</Link>
-                            <Link v-if="!user" href="/login" class="rounded-[8px] border border-slate-200 px-3 py-3">Account</Link>
-                            <Link v-else-if="user?.is_admin" href="/admin" class="rounded-[8px] border border-slate-200 px-3 py-3">Admin panel</Link>
-                            <Link v-else href="/account" class="rounded-[8px] border border-slate-200 px-3 py-3">My Account</Link>
-                            <Link data-mobile-wishlist-menu :href="user ? '/wishlist' : '/login'" class="rounded-[8px] border border-slate-200 px-3 py-3">Wishlist<span v-if="wishlistCount"> ({{ wishlistCount }})</span></Link>
+                        <nav class="grid grid-cols-2 gap-2 text-[13px] font-medium" aria-label="Main navigation">
+                            <Link v-for="item in mainNav" :key="item.label" :href="item.href" class="flex items-center justify-between gap-2 rounded-[6px] border px-3 py-3" :class="item.current ? 'border-prinx-200 bg-prinx-50 text-prinx-700' : 'border-slate-200'" :aria-current="item.current ? 'page' : undefined">
+                                <span>{{ item.label }}</span>
+                                <span v-if="item.badge" class="rounded-[4px] bg-prinx-500 px-1.5 py-[2px] text-[9px] font-semibold uppercase leading-none text-white">{{ item.badge }}</span>
+                            </Link>
+                        </nav>
+                        <div class="mt-2 grid grid-cols-3 gap-2 text-[12px] font-medium text-slate-700">
+                            <Link href="/compare" class="rounded-[6px] bg-slate-50 px-3 py-2.5 text-center">Compare</Link>
+                            <Link data-mobile-wishlist-menu :href="user ? '/wishlist' : '/login'" class="rounded-[6px] bg-slate-50 px-3 py-2.5 text-center">Wishlist<span v-if="wishlistCount"> ({{ wishlistCount }})</span></Link>
+                            <Link v-if="!user" href="/login" class="rounded-[6px] bg-slate-50 px-3 py-2.5 text-center">Account</Link>
+                            <Link v-else-if="user?.is_admin" href="/admin" class="rounded-[6px] bg-slate-50 px-3 py-2.5 text-center">Admin</Link>
+                            <Link v-else href="/account" class="rounded-[6px] bg-slate-50 px-3 py-2.5 text-center">My account</Link>
                         </div>
                         <p class="mt-4 text-[10px] font-bold uppercase tracking-[.14em] text-slate-400">All Categories</p>
                         <div class="mt-2 divide-y divide-slate-100 overflow-hidden rounded-[8px] border border-slate-200">
                             <Link v-for="category in productCategories" :key="category.id" :href="`/shop?category=${encodeURIComponent(category.slug)}`" class="flex items-center justify-between px-3 py-3 text-[13px] text-slate-700"><span>{{ category.name }}</span><span>›</span></Link>
+                        </div>
+                        <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 pt-3 text-[12px] text-slate-600">
+                            <a v-if="whatsappHref" :href="whatsappHref" target="_blank" rel="noopener" class="font-medium text-emerald-700">WhatsApp us</a>
+                            <a v-if="store.phone" :href="`tel:${store.phone}`">Call {{ store.phone }}</a>
+                            <Link href="/pages/about">About us</Link>
+                            <Link href="/pages/contact">Contact us</Link>
                         </div>
                     </div>
                 </div>
@@ -218,7 +235,7 @@ const active = (url) => page.url === url || (url !== '/' && page.url.startsWith(
                             <Link href="/compare" class="block hover:text-prinx-600">Compare Products</Link>
                             <Link href="/shop?sort=newest" class="block hover:text-prinx-600">New Arrivals</Link>
                             <Link href="/shop" class="block hover:text-prinx-600">Best Sellers</Link>
-                            <Link href="/shop" class="block hover:text-prinx-600">Deals Of The Day</Link>
+                            <Link href="/shop?deals=1" class="block hover:text-prinx-600">Deals</Link>
                             <Link href="/cart" class="block hover:text-prinx-600">My Cart</Link>
                         </nav>
                     </div>
