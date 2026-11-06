@@ -52,6 +52,10 @@ class CompareController extends Controller
                 'price' => (float) $product->price,
                 'in_stock' => $product->in_stock,
                 'stock_message' => $product->stock_message,
+                'stock_quantity' => (int) $product->stock_quantity,
+                'low_stock' => (bool) $product->low_stock,
+                'low_stock_threshold' => (int) $product->low_stock_threshold,
+                'warranty' => $product->warranty,
                 'brand' => $product->brand ? ['id' => $product->brand->id, 'name' => $product->brand->name] : null,
                 'category' => $product->category ? [
                     'id' => $product->category->id,

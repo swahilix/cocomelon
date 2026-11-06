@@ -5,6 +5,7 @@ import AppLayout from '../../Layouts/AppLayout.vue';
 import ProductDescription from '../../Components/ProductDescription.vue';
 import ProductRating from '../../Components/ProductRating.vue';
 import SeoHead from '../../Components/SeoHead.vue';
+import ProductCard from '../../Components/ProductCard.vue';
 
 const props = defineProps({
     product: Object,
@@ -233,21 +234,6 @@ function nextImage() {
     if (images.value.length < 2) return;
     const index = imageIndex.value >= images.value.length - 1 ? 0 : imageIndex.value + 1;
     selected.value = images.value[index];
-}
-
-function relatedDiscount(item) {
-    const regular = Number(item.price || 0);
-    const current = Number(item.current_price || 0);
-    return regular > current && regular > 0 ? Math.max(1, Math.round(((regular - current) / regular) * 100)) : 0;
-}
-
-function addRelated(item) {
-    if (!item.in_stock) return;
-    if (Number(item.active_variants_count || 0) > 0) {
-        router.visit(`/products/${item.slug}`);
-        return;
-    }
-    router.post(`/cart/${item.slug}`, { quantity: 1 }, { preserveScroll: true });
 }
 
 function starsFor(value) {
@@ -520,22 +506,8 @@ function submitReview() {
                     <Link href="/shop" class="text-[9px] font-medium text-prinx-600 hover:text-prinx-700">View all</Link>
                 </div>
 
-                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <article v-for="item in related.slice(0, 4)" :key="item.id" class="group grid min-h-[118px] grid-cols-[118px_1fr] overflow-hidden rounded-[7px] border border-slate-200 bg-white">
-                        <Link :href="`/products/${item.slug}`" class="relative flex items-center justify-center bg-white p-3">
-                            <img :src="item.image_url" :alt="item.name" loading="lazy" decoding="async" class="h-[88px] w-[88px] object-contain transition group-hover:scale-[1.03]">
-                            <span v-if="relatedDiscount(item)" class="absolute right-2 top-2 rounded-[5px] bg-prinx-50 px-1.5 py-1 text-[8px] font-semibold text-prinx-700">-{{ relatedDiscount(item) }}%</span>
-                        </Link>
-                        <div class="flex min-w-0 flex-col justify-center border-l border-slate-100 p-3">
-                            <Link :href="`/products/${item.slug}`" class="line-clamp-2 text-[9px] font-semibold leading-4 text-slate-800 transition group-hover:text-prinx-600">{{ item.name }}</Link>
-                            <ProductRating class="mt-1 text-[9px]" :rating="item.approved_reviews_average || 0" :count="item.approved_reviews_count || 0" />
-                            <div class="mt-1 flex flex-wrap items-center gap-2"><strong class="text-[9px] font-semibold text-slate-800">{{ money(item.current_price) }}</strong><span v-if="Number(item.current_price) < Number(item.price)" class="text-[8px] text-slate-400 line-through">{{ money(item.price) }}</span></div>
-                            <div class="mt-2 flex items-center gap-2">
-                                <button type="button" class="h-7 flex-1 rounded-[5px] border border-prinx-300 bg-white px-2 text-[8px] font-semibold text-prinx-600 hover:bg-prinx-500 hover:text-white disabled:border-slate-200 disabled:text-slate-400" :disabled="!item.in_stock" @click="addRelated(item)">{{ Number(item.active_variants_count || 0) > 0 ? 'Select options' : 'Add to Cart' }}</button>
-                                <button type="button" class="flex h-8 w-8 min-h-8 min-w-8 items-center justify-center rounded-[5px] border border-slate-200 text-slate-500 hover:border-prinx-300 hover:text-prinx-600" aria-label="Add to wishlist"><svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 9.2c0 5.4-8.5 10-8.5 10s-8.5-4.6-8.5-10A4.7 4.7 0 0 1 12 6.4a4.7 4.7 0 0 1 8.5 2.8Z"/></svg></button>
-                            </div>
-                        </div>
-                    </article>
+                <div class="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4 xl:gap-4">
+                    <ProductCard v-for="item in related.slice(0, 4)" :key="item.id" :product="item" sizes="(max-width: 639px) 48vw, (max-width: 1279px) 32vw, 260px" />
                 </div>
             </section>
         </div>

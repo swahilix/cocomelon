@@ -2,7 +2,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import AppLayout from '../../Layouts/AppLayout.vue';
-import ProductRating from '../../Components/ProductRating.vue';
+import ProductCard from '../../Components/ProductCard.vue';
 
 const props = defineProps({
     cart: Object,
@@ -49,15 +49,6 @@ const remove = (line) => router.delete(`/cart/${line.product.slug}`, {
     preserveScroll: true,
 });
 const clear = () => confirm('Clear all products from your cart?') && router.delete('/cart', { preserveScroll: true });
-const addRecommended = (product) => {
-    if (Number(product.active_variants_count || 0) > 0) {
-        router.visit(`/products/${product.slug}`);
-        return;
-    }
-    router.post(`/cart/${product.slug}`, { quantity: 1 }, { preserveScroll: true });
-};
-const originalPrice = (product) => Number(product.price || 0) > Number(product.current_price || 0) ? Number(product.price) : null;
-const discount = (product) => originalPrice(product) ? Math.round((1 - Number(product.current_price) / originalPrice(product)) * 100) : 0;
 const applyCoupon = () => {
     const code = couponCode.value.trim();
     if (!code || couponProcessing.value) return;
@@ -135,15 +126,8 @@ const removeCoupon = () => {
 
                         <section v-if="recommended.length" class="mt-5">
                             <div class="flex items-center justify-between gap-4"><h2 class="text-lg font-semibold text-slate-950">You May Also Like</h2><Link href="/shop" class="text-xs font-semibold text-prinx-600 hover:text-prinx-700">View all</Link></div>
-                            <div class="mt-3 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-                                <article v-for="product in recommended" :key="product.id" class="group relative rounded-[8px] border border-slate-200 bg-white p-3 transition hover:border-prinx-200 hover:shadow-[0_8px_24px_rgba(15,23,42,.05)]">
-                                    <span v-if="discount(product)" class="absolute right-2 top-2 z-10 rounded-[5px] bg-prinx-50 px-2 py-1 text-xs font-semibold text-prinx-600">-{{ discount(product) }}%</span>
-                                    <Link :href="`/products/${product.slug}`" class="flex h-[132px] items-center justify-center rounded-[6px] bg-slate-50 p-2"><img :src="product.image_url" :alt="product.name" class="h-full w-full object-contain transition group-hover:scale-[1.03]"></Link>
-                                    <Link :href="`/products/${product.slug}`" class="mt-3 line-clamp-2 min-h-[38px] text-xs font-semibold leading-5 text-slate-900 hover:text-prinx-600">{{ product.name }}</Link>
-                                    <ProductRating class="mt-1 text-[10px]" :rating="product.approved_reviews_average || 0" :count="product.approved_reviews_count || 0" />
-                                    <div class="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1"><strong class="text-xs text-slate-950">{{ money(product.current_price) }}</strong><span v-if="originalPrice(product)" class="text-xs text-slate-400 line-through">{{ money(originalPrice(product)) }}</span></div>
-                                    <button type="button" class="mt-3 flex h-8 max-h-8 w-full items-center justify-center rounded-[6px] border border-prinx-300 bg-white text-[10px] font-semibold leading-none text-prinx-600 transition hover:bg-prinx-500 hover:text-white" @click="addRecommended(product)">{{ Number(product.active_variants_count || 0) > 0 ? 'Select options' : 'Add to Cart' }}</button>
-                                </article>
+                            <div class="mt-3 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+                                <ProductCard v-for="product in recommended" :key="product.id" :product="product" sizes="(max-width: 1023px) 48vw, 200px" />
                             </div>
                         </section>
                     </div>

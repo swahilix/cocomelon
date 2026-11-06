@@ -23,6 +23,7 @@ class LocalStoreController extends Controller
                 ->get(),
             'products' => Product::query()
                 ->with(['brand:id,name', 'category:id,name,slug'])
+                ->withCount(['variants as active_variants_count' => fn ($query) => $query->active()])
                 ->withCount(['reviews as approved_reviews_count' => fn ($query) => $query->approved()])
                 ->withAvg(['reviews as approved_reviews_average' => fn ($query) => $query->approved()], 'rating')
                 ->active()
