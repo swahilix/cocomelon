@@ -11,6 +11,15 @@ const canViewInventory = computed(() => permissions.value.includes('view_invento
 
 useAdminSelect2('.pos-shell');
 
+// Highlight the section that is open.
+const path = computed(() => String(page.url || '').split('?')[0]);
+const navItems = computed(() => [
+    { href: '/admin/sales', label: 'Sales', icon: 'receipt-item', active: path.value.startsWith('/admin/sales') },
+    { href: '/admin/pos', label: 'New sale', icon: 'shopping-cart', active: path.value === '/admin/pos' || path.value.startsWith('/admin/pos/receipt') },
+    { href: '/admin/pos/documents', label: 'Documents', icon: 'document-text', active: path.value.startsWith('/admin/pos/documents') },
+    ...(canViewInventory.value ? [{ href: '/admin/stock/inventory', label: 'Items', icon: 'box', active: path.value.startsWith('/admin/stock/inventory') }] : []),
+]);
+
 const logout = () => router.post('/logout');
 const toggleFullscreen = async () => {
     try {
@@ -33,10 +42,7 @@ const toggleFullscreen = async () => {
                 </Link>
 
                 <nav class="ml-4 hidden items-center gap-1 lg:flex">
-                    <Link href="/admin/sales" class="rounded-[7px] px-3 py-2 text-xs font-medium text-slate-300 transition hover:bg-slate-900 hover:text-white"><Icon name="receipt-item" :size="15" class="mr-1.5 inline" />Sales</Link>
-                    <Link href="/admin/pos" class="rounded-[7px] bg-white/10 px-3 py-2 text-xs font-semibold text-white"><Icon name="shopping-cart" :size="15" class="mr-1.5 inline" />New sale</Link>
-                    <Link href="/admin/pos/documents" class="rounded-[7px] px-3 py-2 text-xs font-medium text-slate-300 transition hover:bg-slate-900 hover:text-white"><Icon name="document-text" :size="15" class="mr-1.5 inline" />Documents</Link>
-                    <Link v-if="canViewInventory" href="/admin/stock/inventory" class="rounded-[7px] px-3 py-2 text-xs font-medium text-slate-300 transition hover:bg-slate-900 hover:text-white"><Icon name="box" :size="15" class="mr-1.5 inline" />Items</Link>
+                    <Link v-for="item in navItems" :key="item.href" :href="item.href" :aria-current="item.active ? 'page' : undefined" :class="['rounded-[7px] px-3 py-2 text-xs transition', item.active ? 'bg-white/10 font-semibold text-white' : 'font-medium text-slate-300 hover:bg-slate-900 hover:text-white']"><Icon :name="item.icon" :size="15" class="mr-1.5 inline" />{{ item.label }}</Link>
                 </nav>
 
                 <div class="ml-auto flex items-center gap-1.5">
