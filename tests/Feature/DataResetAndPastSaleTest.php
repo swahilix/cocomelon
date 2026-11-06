@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
@@ -148,6 +149,89 @@ class DataResetAndPastSaleTest extends TestCase
         $this->assertDatabaseHas('suppliers', ['id' => $supplier->id, 'name' => 'Kariakoo Wholesale']);
         $this->assertSame(0.0, (float) $supplier->fresh()->opening_balance);
         $this->assertDatabaseHas('audit_logs', ['action' => 'system.data_reset']);
+    }
+
+    public function test_emptying_the_trash_deletes_unused_items_and_keeps_used_ones(): void
+    {
+        $live = $this->productWithOpeningStock('Live Phone', 2, 300000);
+        $sold = $this->productWithOpeningStock('Sold Phone', 2, 300000);
+        $this->recordPastSale($sold, 1, 300000);
+        $sold->delete();
+
+        $unused = Product::create($this->productAttributes('Old Cable'));
+        $variant = ProductVariant::create(['product_id' => $unused->id, 'sku' => 'CABLE-1M', 'label' => '1 m', 'is_active' => true, 'stock_quantity' => 0]);
+        DB::table('wishlists')->insert(['user_id' => $this->admin->id, 'product_id' => $unused->id, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('product_reviews')->insert(['product_id' => $unused->id, 'reviewer_name' => 'Ali', 'rating' => 5, 'body' => 'Good', 'created_at' => now(), 'updated_at' => now()]);
+        $unused->delete();
+
+        $withWarranty = Product::create($this->productAttributes('Warranty Laptop'));
+        DB::table('warranties')->insert([
+            'reference' => 'WAR-TEST-1', 'product_id' => $withWarranty->id, 'product_name' => 'Warranty Laptop',
+            'customer_name' => 'Asha', 'customer_phone' => '+255712345678', 'duration_value' => 1, 'duration_unit' => 'years',
+            'starts_on' => now()->toDateString(), 'ends_on' => now()->addYear()->toDateString(), 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $withWarranty->delete();
+
+        $usedCategory = Category::create(['name' => 'Tablets', 'type' => 'product', 'is_active' => true]);
+        $live->update(['category_id' => $usedCategory->id]);
+        $usedCategory->delete();
+        $unusedBrand = Brand::create(['name' => 'Gone Brand', 'is_active' => true]);
+        $unusedBrand->delete();
+
+        $this->actingAs($this->admin)
+            ->get('/admin/system/reset')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('preview.trash.total', 5)
+                ->where('preview.trash.in_use', 3));
+
+        $this->actingAs($this->admin)->post('/admin/system/reset/backup')->assertSessionHas('success');
+        $backup = collect(DataResetService::backups())->first();
+        $contents = json_decode(File::get(DataResetService::backupDirectory().DIRECTORY_SEPARATOR.$backup['name']), true);
+        $this->assertCount(3, $contents['trash']['products']);
+        $this->assertCount(1, $contents['trash']['product_owned.wishlists']);
+
+        // Trash only: transactions are left alone.
+        $this->actingAs($this->admin)
+            ->post('/admin/system/reset', ['confirmation' => 'RESET', 'password' => 'Password123', 'reset_transactions' => false, 'empty_trash' => true])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success', fn ($message) => str_contains($message, '2 items permanently deleted') && str_contains($message, '3 kept'));
+
+        $this->assertNull(Product::withTrashed()->find($unused->id));
+        $this->assertNull(ProductVariant::withTrashed()->find($variant->id));
+        $this->assertSame(0, DB::table('wishlists')->where('product_id', $unused->id)->count());
+        $this->assertSame(0, DB::table('product_reviews')->where('product_id', $unused->id)->count());
+        $this->assertNull(Brand::withTrashed()->find($unusedBrand->id));
+
+        $this->assertNotNull(Product::withTrashed()->find($sold->id), 'Product with sales history is kept');
+        $this->assertNotNull(Product::withTrashed()->find($withWarranty->id), 'Product with a warranty is kept');
+        $this->assertNotNull(Category::withTrashed()->find($usedCategory->id), 'Category used by a live product is kept');
+        $this->assertSame($usedCategory->id, $live->fresh()->category_id);
+        $this->assertSame(1, DB::table('pos_sales')->count());
+        $this->assertDatabaseHas('audit_logs', ['action' => 'system.trash_emptied']);
+    }
+
+    public function test_resetting_transactions_and_trash_together_frees_products_with_sales_history(): void
+    {
+        $sold = $this->productWithOpeningStock('Sold Phone', 2, 300000);
+        $this->recordPastSale($sold, 1, 300000);
+        $sold->delete();
+
+        $this->actingAs($this->admin)->post('/admin/system/reset/backup')->assertSessionHas('success');
+        $this->actingAs($this->admin)
+            ->post('/admin/system/reset', ['confirmation' => 'RESET', 'password' => 'Password123', 'reset_transactions' => true, 'empty_trash' => true])
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull(Product::withTrashed()->find($sold->id));
+        $this->assertSame(0, DB::table('pos_sales')->count());
+    }
+
+    public function test_reset_needs_at_least_one_option(): void
+    {
+        $this->actingAs($this->admin)->post('/admin/system/reset/backup')->assertSessionHas('success');
+
+        $this->actingAs($this->admin)
+            ->post('/admin/system/reset', ['confirmation' => 'RESET', 'password' => 'Password123', 'reset_transactions' => false, 'empty_trash' => false])
+            ->assertSessionHasErrors('confirmation');
     }
 
     public function test_past_sale_is_dated_reduces_stock_and_skips_the_cash_register(): void
