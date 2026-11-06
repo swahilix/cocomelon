@@ -35,7 +35,7 @@ const isHistorical = (sale) => sale.source === 'pos' && String(sale.reference ||
     <div class="card mt-6 overflow-x-auto">
         <table class="admin-table"><thead><tr><th>Reference</th><th>Source</th><th>Customer</th><th>Date</th><th>Amount</th><th>Payment</th><th>Status</th><th>Staff</th><th></th></tr></thead><tbody>
         <tr v-for="sale in sales" :key="`${sale.source}-${sale.id}`">
-            <td><p class="font-semibold">{{ sale.reference }}</p><span v-if="isHistorical(sale)" class="mt-1 inline-flex rounded-[6px] bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-700">Historical import</span></td>
+            <td><p class="font-semibold">{{ sale.reference }}</p><span v-if="isHistorical(sale)" class="mt-1 inline-flex rounded-[6px] bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-700">Historical import</span><span v-else-if="sale.is_backdated" class="mt-1 inline-flex rounded-[6px] bg-blue-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-blue-700">Past sale</span></td>
             <td><span class="rounded-[7px] px-2 py-1 text-xs font-semibold" :class="isHistorical(sale) ? 'bg-amber-50 text-amber-700' : sale.source === 'pos' ? 'bg-blue-50 text-blue-700' : 'bg-violet-50 text-violet-700'">{{ isHistorical(sale) ? 'Historical POS' : sale.source === 'pos' ? 'POS' : 'Online' }}</span></td>
             <td><p class="font-medium">{{ sale.customer }}</p><p class="text-xs text-slate-500">{{ sale.phone || '—' }}</p></td>
             <td>{{ new Date(sale.created_at).toLocaleString() }}</td><td class="font-semibold">{{ money(sale.amount) }}</td>

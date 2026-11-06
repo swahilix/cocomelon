@@ -83,6 +83,23 @@ class User extends Authenticatable
             ->all();
     }
 
+    /**
+     * Full administrators: the Administrator role, or an admin with no role
+     * (accounts created before roles existed).
+     */
+    public function isAdministrator(): bool
+    {
+        if (! $this->is_admin) {
+            return false;
+        }
+
+        if (! $this->role_id) {
+            return true;
+        }
+
+        return $this->role?->slug === 'administrator';
+    }
+
     public function hasPermission(string $permission): bool
     {
         if (! $this->is_admin) {

@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ProductReelController;
 use App\Http\Controllers\Admin\ProductIntelligenceController;
+use App\Http\Controllers\Admin\DataResetController;
 use App\Http\Controllers\Admin\ProductStockController;
 use App\Http\Controllers\Admin\PurchaseOrderController;
 use App\Http\Controllers\Admin\StockEntryController;
@@ -157,6 +158,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // Add stock: opening stock or purchases for any products, separate from product details.
     Route::get('stock/entry', [StockEntryController::class, 'show'])->middleware('permission:adjust_stock,manage_purchases')->name('stock.entry');
     Route::post('stock/opening', [StockEntryController::class, 'opening'])->middleware(['permission:adjust_stock', 'sensitive:stock.opening_posted,product,products,input:_none'])->name('stock.opening.store');
+
+    // Administrators only (checked in the controller): back up and clear transaction data.
+    Route::get('system/reset', [DataResetController::class, 'show'])->name('system.reset.show');
+    Route::post('system/reset/backup', [DataResetController::class, 'backup'])->middleware('throttle:5,1')->name('system.reset.backup');
+    Route::get('system/reset/backups/{file}', [DataResetController::class, 'download'])->name('system.reset.download');
+    Route::post('system/reset', [DataResetController::class, 'reset'])->middleware('throttle:5,1')->name('system.reset.run');
 
     // Purchases list and purchase orders (items + quantities to buy, printed without prices).
     Route::get('purchases', [PurchaseController::class, 'index'])->middleware('permission:manage_purchases,view_costs')->name('purchases.index');

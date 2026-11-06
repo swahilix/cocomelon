@@ -33,7 +33,7 @@ class SalesController extends Controller
                 ->when($search !== '', fn ($q) => $q->where(fn ($s) => $s->where('pos_sales.reference', 'like', "%{$search}%")
                     ->orWhere('pos_sales.customer_name', 'like', "%{$search}%")
                     ->orWhere('pos_sales.customer_phone', 'like', "%{$search}%")))
-                ->select('pos_sales.id', 'pos_sales.reference', 'pos_sales.customer_name', 'pos_sales.customer_phone', 'pos_sales.total', 'pos_sales.payment_method', 'pos_sales.status', 'pos_sales.refunded_amount', 'pos_sales.created_at', 'users.name as cashier_name')
+                ->select('pos_sales.id', 'pos_sales.reference', 'pos_sales.customer_name', 'pos_sales.customer_phone', 'pos_sales.total', 'pos_sales.payment_method', 'pos_sales.status', 'pos_sales.refunded_amount', 'pos_sales.created_at', 'pos_sales.is_backdated', 'users.name as cashier_name')
                 ->latest('pos_sales.id')->limit(100)->get()
                 ->map(fn ($sale) => [
                     'id' => $sale->id,
@@ -47,6 +47,7 @@ class SalesController extends Controller
                     'staff' => $sale->cashier_name,
                     'created_at' => $sale->created_at,
                     'url' => "/admin/sales/pos/{$sale->id}",
+                    'is_backdated' => (bool) ($sale->is_backdated ?? false),
                 ]);
         }
 
