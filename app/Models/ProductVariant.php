@@ -72,7 +72,7 @@ class ProductVariant extends Model
     public function getImageUrlAttribute(): string
     {
         if (! $this->image) {
-            return $this->product?->image_url ?: asset('assets/accessory.svg');
+            return $this->product?->image_url ?: asset('assets/product-placeholder.svg');
         }
 
         if (Str::startsWith($this->image, ['http://', 'https://', '/'])) {
