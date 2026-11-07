@@ -55,7 +55,7 @@ const cancelPlan = () => {
     <AdminLayout>
         <Head :title="`Installment ${plan.reference}`" />
 
-        <div class="mx-auto max-w-[1300px] space-y-4">
+        <div class="space-y-4">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div><Link href="/admin/installments" class="text-[10px] font-semibold text-prinx-600">← Installment plans</Link><h1 class="mt-1 text-[24px] font-semibold tracking-[-.025em] text-slate-950">{{ plan.reference }}</h1><p class="mt-1 text-[12px] text-slate-500">{{ plan.customer_name }} · {{ plan.customer_phone }}</p></div>
                 <span :class="['self-start rounded-full px-3 py-1.5 text-[10px] font-semibold capitalize sm:self-auto', statusClass]">{{ plan.status }}</span>

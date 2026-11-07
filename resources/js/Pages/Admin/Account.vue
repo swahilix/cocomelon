@@ -64,7 +64,7 @@ function changePassword() {
     <AdminLayout>
         <Head title="Admin account" />
 
-        <div class="mx-auto max-w-5xl">
+        <div>
             <div>
                 <p class="section-kicker">Account & security</p>
                 <h1 class="section-title">Admin account</h1>

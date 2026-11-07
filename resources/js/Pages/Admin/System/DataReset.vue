@@ -50,7 +50,7 @@ const submit = () => {
             <Link href="/admin/settings" class="inline-flex min-h-9 items-center justify-center rounded-[8px] border border-slate-200 bg-white px-3 text-[12px] font-semibold text-slate-700 hover:bg-slate-50">All settings</Link>
         </div>
 
-        <div class="mt-4 grid max-w-5xl gap-4 lg:grid-cols-[1fr_360px]">
+        <div class="mt-4 grid gap-4 lg:grid-cols-[1fr_360px]">
             <section class="card overflow-hidden">
                 <div class="border-b border-slate-200 px-5 py-4">
                     <h2 class="font-semibold text-slate-900">What will be deleted</h2>

@@ -9,7 +9,7 @@ import { adminSettings } from '../../../lib/adminHubs';
     <AdminLayout>
         <Head title="Settings" />
 
-        <div class="mx-auto max-w-[1200px] space-y-4">
+        <div class="space-y-4">
             <div>
                 <p class="text-[9px] font-semibold uppercase tracking-[.16em] text-prinx-600">System</p>
                 <h1 class="mt-1 text-[24px] font-semibold tracking-[-.025em] text-slate-950">Settings</h1>
