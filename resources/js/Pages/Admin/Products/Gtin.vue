@@ -326,7 +326,7 @@ onBeforeUnmount(stopScanner);
     <AdminLayout>
         <Head title="GTIN products" />
 
-        <div class="mx-auto max-w-6xl">
+        <div>
             <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <p class="section-kicker">Catalogue identifiers</p>
@@ -365,7 +365,7 @@ onBeforeUnmount(stopScanner);
                 No missing-GTIN products match “{{ search }}”.
             </div>
 
-            <div v-else class="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+            <div v-else class="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                 <article v-for="product in filteredProducts" :key="product.id" class="flex min-w-0 items-center gap-3 rounded-[9px] border border-slate-200 bg-white p-2.5 sm:p-3">
                     <div class="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[7px] border border-slate-100 bg-slate-50">
                         <img :src="product.image_url" :alt="product.name" class="h-full w-full object-contain" loading="lazy">

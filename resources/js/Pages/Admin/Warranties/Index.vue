@@ -194,7 +194,7 @@ const customerError = computed(() => form.errors.customer_name || form.errors.cu
     <AdminLayout>
         <Head title="Warranties" />
 
-        <div class="mx-auto max-w-[1500px] space-y-4">
+        <div class="space-y-4">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <p class="text-[9px] font-semibold uppercase tracking-[.16em] text-prinx-600">Sales & customers</p>

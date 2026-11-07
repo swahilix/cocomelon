@@ -90,7 +90,7 @@ const save = () => form
             </div>
         </div>
 
-        <div v-if="!available" class="mt-4 max-w-3xl rounded-[7px] border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
+        <div v-if="!available" class="mt-4 rounded-[7px] border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
             Run the latest database migrations before changing the card design.
         </div>
 

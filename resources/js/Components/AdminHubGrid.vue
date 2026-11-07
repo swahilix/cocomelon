@@ -17,7 +17,7 @@ const visible = computed(() => {
 </script>
 
 <template>
-    <div v-if="visible.length" class="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+    <div v-if="visible.length" class="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         <Link
             v-for="item in visible"
             :key="item.href"

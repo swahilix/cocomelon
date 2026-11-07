@@ -42,7 +42,7 @@ const save = () => form.post('/admin/business-settings/maps', {
             </div>
         </div>
 
-        <form class="mt-4 max-w-3xl" @submit.prevent="save">
+        <form class="mt-4" @submit.prevent="save">
             <section class="form-section">
                 <div class="mb-4 flex items-start gap-2">
                     <span class="flex h-8 w-8 items-center justify-center rounded-[8px] bg-prinx-50 text-prinx-600"><Icon name="location" :size="17" /></span>

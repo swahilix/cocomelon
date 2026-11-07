@@ -64,11 +64,11 @@ const test = () => {
             </div>
         </div>
 
-        <div v-if="!available" class="mt-4 max-w-3xl rounded-[7px] border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
+        <div v-if="!available" class="mt-4 rounded-[7px] border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
             Run the latest database migrations before configuring AI settings.
         </div>
 
-        <form v-else class="mt-4 max-w-3xl space-y-4" @submit.prevent="save">
+        <form v-else class="mt-4 grid items-start gap-4 xl:grid-cols-2" @submit.prevent="save">
             <section class="form-section">
                 <div class="mb-4 flex items-start gap-2">
                     <span class="flex h-8 w-8 items-center justify-center rounded-[8px] bg-prinx-50 text-prinx-600"><Icon name="magic-star" :size="17" /></span>
