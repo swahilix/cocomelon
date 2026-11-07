@@ -68,13 +68,35 @@ class ProductEntryFlowTest extends TestCase
                 ->where('products.0.opening_allowed', true));
     }
 
-    public function test_product_cannot_be_published_before_it_has_a_price(): void
+    public function test_product_can_be_saved_active_before_it_has_a_price_and_joins_the_store_once_priced(): void
     {
         $this->actingAs($this->admin)
-            ->post('/admin/products', $this->details(['name' => 'Unpriced', 'status' => 'active']))
-            ->assertSessionHasErrors('status');
+            ->post('/admin/products', $this->details(['name' => 'Unpriced Phone', 'status' => 'active']))
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
 
-        $this->assertSame(0, Product::query()->count());
+        $product = Product::query()->where('name', 'Unpriced Phone')->firstOrFail();
+        $this->assertSame('active', $product->status);
+        $this->assertSame(0.0, (float) $product->price);
+
+        // Available for purchases straight away.
+        $this->actingAs($this->admin)
+            ->get('/admin/stock/entry')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('products.0.id', $product->id));
+
+        // Not on the store while it has no price.
+        $this->get('/products/'.$product->slug)->assertNotFound();
+        $this->get('/shop')->assertInertia(fn (Assert $page) => $page->has('products.data', 0));
+
+        // A received purchase gives it a price, so it appears on the store.
+        $this->actingAs($this->admin)
+            ->post('/admin/stock/purchases', $this->purchase($product, 'received', ['quantity' => 3, 'unit_cost' => 300000, 'selling_price' => 380000]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(380000.0, (float) $product->fresh()->price);
+        $this->get('/products/'.$product->slug)->assertOk();
+        $this->get('/shop')->assertInertia(fn (Assert $page) => $page->has('products.data', 1));
     }
 
     public function test_opening_stock_adds_stock_cost_price_and_discount_immediately(): void

@@ -137,7 +137,7 @@ class CheckoutController extends Controller
                         ? ProductVariant::query()->lockForUpdate()->find($line['variant']->id)
                         : null;
 
-                    if (! $product || $product->status !== 'active') {
+                    if (! $product || ! $product->isLive()) {
                         abort(422, "{$line['product']->name} is no longer available.");
                     }
 

@@ -66,7 +66,21 @@ class Product extends Model
     public function reviews() { return $this->hasMany(ProductReview::class); }
     public function variants() { return $this->hasMany(ProductVariant::class)->orderBy('sort_order')->orderBy('id'); }
 
-    public function scopeActive(Builder $query): Builder { return $query->where('status', 'active'); }
+    /**
+     * Products customers can see and buy: Active and with a selling price.
+     * A product can be saved as Active before it has a price (so it shows in
+     * purchases, POS and stock pages straight away); it appears on the store
+     * once opening stock, a purchase or Update price gives it a price.
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('status', 'active')->where('price', '>', 0);
+    }
+
+    public function isLive(): bool
+    {
+        return $this->status === 'active' && (float) $this->price > 0;
+    }
     public function scopeMerchantEligible(Builder $query): Builder
     {
         return $query->active()

@@ -74,7 +74,7 @@ class WishlistController extends Controller
 
     public function store(Request $request, Product $product): RedirectResponse
     {
-        abort_unless($product->status === 'active', 404);
+        abort_unless($product->isLive(), 404);
 
         $query = DB::table('wishlists')
             ->where('user_id', $request->user()->id)

@@ -17,7 +17,7 @@ class CartService
     public function add(Product $product, int $quantity = 1, ?ProductVariant $variant = null): void
     {
         $this->assertVariant($product, $variant);
-        abort_unless($product->status === 'active' && ($variant ? $variant->in_stock : $product->in_stock), 422, 'This product is not available.');
+        abort_unless($product->isLive() && ($variant ? $variant->in_stock : $product->in_stock), 422, 'This product is not available.');
 
         $cart = $this->normalize($this->raw());
         $key = $this->key($product, $variant);

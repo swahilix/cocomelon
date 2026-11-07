@@ -12,7 +12,7 @@ class ProductReviewController extends Controller
 {
     public function store(Request $request, Product $product): RedirectResponse
     {
-        abort_unless($product->status === 'active', 404);
+        abort_unless($product->isLive(), 404);
 
         $user = $request->user();
 

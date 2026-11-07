@@ -45,7 +45,9 @@ const form = useForm({
     low_stock_threshold: p.low_stock_threshold ?? 5,
     track_stock: p.track_stock ?? true,
     condition: p.condition || 'new',
-    status: p.status || 'draft',
+    // New products are saved Active so they show in purchases, stock and POS
+    // right away; the store lists them once they have a selling price.
+    status: p.status || 'active',
     featured: p.featured ?? false,
     merchant_sync_enabled: p.merchant_sync_enabled ?? true,
     primary_image: null,
@@ -149,7 +151,7 @@ const resetCreateForm = () => {
     form._method = 'POST';
     form.category_id = '';
     form.brand_id = '';
-    form.status = 'draft';
+    form.status = 'active';
     form.condition = 'new';
     form.track_stock = true;
     form.featured = false;
@@ -463,7 +465,7 @@ onBeforeUnmount(clearImagePreviews);
             <aside class="card h-fit p-5">
                 <h2 class="font-semibold">Publishing</h2>
                 <div class="mt-4 grid gap-4">
-                    <div><label class="label">Status</label><select v-model="form.status" data-native-select class="input"><option value="draft">Draft</option><option value="active" :disabled="!canPublish">Active{{ canPublish ? '' : ' (add a price first)' }}</option><option value="archived">Archived</option></select><p v-if="!canPublish" class="mt-1 text-[11px] text-slate-500">The product stays a draft until it has a selling price from opening stock, a purchase or Update price.</p><p v-if="form.errors.status" class="error">{{ form.errors.status }}</p></div>
+                    <div><label class="label">Status</label><select v-model="form.status" data-native-select class="input"><option value="draft">Draft</option><option value="active">Active</option><option value="archived">Archived</option></select><p class="mt-1 text-[11px] text-slate-500"><template v-if="form.status === 'active' && !canPublish">Active products show in purchases, stock and POS now, and on the store once they get a selling price from Add stock or a purchase.</template><template v-else-if="form.status === 'active'">Shown on the store and available in purchases, stock and POS.</template><template v-else-if="form.status === 'draft'">Hidden from the store. Still available in Add stock.</template><template v-else>Hidden from the store and from new purchases.</template></p><p v-if="form.errors.status" class="error">{{ form.errors.status }}</p></div>
                     <div><label class="label">Condition</label><select v-model="form.condition" class="input"><option value="new">New</option><option value="refurbished">Refurbished</option><option value="used">Used</option></select></div>
                     <label class="flex items-center gap-2 text-sm"><input v-model="form.track_stock" type="checkbox"> Track stock</label>
                     <label class="flex items-center gap-2 text-sm"><input v-model="form.featured" type="checkbox"> Featured</label>
