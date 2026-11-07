@@ -158,7 +158,7 @@ class StorefrontController extends Controller
 
     public function product(Request $request, Product $product): Response
     {
-        abort_unless($product->status === 'active', 404);
+        abort_unless($product->isLive(), 404);
         $this->activity->record($request, $product, 'view');
         $this->conversions->record($request, 'view_product', $product);
         $product->load([
@@ -325,7 +325,7 @@ class StorefrontController extends Controller
             ->map(function (ProductReel $reel): ?array {
                 $item = $reel->item_type === 'service' ? $reel->service : $reel->product;
 
-                if (! $item || $item->status !== 'active') {
+                if (! $item || ($reel->item_type === 'service' ? $item->status !== 'active' : ! $item->isLive())) {
                     return null;
                 }
 

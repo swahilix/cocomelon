@@ -47,7 +47,7 @@ class WarrantyController extends Controller
         return Inertia::render('Admin/Warranties/Index', [
             'warranties' => $warranties->map(fn ($warranty) => $this->serialize($warranty, $messages->get((int) $warranty->id, collect())))->values(),
             'products' => Product::query()
-                ->active()
+                ->where('status', 'active')
                 ->orderBy('name')
                 ->get(['id', 'name', 'sku', 'warranty_duration_value', 'warranty_duration_unit'])
                 ->map(fn (Product $product): array => [

@@ -105,7 +105,9 @@ class ProductController extends Controller
         // from the Add stock page.
         return redirect()
             ->route('admin.products.create', ['saved' => $product->id])
-            ->with('success', $product->name.' saved as a draft. Add its stock and price from Add stock.');
+            ->with('success', $product->status === 'active'
+                ? $product->name.' saved. It shows in purchases and stock now, and on the store once you add its price through Add stock or a purchase.'
+                : $product->name.' saved as a draft. Add its stock and price from Add stock.');
     }
 
     public function update(Request $request, Product $product, InventoryService $inventory, ProductPricingService $pricing): RedirectResponse
@@ -224,12 +226,6 @@ class ProductController extends Controller
             'variants.*.is_active' => ['nullable', 'boolean'],
             'variants.*.sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
-
-        if ($validated['status'] === 'active' && (! $product || (float) $product->price <= 0)) {
-            throw ValidationException::withMessages([
-                'status' => 'Add opening stock, a purchase or a price before publishing this product.',
-            ]);
-        }
 
         $value = $validated['warranty_duration_value'] ?? null;
         $unit = $validated['warranty_duration_unit'] ?? null;
